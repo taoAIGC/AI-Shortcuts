@@ -111,7 +111,6 @@ function showToast(message, duration = 2000) {
 function initializeI18n() {
   // 更新页面标题
   document.title = chrome.i18n.getMessage("appName");
-  document.title = chrome.i18n.getMessage('configTitle');
 
   
   // 更新所有带有 data-i18n 属性的元素

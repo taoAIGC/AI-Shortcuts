@@ -44,9 +44,31 @@ async function createFloatButton() {
   const closeBtn = document.createElement('div');
   closeBtn.className = 'close-button';
   closeBtn.innerHTML = '×';
+
+  // 修改关闭按钮的点击事件处理
+  closeBtn.addEventListener('click', (e) => {
+    e.stopPropagation();  // 阻止事件冒泡
+    e.preventDefault();   // 阻止默认行为
+    container.remove();   // 移除整个容器
+    return false;        // 确保事件不会继续传播
+  });
+
+  // 将关闭按钮添加到按钮中
   button.appendChild(closeBtn);
-   // 检测操作系统类型
-   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+
+  // 按钮的点击事件
+  button.addEventListener('click', () => {
+    if (!hasMoved) {  // 只有在没有拖动的情况下才触发点击事件
+      dialog.classList.toggle('show');
+      if (dialog.classList.contains('show')) {
+        const input = dialog.querySelector('#multiAiInput');
+        if (input) input.focus();
+      }
+    }
+  });
+
+  // 检测操作系统类型
+  const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 
   // 设置提示文本
   const shortcutText = isMac ? '⌘+M' : 'Ctrl+M';
@@ -93,18 +115,6 @@ async function createFloatButton() {
   iconContainer.appendChild(settingIcon);
   iconContainer.appendChild(feedbackIcon);
 
-  // 绑定事件
-  closeBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    container.remove();
-  });
-
-  // 反馈图标点击事件
-  feedbackIcon.addEventListener('click', (e) => {
-    e.stopPropagation();
-    window.open('https://wenjuan.feishu.cn/m/cfm?t=sTFPGe4oetOi-9m3a', '_blank');
-  });
-
   // 将按钮和图标容器添加到整体容器中
   container.appendChild(button);
   container.appendChild(iconContainer);
@@ -125,46 +135,39 @@ async function createFloatButton() {
   let isDragging = false;
   let startY = 0;
   let startTop = 0;
-  let hasMoved = false;  // 添加标记判断是否发生了移动
+  let hasMoved = false;
 
+  // 鼠标按下
   button.addEventListener('mousedown', (e) => {
-    e.preventDefault();  // 防止选中文本
+    e.preventDefault();
     isDragging = true;
     hasMoved = false;  // 重置移动标记
     startY = e.clientY;
     const rect = container.getBoundingClientRect();
     startTop = rect.top;
-    container.classList.add('dragging');  // 添加拖动类
+    container.classList.add('dragging');
   });
 
+  // 鼠标移动
   document.addEventListener('mousemove', (e) => {
     if (!isDragging) return;
     
     hasMoved = true;  // 标记发生了移动
     const deltaY = e.clientY - startY;
     const newTop = startTop + deltaY;
-
-    // 确保不超出视窗范围
+    
     const maxTop = window.innerHeight - container.offsetHeight;
     const boundedTop = Math.max(0, Math.min(newTop, maxTop));
-
+    
     container.style.top = `${boundedTop}px`;
     container.style.transform = 'none';
   });
 
+  // 鼠标松开
   document.addEventListener('mouseup', () => {
     if (isDragging) {
       isDragging = false;
       container.classList.remove('dragging');
-      
-      // 只有在没有发生移动的情况下才触发点击事件
-      if (!hasMoved) {
-        dialog.classList.toggle('show');
-        if (dialog.classList.contains('show')) {
-          const input = dialog.querySelector('#multiAiInput');
-          input.focus();
-        }
-      }
     }
   });
 
@@ -190,7 +193,6 @@ async function createFloatButton() {
     e.stopPropagation();
     chrome.runtime.sendMessage({ action: 'openOptionsPage' });
   });
-
   
   // 点击外部关闭对话框
   document.addEventListener('click', (e) => {
