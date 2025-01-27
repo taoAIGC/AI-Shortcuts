@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Multi-AI</title>
+  <link rel="stylesheet" href="popup.css">
+
+</head>
+<body>
+  <div class="container">
+    <h2 data-i18n="popupTitle"></h2>
+    <div id="error" style="display: none;"></div>
+    <div class="popup-container">
+      <textarea id="searchInput" data-i18n-placeholder="inputPlaceholder" autofocus rows="3"></textarea>
+      <div class="button-group">
+        <div class="single-search-group">
+          <button id="singleSearchButton" class="search-button"></button>
+          <button id="siteSelectButton" class="site-select-button" data-i18n="selectSite">▼</button>
+          <div id="siteDropdown" class="site-dropdown"></div>
+        </div>
+        <button id="searchButton" class="search-button" data-i18n="startCompare"></button>
+      </div>
+      <div class="settings-link">
+        <a href="#" id="settingsLink" data-i18n="openSettings">config</a>
+      </div>
+    </div>
+    <div class="page-link">
+      <a href="#" id="openPage" data-i18n="openPage"></a>
+    </div>
+  </div>
+  <script src="../lib/jquery-3.7.1.min.js"></script>
+  <script src="../config/defaultSites.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html> 

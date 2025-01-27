@@ -1,0 +1,119 @@
+{
+  "manifest_version": 3,
+  "name": "__MSG_appName__",
+  "version": "1.14",
+  "description": "__MSG_extDescription__",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "tabs",
+    "contextMenus",
+    "scripting",
+    "declarativeNetRequest"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; frame-src *",
+    "sandbox": "sandbox allow-scripts allow-forms allow-popups allow-modals; script-src 'unsafe-eval' 'self'"
+  },
+  "action": {
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
+    "default_title": "__MSG_commandDescription__"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "options_page": "options/options.html",
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://chatglm.cn/*",
+        "https://kimi.moonshot.cn/*",
+        "https://chatgpt.com/*",
+        "https://nanoai.live/*",
+        "https://tongyi.aliyun.com/*",
+        "https://www.doubao.com/*",
+        "https://doubao.com/*",
+        "https://yiyan.baidu.com/*",
+        "https://chat.deepseek.com/*",
+        "https://metaso.cn/*",
+        "https://claude.ai/*",
+        "https://gemini.google.com/*",
+        "https://poe.com/*",
+        "https://copilot.microsoft.com/*"
+      ],
+      "js": ["lib/jquery-3.7.1.min.js", "iframe/inject.js"],
+      "run_at": "document_start",
+      "all_frames": true
+    },
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content-scripts/selection.js"],
+      "css": ["content-scripts/selection.css"]
+    },
+    {
+      "matches": ["<all_urls>"],
+      "css": ["content-scripts/float-button.css"],
+      "js": [
+        "config/config.js",
+        "content-scripts/float-button.js",
+        "lib/jquery-3.7.1.min.js"
+      ],
+      "run_at": "document_end"
+    },
+    {
+      "matches": [
+        "https://www.google.com/*",
+        "https://www.baidu.com/*",
+        "https://www.bing.com/*",
+        "https://cn.bing.com/*"
+      ],
+      "js": [
+        "content-scripts/search-engines.js"
+      ]
+    }
+  ],
+  "default_locale": "en",
+  "web_accessible_resources": [{
+    "resources": [
+      "iframe/*",
+      "icons/*",
+      "config/*",
+      "content-scripts/*"
+    ],
+    "use_dynamic_url": true,
+    "matches": [
+      "chrome-extension://*/*",
+      "<all_urls>"
+    ]
+  }, {
+    "resources": ["icons/*"],
+    "matches": ["<all_urls>"]
+  }],
+
+
+  "commands": {
+    "_execute_action": {
+      "description": "__MSG_commandDescription__"
+    }
+  },
+
+  "declarative_net_request": {
+    "rule_resources": [{
+      "id": "ruleset_1",
+      "enabled": true,
+      "path": "config/rules.json"
+    }]
+  }
+} 

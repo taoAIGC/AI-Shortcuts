@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+   <!--  <title data-i18n="appName"></title>-->
+    <title> iframe model</title>
+    <link rel="stylesheet" href="iframe.css">
+</head>
+<body>
+    <div class="search-bar">
+        <input 
+            type="text" 
+            id="searchInput" 
+            data-i18n="inputPlaceholder"
+            placeholder=""
+            autofocus
+        >
+        <button id="searchButton" data-i18n="startCompare">发送</button>
+        <select id="columnSelect">
+            <option value="1" data-i18n="column1">1列</option>
+            <option value="2" data-i18n="column2">2列</option>
+            <option value="3" data-i18n="column3">3列</option>
+            <option value="4" data-i18n="column4">4列</option>
+        </select>
+         <div class="settings-icon-container">
+            <img src="../icons/setting.png" class="settings-icon" title="站点设置">
+            <div class="settings-dialog">
+                <div class="dialog-header">
+                    <h3>站点设置</h3>
+                </div>
+                <div class="multi-ai-dialog">
+                    <div class="site-list">
+                        <!-- 站点选项将通过 JavaScript 动态添加 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="iframes-container">
+        <!-- iframes 将被动态插入到这里 -->
+    </div>
+    <script type="module" src="iframe.js"></script>
+</body>
+</html> 

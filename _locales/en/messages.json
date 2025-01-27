@@ -1,0 +1,71 @@
+{
+  "appName": {
+    "message": "AI Shortcuts - for ChatGPT, Gemini and more."
+  },
+  "extDescription": {
+    "message": "AI Shortcuts for ChatGPT, Gemini  and more."
+  },
+  "configTitle": {
+    "message": "AIs Comparison Configuration"
+  },
+  "saveSuccess": {
+    "message": "Configuration saved"
+  },
+  "saveFailed": {
+    "message": "Save failed: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "inputPlaceholder": {
+    "message": "Enter content to search..."
+  },
+  "openSettings": {
+    "message": "Default Comparison Settings"
+  },
+  "searchWithMultiAI": {
+    "message": "Search with Multi-AI"
+  },
+  "startCompare": {
+    "message": "Compare AIs",
+    "placeholders": {
+      "n": {
+        "content": "$1"
+      }
+    }
+  },
+  "openPage": {
+    "message": "Tab Mode"
+  },
+  "commandDescription": {
+    "message": "Hotkey: (⌘+M on Mac, Ctrl+M on Windows)"
+  },
+  "contactInfo": {
+    "message": "If you want to add more sites, please contact me at AIShortcuts@outlook.com"
+  },
+  "popupTitle": {
+    "message": "AI Shortcuts"
+  },
+  "column1": {
+    "message": "1 Column",
+    "description": "Single column layout option"
+  },
+  "column2": {
+    "message": "2 Columns",
+    "description": "Two columns layout option"
+  },
+  "column3": {
+    "message": "3 Columns",
+    "description": "Three columns layout option"
+  },
+  "column4": {
+    "message": "4 Columns",
+    "description": "Four columns layout option"
+  },
+  "closeButton": {
+    "message": "Close",
+    "description": "Close button text"
+  }
+} 

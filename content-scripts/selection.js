@@ -1,0 +1,265 @@
+let toolbar = null;
+let isToolbarVisible = false;
+let lastSelectedText = '';
+let favoriteButton = null;
+
+
+
+
+// 更新收藏站点按钮文本
+function updateFavoriteButton() {
+  if (!favoriteButton) return;
+  
+  chrome.storage.sync.get('favoriteSites', function(settings) {
+    console.log("更新收藏按钮文案settings favouriteSites", settings.favoriteSites);
+    if (settings.favoriteSites && settings.favoriteSites.length > 0) {
+      favoriteButton.textContent = settings.favoriteSites[0].name;
+      console.log("获取到的favoriteButton.textContent", settings.favoriteSites[0].name);
+    }
+  });
+}
+
+// 创建工具栏
+async function createToolbar() {
+    // 从 storage 获取站点配置
+    const { sites } = await chrome.storage.sync.get('sites');
+    if (!sites || !sites.length) return;
+  
+    // 只显示非隐藏的站点
+    const visibleSites = sites.filter(site => !site.hidden);
+    console.log('可见的站点:', visibleSites);
+
+ // 初始化按钮文本
+  if (toolbar) return;
+  
+  toolbar = document.createElement('div');
+  toolbar.className = 'multi-ai-toolbar';
+  
+  // 创建收藏站点按钮
+  favoriteButton = document.createElement('button');
+  favoriteButton.className = 'multi-ai-favorite-button';
+  // 创建下拉选择器和列表
+  const siteSelectButton = document.createElement('button');
+  siteSelectButton.className = 'site-select-button';
+  siteSelectButton.textContent = '▼';
+  const siteDropdown = document.createElement('div');
+  siteDropdown.className = 'site-dropdown';  // 修改类名
+
+
+  
+  updateFavoriteButton();
+  // 初始化下拉菜单
+function initializeSiteDropdown() {
+  if (!siteDropdown || !siteSelectButton) return;
+  console.log("初始化下拉菜单",visibleSites);
+
+  // 创建站点列表
+  visibleSites.forEach(site => {
+    const siteItem = document.createElement('div');
+    siteItem.className = 'site-item';
+    siteItem.textContent = `${site.name}`;
+    
+    siteItem.addEventListener('click', async () => {
+
+      const query = window.getSelection().toString().trim();
+       // 点击后直接打开搜索
+
+        chrome.runtime.sendMessage({
+          action: 'singleSiteSearch',
+          query: query,
+          siteName: site.name
+        }, (response) => {
+          console.log('Message response:', response);  // 打印消息响应
+        });
+
+      
+      const newFavoriteSite = [{
+        name: site.name
+      }];
+      
+      // 更新存储
+      await chrome.storage.sync.set({ favoriteSites: newFavoriteSite });
+      
+      siteDropdown.classList.remove('show');
+    });
+    
+    siteDropdown.appendChild(siteItem);
+  });
+
+  // 切换下拉菜单显示状态
+  siteSelectButton.addEventListener('click', (e) => {
+    e.stopPropagation();
+    siteDropdown.classList.toggle('show');
+    console.log('下拉菜单显示状态:', siteDropdown.classList.contains('show'));
+  });
+
+  // 点击其他地方关闭下拉菜单
+  document.addEventListener('click', () => {
+    siteDropdown.classList.remove('show');
+  });
+
+  // 防止点击下拉菜单时关闭
+  siteDropdown.addEventListener('click', (e) => {
+    e.stopPropagation();
+  });
+}
+  
+  // 点击处理
+  favoriteButton.onclick = async (e) => {
+    e.stopPropagation();
+    const selectedText = window.getSelection().toString().trim();
+    if (selectedText) {
+      chrome.storage.sync.get('favoriteSites', async function(settings) {
+        if (settings.favoriteSites && settings.favoriteSites.length > 0) {
+          await chrome.runtime.sendMessage({
+            action: 'singleSiteSearch',
+            query: selectedText,
+            siteName: settings.favoriteSites[0].name
+          });
+        }
+      });
+    }
+    console.log("获取选择的文本失败");
+  };
+  
+  // 创建比较按钮
+  const compareButton = document.createElement('img');
+  compareButton.src = chrome.runtime.getURL('icons/icon48.png');
+  compareButton.title = chrome.i18n.getMessage('searchWithMultiAI');
+  compareButton.className = 'multi-ai-compare-button';
+  
+  compareButton.onclick = async (e) => {
+    e.stopPropagation();
+    const selectedText = window.getSelection().toString().trim();
+    if (selectedText) {
+      await chrome.runtime.sendMessage({
+        action: 'createComparisonPage',
+        query: selectedText
+      });
+    }
+  };
+  
+  initializeSiteDropdown();
+  // 添加按钮到工具栏
+
+  // 创建单站点搜索组
+  const singleSearchGroup = document.createElement('div');
+  singleSearchGroup.className = 'single-search-group';
+  
+  // 将相关元素添加到单站点搜索组
+  singleSearchGroup.appendChild(favoriteButton);
+  singleSearchGroup.appendChild(siteSelectButton);
+  singleSearchGroup.appendChild(siteDropdown);
+  
+  // 将单站点搜索组添加到工具栏
+  toolbar.appendChild(singleSearchGroup);
+  toolbar.appendChild(compareButton);
+  document.body.appendChild(toolbar);
+}
+
+// 更新工具栏位置
+function updateToolbarPosition(selection) {
+  if (!toolbar) createToolbar();
+  
+  if (!selection || !selection.rangeCount || selection.rangeCount === 0) {
+    console.log('无效的选区');
+    return;
+  }
+  
+  try {
+    const range = selection.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+    
+    if (rect.width > 0 && rect.height > 0) {
+      // 使用 viewport 相对位置
+      const left = rect.right + 5;
+      const top = rect.top - 5;
+      
+      // 确保工具栏不会超出视窗
+      const maxLeft = window.innerWidth - toolbar.offsetWidth - 10;
+      const finalLeft = Math.min(left, maxLeft);
+      
+      toolbar.style.left = `${finalLeft}px`;
+      toolbar.style.top = `${top}px`;
+      toolbar.style.display = 'block';
+      isToolbarVisible = true;
+      
+      console.log('工具栏位置更新', {
+        left: finalLeft,
+        top,
+        display: toolbar.style.display,
+        visible: isToolbarVisible,
+        toolbarWidth: toolbar.offsetWidth,
+        toolbarHeight: toolbar.offsetHeight
+      });
+    }
+  } catch (error) {
+    console.error('更新工具栏位置失败:', error);
+  }
+}
+
+// 处理鼠标松开事件
+document.addEventListener('mouseup', (e) => {
+  setTimeout(() => {
+    const selection = window.getSelection();
+    const selectedText = selection.toString().trim();
+    
+    console.log('鼠标松开', {
+      hasSelection: !!selection,
+      rangeCount: selection.rangeCount,
+      selectedText: selectedText
+    });
+    
+    if (selectedText && selection.rangeCount > 0) {
+      lastSelectedText = selectedText;
+      updateToolbarPosition(selection);
+    }
+  }, 10);
+});
+
+// 处理点击事件
+document.addEventListener('mousedown', (e) => {
+  if (toolbar && !toolbar.contains(e.target)) {
+    console.log("鼠标点击toolbar消失", toolbar.contains(e.target));
+    toolbar.style.display = 'none';
+    isToolbarVisible = false;
+    lastSelectedText = '';
+  }
+});
+
+// 监听页面滚动事件
+window.addEventListener('scroll', () => {
+  // 如果工具栏可见，直接隐藏
+  console.log("页面滚动 isToolbarVisible", isToolbarVisible);
+  if (isToolbarVisible) {
+    toolbar.style.display = 'none';
+    isToolbarVisible = false;
+    lastSelectedText = '';
+  }
+}, { passive: true });
+
+// 初始化
+createToolbar(); 
+
+// 添加错误处理
+window.addEventListener('error', function(event) {
+  if (event.error?.message?.includes('Extension context invalidated')) {
+    console.log('扩展已重新加载，将刷新页面');
+    window.location.reload();
+  }
+});
+
+// 监听扩展消息
+chrome.runtime.onMessage?.addListener((message, sender, sendResponse) => {
+  if (message.action === 'extensionReloaded') {
+    window.location.reload();
+  }
+});
+
+// 监听存储变化
+chrome.storage.onChanged.addListener((changes, namespace) => {
+  if (namespace === 'sync' && changes.favoriteSites) {
+    updateFavoriteButton();
+  }
+});
+

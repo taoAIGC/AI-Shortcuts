@@ -1,0 +1,66 @@
+{
+  "appName": {
+    "message": "AI 任意门 - 快速访问 ChatGPT 豆包 KIMI 等"
+  },
+  "extDescription": {
+    "message": "AI 任意门 - 快速访问 ChatGPT 豆包 KIMI 等"
+  },
+  "configTitle": {
+    "message": "AI对比配置"
+  },
+  "saveSuccess": {
+    "message": "配置已保存"
+  },
+  "saveFailed": {
+    "message": "保存失败: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "inputPlaceholder": {
+    "message": "输入要搜索的内容..."
+  },
+  "openSettings": {
+    "message": "默认AI对比配置"
+  },
+  "searchWithMultiAI": {
+    "message": "使用AI 任意门搜索"
+  },
+  "startCompare": {
+    "message": "多AI对比"
+  },
+  "openPage": {
+    "message": "标签页模式"
+  },
+  "commandDescription": {
+    "message": "快捷键(Mac下 ⌘+M , Windows下 Ctrl+M)"
+  },
+  "contactInfo": {
+    "message": "如果你想增加更多站点，可以与我联系 AIShortcuts@outlook.com"
+  },
+  "popupTitle": {
+    "message": "AI 任意门"
+  },
+  "column1": {
+    "message": "1列",
+    "description": "一列布局选项"
+  },
+  "column2": {
+    "message": "2列",
+    "description": "两列布局选项"
+  },
+  "column3": {
+    "message": "3列",
+    "description": "三列布局选项"
+  },
+  "column4": {
+    "message": "4列",
+    "description": "四列布局选项"
+  },
+  "closeButton": {
+    "message": "关闭",
+    "description": "关闭按钮文本"
+  }
+} 
