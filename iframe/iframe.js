@@ -9,25 +9,32 @@ document.addEventListener('DOMContentLoaded', async function() {
     columnSelect.value = preferredColumns;
     updateColumns(preferredColumns);
 
-    // 获取站点配置并初始化 iframes
-    chrome.storage.sync.get('sites', (result) => {
-        if (result.sites) {
-            // 过滤出启用的且支持 iframe 的站点
-            const availableSites = result.sites.filter(site => 
-                site.enabled && 
-                site.supportIframe !== false && 
-                !site.hidden
-            );
+    // 检查 URL 参数，判断打开方式
+    const urlParams = new URLSearchParams(window.location.search);
+    const hasQueryParam = urlParams.has('query');
+    
+    // 只有在直接打开（方式1）时才执行初始化 iframes
+    if (!hasQueryParam) {
+        // 获取站点配置并初始化 iframes
+        chrome.storage.sync.get('sites', (result) => {
+            if (result.sites) {
+                // 过滤出启用的且支持 iframe 的站点
+                const availableSites = result.sites.filter(site => 
+                    site.enabled && 
+                    site.supportIframe !== false && 
+                    !site.hidden
+                );
 
-            if (availableSites.length > 0) {
-                console.log('初始化可用站点:', availableSites);
-                // 使用现有的 createIframes 函数创建 iframe
-                createIframes('', availableSites); // query 参数传空字符串
-            } else {
-                console.log('没有可用的站点');
+                if (availableSites.length > 0) {
+                    console.log('初始化可用站点:', availableSites);
+                    // 使用现有的 createIframes 函数创建 iframe
+                    createIframes('', availableSites); // query 参数传空字符串
+                } else {
+                    console.log('没有可用的站点');
+                }
             }
-        }
-    });
+        });
+    }
 
     // 列数变化监听器
     columnSelect.addEventListener('change', function(e) {
@@ -77,6 +84,7 @@ async function createIframes(query, sites) {
       // 如果有查询词,清空容器内容
       container.innerHTML = '';
       console.log("清空iframe")
+
     } 
     // 调整主容器样式以适应导航栏
     container.style.marginLeft = '72px';
@@ -239,10 +247,63 @@ function createSingleIframe(siteName, url, container, query) {
   window.removeEventListener('message', messageHandler); // 移除可能存在的旧监听器
   window.addEventListener('message', messageHandler);
   
+  // 合并和优化 iframe 加载事件处理
+  iframe.addEventListener('load', () => {
+    const searchInput = document.getElementById('searchInput');
+    
+    // 设置 iframe 为不可聚焦
+    iframe.setAttribute('tabindex', '-1');
+    
+    // 防止 iframe 内容获取焦点
+    try {
+      const doc = iframe.contentDocument || iframe.contentWindow.document;
+      doc.documentElement.setAttribute('tabindex', '-1');
+      doc.body.setAttribute('tabindex', '-1');
+      
+      // 阻止所有可能的焦点事件
+      doc.addEventListener('focus', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        searchInput.focus();
+      }, true);
+      
+      doc.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        searchInput.focus();
+      }, true);
+      
+      doc.addEventListener('click', (e) => {
+        if (e.target.tagName !== 'A') {
+          e.preventDefault();
+          e.stopPropagation();
+          searchInput.focus();
+        }
+      }, true);
+    } catch (error) {
+      console.log('无法直接访问 iframe 内容，将通过消息通信处理');
+      iframe.contentWindow.postMessage({
+        type: 'PREVENT_FOCUS',
+        source: 'iframe-parent'
+      }, '*');
+    }
+    
+    // 确保搜索输入框保持焦点
+    setTimeout(() => {
+      searchInput.focus();
+    }, 100);
+  });
+
+  // 在父页面级别阻止 iframe 获取焦点
+  document.addEventListener('focusin', (e) => {
+    if (e.target.tagName === 'IFRAME') {
+      e.preventDefault();
+      document.getElementById('searchInput').focus();
+    }
+  }, true);
+
   iframe.src = url;
-  // 添加 tabindex="-1" 防止自动获取焦点
-  iframe.setAttribute('tabindex', '-1');
-  
+
   // 在 iframe 加载完成后，将页面滚动回顶部
   /*
   iframe.addEventListener('load', () => {
@@ -616,26 +677,27 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+// 初始化站点设置的函数
 async function initializeSiteSettings() {    
     const siteList = document.querySelector('.site-list');
-
+    const saveButton = document.querySelector('.save-settings-btn');
+    
+    // 设置按钮的 title 属性
+    saveButton.title = chrome.i18n.getMessage('saveSettingsTitle');
     
     siteList.innerHTML = '';
     // 获取当前已打开的 iframe 站点 ID 数组
     const openedSites = Array.from(document.querySelectorAll('.ai-iframe'))
         .map(iframe => iframe.getAttribute('data-site'));
     
-    console.log("打开的站点", openedSites);
-    
     try {
-        // 2. 等待从 storage 获取数据
+        // 从 storage 获取数据
         const { sites = [] } = await chrome.storage.sync.get('sites');
         
-        // 3. 大量的 DOM 操作（创建站点列表）
+        // 过滤支持 iframe 的站点
         const supportedSites = sites.filter(site => 
             site.supportIframe === true && !site.hidden
         );
-        console.log("支持iframe的站点:", supportedSites);
 
         const fragment = document.createDocumentFragment();
 
@@ -697,6 +759,14 @@ async function initializeSiteSettings() {
                     const iframeToRemove = document.querySelector(`[data-site="${site.name}"]`);
                     if (iframeToRemove) {
                         iframeToRemove.closest('.iframe-container').remove();
+                        // 移除导航项
+                        const navItems = document.querySelectorAll('.nav-item');
+                        navItems.forEach(item => {
+                          if (item.textContent.trim() === site.name) {
+                            item.remove();
+                          }
+                        });
+
                     }
                 }
             });
@@ -708,7 +778,43 @@ async function initializeSiteSettings() {
         
         siteList.appendChild(fragment);
         
-        // 移除自动创建 iframe 的逻辑
+        // 添加保存按钮点击事件
+        saveButton.addEventListener('click', async () => {
+            try {
+                // 获取所有复选框
+                const checkboxes = document.querySelectorAll('.site-checkbox');
+                
+                // 获取当前所有站点配置
+                const { sites: currentSites = [] } = await chrome.storage.sync.get('sites');
+                
+                // 更新站点启用状态
+                const updatedSites = currentSites.map(site => {
+                    // 找到对应的复选框
+                    const checkbox = document.querySelector(`#site-${site.name}`);
+                    if (checkbox) {
+                        // 如果找到复选框，根据复选框状态设置 enabled
+                        return {
+                            ...site,
+                            enabled: checkbox.checked
+                        };
+                    }
+                    // 如果没找到复选框（不支持 iframe 的站点），保持原状态
+                    return site;
+                });
+                
+                // 保存更新后的配置
+                await chrome.storage.sync.set({ sites: updatedSites });
+                
+                // 显示成功提示
+                showToast('设置已保存');
+                
+                console.log('站点设置已更新:', updatedSites);
+                
+            } catch (error) {
+                console.error('保存站点设置失败:', error);
+                showToast('保存设置失败');
+            }
+        });
         
     } catch (error) {
         console.error('获取站点配置失败:', error);
@@ -716,6 +822,23 @@ async function initializeSiteSettings() {
             siteList.innerHTML = '<div class="error-message">加载站点配置失败，请刷新页面重试</div>';
         }
     }
+}
+
+// Toast 提示函数
+function showToast(message, duration = 2000) {
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    
+    // 添加显示类名触发动画
+    setTimeout(() => toast.classList.add('show'), 10);
+    
+    // 定时移除
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+    }, duration);
 }
 
 // 设置图标和对话框的事件处理
@@ -748,13 +871,15 @@ function initializeI18n() {
     document.querySelectorAll('[data-i18n]').forEach(element => {
         const key = element.getAttribute('data-i18n');
         const message = chrome.i18n.getMessage(key);
-        
-        if (element.tagName.toLowerCase() === 'input' && element.type === 'text') {
-            // 对于输入框，设置 placeholder
-            element.placeholder = message;
-        } else {
-            // 对于其他元素（包括 option），设置文本内容
-            element.textContent = message;
+        if (message) {
+            if (element.tagName.toLowerCase() === 'input' && 
+                element.type === 'text') {
+                // 对于输入框，设置 placeholder
+                element.placeholder = message;
+            } else {
+                // 对于其他元素，设置文本内容
+                element.textContent = message;
+            }
         }
     });
 }

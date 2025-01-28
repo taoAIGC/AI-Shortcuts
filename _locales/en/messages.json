@@ -3,10 +3,10 @@
     "message": "AI Shortcuts - for ChatGPT, Gemini, DeepSeek and more."
   },
   "extDescription": {
-    "message": "AI Shortcuts for ChatGPT, Gemini  and more."
+    "message": "AI Shortcuts for ChatGPT, Gemini, DeepSeek and more."
   },
   "configTitle": {
-    "message": "AIs Comparison Configuration"
+    "message": "Default AI Sites"
   },
   "saveSuccess": {
     "message": "Configuration saved"
@@ -67,5 +67,17 @@
   "closeButton": {
     "message": "Close",
     "description": "Close button text"
+  },
+  "iframeSiteSettings": {
+    "message": "Collection mode settings",
+    "description": "Title of the site settings dialog"
+  },
+  "standaloneModeTitle": {
+    "message": "Standalone Page Mode",
+    "description": "Title for standalone page mode section"
+  },
+  "collectionModeTitle": {
+    "message": "Collection Mode",
+    "description": "Title for collection mode section"
   }
 } 

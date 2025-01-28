@@ -8,8 +8,18 @@
 <body>
   <div class="container">
     <h1 data-i18n="configTitle"></h1>
-    <div id="siteConfigs"></div>
-    <!-- 添加联系信息 -->
+    
+    <!-- 独立模式站点列表 -->
+    <div class="site-section">
+      <h2 data-i18n="standaloneModeTitle">独立模式</h2>
+      <div id="standaloneSiteConfigs" class="site-configs"></div>
+    </div>
+    
+    <!-- 合集模式站点列表 -->
+    <div class="site-section">
+      <h2 data-i18n="collectionModeTitle">合集模式</h2>
+      <div id="collectionSiteConfigs" class="site-configs"></div>
+    </div>
     
     <div class="contact-info" data-i18n="contactInfo"></div>
   </div>
@@ -19,7 +29,5 @@
 
   <script src="../config/defaultSites.js"></script>
   <script src="options.js"></script>
-</body>
-</html> 
 </body>
 </html> 

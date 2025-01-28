@@ -111,6 +111,13 @@ async function createFloatButton() {
   feedbackIcon.className = 'bottom-icon feedback-icon';
   feedbackIcon.title = '反馈';
 
+  // 添加点击事件，打开反馈表单
+  feedbackIcon.addEventListener('click', (e) => {
+    e.stopPropagation();
+    // 打开飞书问卷链接
+    window.open('https://wenjuan.feishu.cn/m/cfm?t=sTFPGe4oetOi-9m3a', '_blank');
+  });
+
   // 添加图标到容器
   iconContainer.appendChild(settingIcon);
   iconContainer.appendChild(feedbackIcon);

@@ -898,7 +898,7 @@ async function openSearchTabs(query, checkedSites = null) {
       console.log('找到支持 iframe 的启用站点:', iframeSites);
       
       const newTab = await chrome.tabs.create({
-          url: chrome.runtime.getURL('iframe/iframe.html'),
+          url: chrome.runtime.getURL('iframe/iframe.html?query=true'),
           active: true
       });
 

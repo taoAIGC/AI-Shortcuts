@@ -25,8 +25,8 @@ h1 {
   background: #fff;
   border: 1px solid #ddd;
   border-radius: 8px;
-  padding: 15px;
-  margin-bottom: 10px;
+  padding: 10px;
+  margin-bottom: 5px;
 }
 
 /* 站点头部 */
@@ -122,4 +122,20 @@ input:checked + .slider:before {
   font-size: 14px;
   text-align: center;
   border-top: 1px solid #eee;
+}
+
+.site-section {
+    margin-bottom: 30px;
+}
+
+.site-section h2 {
+    font-size: 1.2em;
+    margin-bottom: 15px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #eee;
+}
+
+.site-configs {
+    display: grid;
+    gap: 5px;
 } 

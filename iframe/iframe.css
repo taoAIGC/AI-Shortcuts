@@ -128,6 +128,8 @@ html {
 .settings-icon-container {
     position: relative;
     display: inline-block;
+    display: flex;
+    align-items: center;
 }
 
 .settings-icon {
@@ -147,13 +149,15 @@ html {
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     z-index: 1000;
     margin-top: 8px;
-    padding: 16px;
+    padding: 0 0 16px 0;
 }
 
 .dialog-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
     border-bottom: 1px solid #eee;
-    padding-bottom: 8px;
-    margin-bottom: 12px;
 }
 
 .dialog-header h3 {
@@ -164,6 +168,34 @@ html {
 
 }
 
+.save-settings-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 6px;
+    background-color: #fff !important;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.save-settings-btn:hover {
+    background-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+.save-icon {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+}
+
+.save-settings-btn:active {
+    background-color: rgba(0, 0, 0, 0.1) !important;
+    transform: scale(0.95);
+}
 
 .multi-ai-dialog .site-list {
     display: grid;

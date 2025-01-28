@@ -6,7 +6,7 @@
     "message": "AI 任意门 - 快速访问 ChatGPT 豆包 DeepSeek 等"
   },
   "configTitle": {
-    "message": "AI对比配置"
+    "message": "默认AI站点"
   },
   "saveSuccess": {
     "message": "配置已保存"
@@ -62,5 +62,17 @@
   "closeButton": {
     "message": "关闭",
     "description": "关闭按钮文本"
+  },
+  "standaloneModeTitle": {
+    "message": "独立页面模式",
+    "description": "独立页面模式标题"
+  },
+  "collectionModeTitle": {
+    "message": "合集模式",
+    "description": "合集模式标题"
+  },
+  "iframeSiteSettings": {
+    "message": "合集模式设置",
+    "description": "站点设置对话框的标题"
   }
 } 
