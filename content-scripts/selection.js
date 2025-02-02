@@ -239,7 +239,18 @@ window.addEventListener('scroll', () => {
 }, { passive: true });
 
 // 初始化
-createToolbar(); 
+
+
+chrome.storage.sync.get(['buttonConfig'], function(result) {
+  const buttonConfig = result.buttonConfig || { selectionSearch: true };
+  if (buttonConfig.selectionSearch) {
+    createToolbar(); 
+  } else {
+    console.log('浮动按钮已禁用');
+  }
+});
+
+
 
 // 添加错误处理
 window.addEventListener('error', function(event) {

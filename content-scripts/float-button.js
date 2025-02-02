@@ -306,4 +306,12 @@ function getSelectedSites() {
 }
 
 // 初始化
-createFloatButton(); 
+// 获取按钮配置
+chrome.storage.sync.get(['buttonConfig'], function(result) {
+  const buttonConfig = result.buttonConfig || { floatButton: true };
+  if (buttonConfig.floatButton) {
+    createFloatButton();
+  } else {
+    console.log('浮动按钮已禁用');
+  }
+});

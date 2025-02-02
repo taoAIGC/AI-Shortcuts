@@ -273,4 +273,14 @@ function initSearchEngineToolbar() {
 }
 
 // 启动初始化
-initSearchEngineToolbar(); 
+
+chrome.storage.sync.get(['buttonConfig'], function(result) {
+  const buttonConfig = result.buttonConfig || { searchEngine: true };
+  if (buttonConfig.searchEngine) {
+    initSearchEngineToolbar();;
+  } else {
+    console.log('浮动按钮已禁用');
+  }
+});
+
+

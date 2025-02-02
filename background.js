@@ -53,7 +53,7 @@ chrome.declarativeNetRequest.onRuleMatchedDebug.addListener(
 chrome.runtime.onInstalled.addListener(async (details) => {
   try {
     // 获取当前存储的数据
-    const { sites, favoriteSites } = await chrome.storage.sync.get(['sites', 'favoriteSites']);
+    const { sites, favoriteSites, buttonConfig } = await chrome.storage.sync.get(['sites', 'favoriteSites', 'buttonConfig']);
     
     // 处理 sites 数据
     console.log('开始与原始sites合并:', sites);
@@ -87,6 +87,21 @@ chrome.runtime.onInstalled.addListener(async (details) => {
         favoriteSites: defaultFavoriteSites 
       });
       console.log('已初始化 favoriteSites:', defaultFavoriteSites);
+    }
+
+    // 处理 buttonConfig 数据
+    if (buttonConfig) {
+      // 如果已有配置，合并配置
+      const mergedButtonConfig = {
+        ...self.buttonConfig,  // 使用默认配置作为基础
+        ...buttonConfig       // 覆盖已有的用户配置
+      };
+      await chrome.storage.sync.set({ buttonConfig: mergedButtonConfig });
+      console.log('已合并更新 buttonConfig:', mergedButtonConfig);
+    } else {
+      // 如果没有配置，使用默认配置
+      await chrome.storage.sync.set({ buttonConfig: self.buttonConfig });
+      console.log('已初始化 buttonConfig:', self.buttonConfig);
     }
   } catch (error) {
     console.error('初始化失败:', error);
@@ -777,7 +792,7 @@ const siteHandlers = {
               if (!sendButton.disabled) {
                 sendButton.click();
                 console.log('按钮点击成功');
-                return true;
+  return true;
               }
             }
 
@@ -1070,3 +1085,56 @@ chrome.runtime.onInstalled.addListener(async (details) => {
         console.error('初始化失败:', error);
     }
 });
+
+// 创建右键菜单
+async function createContextMenu() {
+  try {
+    // 获取配置
+    const { buttonConfig } = await chrome.storage.sync.get('buttonConfig');
+    
+    // 检查是否启用右键菜单
+    if (buttonConfig && buttonConfig.contextMenu) {
+      // 先移除已存在的菜单（避免重复）
+      await chrome.contextMenus.removeAll();
+      
+      // 创建新菜单
+      chrome.contextMenus.create({
+        id: "searchWithMultiAI",
+        title: chrome.i18n.getMessage("searchWithMultiAI"),
+        contexts: ["selection"]  // 只在选中文本时显示
+      });
+      console.log('右键菜单已创建');
+    } else {
+      // 如果未启用，确保移除菜单
+      await chrome.contextMenus.removeAll();
+      console.log('右键菜单已移除');
+    }
+  } catch (error) {
+    console.error('创建右键菜单失败:', error);
+  }
+}
+
+// 监听存储变化，当配置更改时更新右键菜单
+chrome.storage.onChanged.addListener((changes, namespace) => {
+  if (namespace === 'sync' && changes.buttonConfig) {
+    createContextMenu();
+  }
+});
+
+// 在扩展安装/更新时初始化右键菜单
+chrome.runtime.onInstalled.addListener(createContextMenu);
+
+// 在每次页面加载时检查并创建右键菜单
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.status === 'complete') {
+    createContextMenu();
+  }
+});
+
+// 监听扩展卸载事件
+chrome.runtime.setUninstallURL('https://wenjuan.feishu.cn/m/cfm?t=sTFPGe4oetOi-9m3a', () => {
+  if (chrome.runtime.lastError) {
+    console.error('设置卸载 URL 失败:', chrome.runtime.lastError);
+  }
+});
+

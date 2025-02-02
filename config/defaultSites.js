@@ -272,6 +272,15 @@ const defaultModes = {
 
 
 
+// 默认入口配置
+const buttonConfig = {
+  floatButton: true,
+  selectionSearch: true,
+  contextMenu: true,
+  searchEngine: true
+};
+
+
 // Service Worker环境
 if (typeof window === 'undefined') {
   const language = navigator.language.toLowerCase();
@@ -284,6 +293,7 @@ if (typeof window === 'undefined') {
 
 
   self.defaultFavoriteSites = defaultFavoriteSites;
+  self.buttonConfig = buttonConfig;
 }
 // 浏览器环境
 else {
@@ -295,6 +305,8 @@ else {
     window.defaultSites = defaultSites_EN;
   }
   window.defaultFavoriteSites = defaultFavoriteSites;
+  window.buttonConfig = buttonConfig;
   
 
 } 
+

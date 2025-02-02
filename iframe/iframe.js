@@ -66,18 +66,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 // 处理 iframe 的创建和加载
 async function createIframes(query, sites) {
-  // 直接从 storage 获取站点配置
+    // 直接从 storage 获取站点配置
   const enabledSites = sites;
-  
+    
   console.log('过滤后的站点:', enabledSites);
-
-  // 获取容器元素
-  const container = document.getElementById('iframes-container');
-  if (!container) {
-    console.error('未找到 iframes 容器');
-    return;
-  }
-
+    
+    // 获取容器元素
+    const container = document.getElementById('iframes-container');
+    if (!container) {
+      console.error('未找到 iframes 容器');
+      return;
+    }
+    
   try {
     if (query) {
       
@@ -102,10 +102,10 @@ async function createIframes(query, sites) {
         }
       } else {
         url = site.supportUrlQuery 
-          ? site.url.replace('{query}', encodeURIComponent(query))
-          : site.url;
+        ? site.url.replace('{query}', encodeURIComponent(query))
+        : site.url;
       }
-
+        
       console.log("即将开始调用创建单个 iframe",site.name, url)
       createSingleIframe(site.name, url, container, query);
     });
@@ -329,13 +329,13 @@ function createSingleIframe(siteName, url, container, query) {
   iframe.setAttribute('sec-ch-ua-mobile', '?0');
   iframe.setAttribute('sec-ch-ua-platform', '"Macintosh"');
   
-
+  
   // 组装元素
   iframeContainer.appendChild(header);
   iframeContainer.appendChild(iframe);
   container.appendChild(iframeContainer);
   
-  // 添加按钮事件处理   
+  // 添加按钮事件处理
   const closeBtn = header.querySelector('.close-btn');
   
   closeBtn.onclick = () => {
@@ -350,7 +350,7 @@ function createSingleIframe(siteName, url, container, query) {
     });
     
   };
-  
+
   iframe.onload = () => {
     // 只有当有查询内容时才执行处理
     if (!query) {

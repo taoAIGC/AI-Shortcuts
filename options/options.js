@@ -1,4 +1,5 @@
 let sites = [];
+let currentButtonConfig = null;
 console.log('系统默认站点设置:', defaultSites);
 
 
@@ -8,6 +9,12 @@ function loadConfig() {
     sites = data.sites || window.defaultSites;
     console.log('加载的sites:', sites);
     initializeSiteConfigs();
+  });
+
+  chrome.storage.sync.get('buttonConfig', function(data) {
+    currentButtonConfig = data.buttonConfig || window.defaultButtonConfig;
+    console.log('加载的buttonConfig:', currentButtonConfig);
+    initializeButtonConfigs();
   });
 }
 
@@ -90,6 +97,75 @@ function showMessage(message, isError = false) {
   }, 3000);
 }
 
+// 初始化快捷入口配置
+async function initializeButtonConfigs() {
+  try {
+    // 获取存储的按钮配置
+    let { buttonConfig } = await chrome.storage.sync.get(['buttonConfig']);
+    let currentConfig = buttonConfig || {
+      floatButton: true,
+      selectionSearch: true,
+      contextMenu: true,
+      searchEngine: true
+    };
+
+    console.log('初始配置:', currentConfig);
+
+    // 配置项定义
+    const configItems = [
+      { id: 'floatButtonSwitch', configKey: 'floatButton', name: '悬浮按钮' },
+      { id: 'selectionSearchSwitch', configKey: 'selectionSearch', name: '划词搜索' },
+      { id: 'contextMenuSwitch', configKey: 'contextMenu', name: '右键菜单' },
+      { id: 'searchEngineSwitch', configKey: 'searchEngine', name: '搜索引擎' }
+    ];
+
+    const buttonContainer = document.getElementById('buttonSiteConfigs');
+    if (!buttonContainer) return;
+    
+    buttonContainer.innerHTML = '';
+
+    configItems.forEach(item => {
+      const configDiv = document.createElement('div');
+      configDiv.className = 'site-config';
+      configDiv.innerHTML = `
+        <div class="site-header">
+          <label class="switch">
+            <input type="checkbox" id="${item.id}"
+              ${currentConfig[item.configKey] ? 'checked' : ''}>
+            <span class="slider round"></span>
+          </label>
+          <span class="site-name-display">${item.name}</span>
+        </div>
+      `;
+      buttonContainer.appendChild(configDiv);
+
+      const switchElement = configDiv.querySelector(`#${item.id}`);
+      switchElement.addEventListener('change', async (e) => {
+        // 每次更改前先获取最新的配置
+        const { buttonConfig: latestConfig } = await chrome.storage.sync.get(['buttonConfig']);
+        const updatedConfig = {
+          ...(latestConfig || currentConfig),  // 使用最新的配置作为基础
+          [item.configKey]: e.target.checked
+        };
+        
+        await chrome.storage.sync.set({ buttonConfig: updatedConfig });
+        // 更新当前配置
+        currentConfig = updatedConfig;
+        console.log(`已更新${item.name}配置:`, updatedConfig);
+        if (chrome.runtime.lastError) {
+          showToast(chrome.i18n.getMessage("saveFailed", [chrome.runtime.lastError.message]));
+          return;
+        }
+        showToast(chrome.i18n.getMessage("saveSuccess"));
+        
+      });
+    });
+
+  } catch (error) {
+    console.error('初始化按钮配置失败:', error);
+  }
+}
+
 async function initializeSiteConfigs() {
   try {
     // 1. 获取存储的站点配置
@@ -101,8 +177,6 @@ async function initializeSiteConfigs() {
     const standaloneSites = visibleSites.filter(site => !site.supportIframe);
     const collectionSites = visibleSites.filter(site => site.supportIframe);
     
-    console.log('独立模式站点:', standaloneSites);
-    console.log('合集模式站点:', collectionSites);
 
     // 3. 获取两个容器
     const standaloneContainer = document.getElementById('standaloneSiteConfigs');
@@ -196,3 +270,9 @@ async function initializeSiteConfigs() {
     showToast('加载配置失败');
   }
 } 
+
+// 在页面加载时初始化
+document.addEventListener('DOMContentLoaded', function() {
+  initializeI18n();
+  loadConfig();
+}); 

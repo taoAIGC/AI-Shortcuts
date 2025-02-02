@@ -79,5 +79,9 @@
   "collectionModeTitle": {
     "message": "Collection Mode",
     "description": "Title for collection mode section"
+  },
+  "configButtonTitle": {
+    "message": "Shortcut Entry Configuration",
+    "description": "Title for shortcut entry configuration"
   }
 } 
