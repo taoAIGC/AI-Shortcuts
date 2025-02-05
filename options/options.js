@@ -113,10 +113,10 @@ async function initializeButtonConfigs() {
 
     // 配置项定义
     const configItems = [
-      { id: 'floatButtonSwitch', configKey: 'floatButton', name: '悬浮按钮' },
-      { id: 'selectionSearchSwitch', configKey: 'selectionSearch', name: '划词搜索' },
-      { id: 'contextMenuSwitch', configKey: 'contextMenu', name: '右键菜单' },
-      { id: 'searchEngineSwitch', configKey: 'searchEngine', name: '搜索引擎' }
+      { id: 'floatButtonSwitch', configKey: 'floatButton', name: chrome.i18n.getMessage("floatButton") },
+      { id: 'selectionSearchSwitch', configKey: 'selectionSearch', name: chrome.i18n.getMessage("selectionSearch") },
+      { id: 'contextMenuSwitch', configKey: 'contextMenu', name: chrome.i18n.getMessage("contextMenu") },
+      { id: 'searchEngineSwitch', configKey: 'searchEngine', name: chrome.i18n.getMessage("searchEngine") }
     ];
 
     const buttonContainer = document.getElementById('buttonSiteConfigs');

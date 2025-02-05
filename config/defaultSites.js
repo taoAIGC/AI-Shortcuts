@@ -12,7 +12,7 @@ const defaultSites_CN = [
   {
     name: '豆包',
     url: 'https://doubao.com/chat',
-    enabled: true,
+    enabled: false,
     supportUrlQuery: false,
     description: 'By Bytedance',
     hidden: false,
@@ -35,7 +35,7 @@ const defaultSites_CN = [
     supportUrlQuery: true,
     description: '',
     hidden: false,
-    supportIframe: false
+    supportIframe: true
   },
   {
     name: 'ChatGPT',
@@ -91,14 +91,14 @@ const defaultSites_CN = [
     supportUrlQuery: true,
     description: '',
     hidden: false,
-    supportIframe: false  
+    supportIframe: true  
   },
   
   
   {
     name: 'DeepSeek',
     url: 'https://chat.deepseek.com/',
-    enabled: false,
+    enabled: true,
     supportUrlQuery: false,
     description: 'By DeepSeek',
     hidden: false,
@@ -140,7 +140,7 @@ const defaultSites_CN = [
     supportUrlQuery: true,
     description: '',
     hidden: false,
-    supportIframe: false
+    supportIframe: true
   },
   
  
@@ -170,7 +170,7 @@ const defaultSites_CN = [
     supportUrlQuery: true,
     description: 'Bing 搜索',
     hidden: false,
-    supportIframe: false
+    supportIframe: true
   }
   
 ];

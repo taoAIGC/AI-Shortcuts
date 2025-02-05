@@ -301,7 +301,15 @@ function createSingleIframe(siteName, url, container, query) {
       document.getElementById('searchInput').focus();
     }
   }, true);
-
+  // 如果参数为空,只使用 url 的 host 部分
+  if (!query) {
+    try {
+      const urlObj = new URL(url);
+      url = 'https://' + urlObj.hostname;
+    } catch (e) {
+      console.error('URL解析失败:', url);
+    }
+  }
   iframe.src = url;
 
   // 在 iframe 加载完成后，将页面滚动回顶部

@@ -78,5 +78,21 @@
   "configButtonTitle": {
     "message": "快捷入口配置",
     "description": "入口配置标题"
+  },
+  "floatButton": {
+    "message": "悬浮按钮",
+    "description": "悬浮按钮的名称"
+  },
+  "selectionSearch": {
+    "message": "划词搜索",
+    "description": "划词搜索的名称"
+  },
+  "contextMenu": {
+    "message": "右键菜单",
+    "description": "右键菜单的名称"
+  },
+  "searchEngine": {
+    "message": "搜索引擎",
+    "description": "搜索引擎的名称"
   }
 } 

@@ -4,6 +4,33 @@
       "priority": 1,
       "action": {
         "type": "modifyHeaders",
+        "requestHeaders": [
+          {
+            "header": "Sec-Fetch-Dest",
+            "operation": "set",
+            "value": "document"
+          },
+          {
+            "header": "Sec-Fetch-Site",
+            "operation": "set",
+            "value": "same-origin"
+          },
+          {
+            "header": "Sec-Fetch-Mode",
+            "operation": "set",
+            "value": "navigate"
+          },
+          {
+            "header": "Sec-Fetch-User",
+            "operation": "set",
+            "value": "?1"
+          },
+          {
+            "header": "Upgrade-Insecure-Requests",
+            "operation": "set",
+            "value": "1"
+          }
+        ],
         "responseHeaders": [
           {
             "header": "content-security-policy",

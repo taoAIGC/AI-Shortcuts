@@ -17,6 +17,26 @@ chrome.declarativeNetRequest.updateSessionRules({
       "type": "modifyHeaders",
       "responseHeaders": [
         {
+          "header": "Sec-Fetch-Dest",
+          "operation": "set",
+          "value": "document"
+        },
+        {
+          "header": "Sec-Fetch-Site",
+          "operation": "set",
+          "value": "same-origin"
+        },
+        {
+          "header": "Sec-Fetch-Mode",
+          "operation": "set",
+          "value": "navigate"
+        },
+        {
+          "header": "Sec-Fetch-User",
+          "operation": "set",
+          "value": "?1"
+        },
+        {
           "header": "content-security-policy",
           "operation": "remove"
         },

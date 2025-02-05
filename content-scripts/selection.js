@@ -204,15 +204,19 @@ document.addEventListener('mouseup', (e) => {
     const selection = window.getSelection();
     const selectedText = selection.toString().trim();
     
-    console.log('鼠标松开', {
-      hasSelection: !!selection,
-      rangeCount: selection.rangeCount,
-      selectedText: selectedText
-    });
     
     if (selectedText && selection.rangeCount > 0) {
       lastSelectedText = selectedText;
-      updateToolbarPosition(selection);
+      chrome.storage.sync.get(['buttonConfig'], function(result) {
+        const buttonConfig = result.buttonConfig || { selectionSearch: true };
+        if (buttonConfig.selectionSearch) {
+          updateToolbarPosition(selection);
+        } else {
+          console.log('滑词已禁用');
+        }
+      });
+
+      
     }
   }, 10);
 });
@@ -246,7 +250,7 @@ chrome.storage.sync.get(['buttonConfig'], function(result) {
   if (buttonConfig.selectionSearch) {
     createToolbar(); 
   } else {
-    console.log('浮动按钮已禁用');
+    console.log('滑词已禁用');
   }
 });
 
