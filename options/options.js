@@ -1,4 +1,3 @@
-let sites = [];
 let currentButtonConfig = null;
 console.log('系统默认站点设置:', defaultSites);
 
@@ -6,7 +5,7 @@ console.log('系统默认站点设置:', defaultSites);
 // 加载保存的配置
 function loadConfig() {
   chrome.storage.sync.get('sites', function(data) {
-    sites = data.sites || window.defaultSites;
+    const  sites = data.sites || window.defaultSites;
     console.log('加载的sites:', sites);
     initializeSiteConfigs();
   });
@@ -21,24 +20,6 @@ function loadConfig() {
 // 获取翻译文本
 function getMessage(key, substitutions = null) {
   return chrome.i18n.getMessage(key, substitutions);
-}
-
-// 保存配置
-function saveConfig() {
-  chrome.storage.sync.set({ sites: sites }, function() {
-    if (chrome.runtime.lastError) {
-      showToast(chrome.i18n.getMessage("saveFailed", [chrome.runtime.lastError.message]));
-      return;
-    }
-    showToast(chrome.i18n.getMessage("saveSuccess"));
-    
-    // 通知background更新配置
-    chrome.runtime.sendMessage({ 
-      action: 'configUpdated', 
-      sites: sites 
-    });
-
-  });
 }
 
 // 显示吐司提示
@@ -227,33 +208,45 @@ async function initializeSiteConfigs() {
     // 7. 添加切换事件监听器
     document.querySelectorAll('.enable-toggle').forEach(toggle => {
       toggle.addEventListener('change', async function() {
-        const mode = this.getAttribute('data-mode');
-        const index = parseInt(this.getAttribute('data-index'));
-        const siteList = mode === 'standalone' ? standaloneSites : collectionSites;
-        const site = siteList[index];
-        
         try {
-          // 更新站点状态
-          const allSites = [...sites];
-          const siteIndex = allSites.findIndex(s => s.name === site.name);
+          // 获取最新的存储数据
+          const { sites: currentSites } = await chrome.storage.sync.get('sites');
+          const siteName = this.closest('.site-config').querySelector('.site-name-display').textContent;
+          
+          // 直接通过站点名称在完整数组中查找
+          const siteIndex = currentSites.findIndex(s => s.name === siteName);
           if (siteIndex !== -1) {
-            allSites[siteIndex] = {
-              ...allSites[siteIndex],
+            const updatedSites = [...currentSites];
+            updatedSites[siteIndex] = {
+              ...updatedSites[siteIndex],
               enabled: this.checked
             };
-            await chrome.storage.sync.set({ sites: allSites });
-            console.log('保存的站点数组:', allSites);
+            
+            // 保存更新后的配置
+            await new Promise((resolve, reject) => {
+              chrome.storage.sync.set({ sites: updatedSites }, () => {
+                if (chrome.runtime.lastError) {
+                  reject(chrome.runtime.lastError);
+                } else {
+                  resolve();
+                }
+              });
+            });
+            
+            console.log('保存的站点数组:', updatedSites[siteIndex]);
+            
+            // 确保保存完成后再获取
+            const result = await new Promise((resolve) => {
+              chrome.storage.sync.get('sites', resolve);
+            });
+            console.log('获取到的站点数组:', result.sites);
+
             if (chrome.runtime.lastError) {
               showToast(chrome.i18n.getMessage("saveFailed", [chrome.runtime.lastError.message]));
               return;
             }
             showToast(chrome.i18n.getMessage("saveSuccess"));
             
-            // 通知background更新配置
-            chrome.runtime.sendMessage({ 
-              action: 'configUpdated', 
-              sites: allSites 
-            });
 
           }
         } catch (error) {

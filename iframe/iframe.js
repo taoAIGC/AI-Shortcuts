@@ -1,3 +1,4 @@
+
 // 页面加载完成后的初始化
 document.addEventListener('DOMContentLoaded', async function() {
     // 初始化列数选择
@@ -595,76 +596,16 @@ const iframeHandlers = {
 
 // 添加搜索按钮
 document.getElementById('searchButton').addEventListener('click', () => {
-    const query = document.getElementById('searchInput').value.trim();
-    if (query) {
-        // 获取所有 iframe
-        const iframes = document.querySelectorAll('iframe');
-        
-        // 遍历每个 iframe
-        iframes.forEach(iframe => {
-            try {
-                // 从 src 中提取域名
-                const url = new URL(iframe.src);
-                const domain = url.hostname;
-                console.log('当前iframe网站hostname:', domain);
-                
-                // 查找对应的处理函数
-                const handler = iframeHandlers[domain];
-                if (handler) {
-                    console.log(`重新处理 ${domain} iframe`, {
-                        时间: new Date().toISOString(),
-                        query: query
-                    });
-                    // 调用处理函数
-                    handler(iframe, query);
-                }
-            } catch (error) {
-                console.error('处理 iframe 失败:', error);
-            }
-        });
-    }
+  iframeFresh();
 });
 
 // 处理回车键
 document.getElementById('searchInput').addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
-        const query = e.target.value.trim();
-        if (query) {
-            // 触发搜索按钮的active效果
-            const searchButton = document.getElementById('searchButton');
-            searchButton.classList.add('active');
-            
-            // 200ms后移除active效果
-            setTimeout(() => {
-                searchButton.classList.remove('active');
-            }, 200);
-
-            
-            const iframes = document.querySelectorAll('iframe');
+        iframeFresh();
+      
         
-        // 遍历每个 iframe
-        iframes.forEach(iframe => {
-            try {
-                // 从 src 中提取域名
-                const url = new URL(iframe.src);
-                const domain = url.hostname;
-                
-                // 查找对应的处理函数
-                const handler = iframeHandlers[domain];
-                if (handler) {
-                    console.log(`重新处理 ${domain} iframe`, {
-                        时间: new Date().toISOString(),
-                        query: query
-                    });
-                    // 调用处理函数
-                    handler(iframe, query);
-                }
-            } catch (error) {
-                console.error('处理 iframe 失败:', error);
-            }
-        });
-        }
     }
 });
 
@@ -891,6 +832,72 @@ function initializeI18n() {
         }
     });
 }
+
+
+async function iframeFresh() {    
+  const query = document.getElementById('searchInput').value.trim();
+  if (query) {
+      // 触发搜索按钮的active效果
+      const searchButton = document.getElementById('searchButton');
+      searchButton.classList.add('active');
+      
+      // 200ms后移除active效果
+      setTimeout(() => {
+          searchButton.classList.remove('active');
+      }, 200);
+      // 获取所有 iframe
+      const iframes = document.querySelectorAll('iframe');
+          // 从 storage 获取站点配置
+     
+      const { sites = [] } = await chrome.storage.sync.get('sites');
+
+        // 遍历每个 iframe
+      iframes.forEach(iframe => {
+        try {
+            // 从 src 中提取域名
+            const url = new URL(iframe.src);
+            const domain = url.hostname;
+            console.log('当前iframe网站hostname:', domain);
+            // 通过 data-site 属性获取站点名
+            const siteName = iframe.getAttribute('data-site');
+
+            const siteConfig = sites.find(site => site.name === siteName);
+            // 如果站点配置存在并且支持 URL 查询
+            if (siteConfig && siteConfig.supportUrlQuery) {
+                // 获取 URL
+                const url = siteConfig.url;
+                // 根据 URL 和 query 拼接新的 URL
+                const newUrl = url.replace('{query}', encodeURIComponent(query));
+                console.log(`为 ${siteName} iframe 生成新的 URL: ${newUrl}`);
+                // 让 iframe 访问新的 URL
+                iframe.src = newUrl;
+            }
+            else{
+              // 查找对应的处理函数
+              const handler = iframeHandlers[domain];
+              if (handler) {
+                  console.log(`重新处理 ${domain} iframe`, {
+                      时间: new Date().toISOString(),
+                      query: query
+                  });
+                  // 调用处理函数
+                  handler(iframe, query);
+              }
+          }
+        } catch (error) {
+            console.error('处理 iframe 失败:', error);
+        }
+    });
+    
+
+      
+      
+  }
+
+
+}
+
+
 
 // 在页面加载时调用
 document.addEventListener('DOMContentLoaded', initializeI18n);
