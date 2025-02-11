@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "__MSG_appName__",
-  "version": "1.17",
+  "version": "1.18",
   "description": "__MSG_extDescription__",
   "permissions": [
     "storage",
@@ -52,7 +52,9 @@
         "https://claude.ai/*",
         "https://gemini.google.com/*",
         "https://poe.com/*",
-        "https://copilot.microsoft.com/*"
+        "https://copilot.microsoft.com/*",
+        "https://zhida.zhihu.com/*"
+
       ],
       "js": ["lib/jquery-3.7.1.min.js", "iframe/inject.js"],
       "run_at": "document_start",

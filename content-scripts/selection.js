@@ -2,6 +2,7 @@ let toolbar = null;
 let isToolbarVisible = false;
 let lastSelectedText = '';
 let favoriteButton = null;
+let currentSelectedText = '';
 
 
 
@@ -60,18 +61,16 @@ function initializeSiteDropdown() {
     siteItem.textContent = `${site.name}`;
     
     siteItem.addEventListener('click', async () => {
+      if (!currentSelectedText) {
+        console.log('没有有效的选中文本');
+        return;
+      }
 
-      const query = window.getSelection().toString().trim();
-       // 点击后直接打开搜索
-
-        chrome.runtime.sendMessage({
-          action: 'singleSiteSearch',
-          query: query,
-          siteName: site.name
-        }, (response) => {
-          console.log('Message response:', response);  // 打印消息响应
-        });
-
+      chrome.runtime.sendMessage({
+        action: 'singleSiteSearch',
+        query: currentSelectedText,
+        siteName: site.name
+      });
       
       const newFavoriteSite = [{
         name: site.name
@@ -90,7 +89,6 @@ function initializeSiteDropdown() {
   siteSelectButton.addEventListener('click', (e) => {
     e.stopPropagation();
     siteDropdown.classList.toggle('show');
-    console.log('下拉菜单显示状态:', siteDropdown.classList.contains('show'));
   });
 
   // 点击其他地方关闭下拉菜单
@@ -107,19 +105,20 @@ function initializeSiteDropdown() {
   // 点击处理
   favoriteButton.onclick = async (e) => {
     e.stopPropagation();
-    const selectedText = window.getSelection().toString().trim();
-    if (selectedText) {
-      chrome.storage.sync.get('favoriteSites', async function(settings) {
-        if (settings.favoriteSites && settings.favoriteSites.length > 0) {
-          await chrome.runtime.sendMessage({
-            action: 'singleSiteSearch',
-            query: selectedText,
-            siteName: settings.favoriteSites[0].name
-          });
-        }
-      });
+    if (!currentSelectedText) {
+      console.log('没有有效的选中文本');
+      return;
     }
-    console.log("获取选择的文本失败");
+
+    chrome.storage.sync.get('favoriteSites', async function(settings) {
+      if (settings.favoriteSites && settings.favoriteSites.length > 0) {
+        await chrome.runtime.sendMessage({
+          action: 'singleSiteSearch',
+          query: currentSelectedText,
+          siteName: settings.favoriteSites[0].name
+        });
+      }
+    });
   };
   
   // 创建比较按钮
@@ -130,11 +129,16 @@ function initializeSiteDropdown() {
   
   compareButton.onclick = async (e) => {
     e.stopPropagation();
-    const selectedText = window.getSelection().toString().trim();
-    if (selectedText) {
+
+    if (!currentSelectedText) {
+      console.log('没有有效的选中文本');
+      return;
+    }
+
+    if (currentSelectedText) {
       await chrome.runtime.sendMessage({
         action: 'createComparisonPage',
-        query: selectedText
+        query: currentSelectedText
       });
     }
   };
@@ -200,13 +204,20 @@ function updateToolbarPosition(selection) {
 
 // 处理鼠标松开事件
 document.addEventListener('mouseup', (e) => {
+  // 检查点击是否在工具栏内
+  if (toolbar && toolbar.contains(e.target)) {
+    console.log('在工具栏内点击，保持当前选中文本');
+    return;
+  }
+
   setTimeout(() => {
+    
     const selection = window.getSelection();
-    const selectedText = selection.toString().trim();
+    currentSelectedText = selection?.toString().trim() || '';
+    console.log("currentSelectedText", currentSelectedText);
     
-    
-    if (selectedText && selection.rangeCount > 0) {
-      lastSelectedText = selectedText;
+    if (currentSelectedText && selection.rangeCount > 0) {
+      lastSelectedText = currentSelectedText;
       chrome.storage.sync.get(['buttonConfig'], function(result) {
         const buttonConfig = result.buttonConfig || { selectionSearch: true };
         if (buttonConfig.selectionSearch) {
@@ -215,8 +226,6 @@ document.addEventListener('mouseup', (e) => {
           console.log('滑词已禁用');
         }
       });
-
-      
     }
   }, 10);
 });
@@ -228,6 +237,8 @@ document.addEventListener('mousedown', (e) => {
     toolbar.style.display = 'none';
     isToolbarVisible = false;
     lastSelectedText = '';
+    currentSelectedText = '';
+    console.log("清空currentSelectedText");
   }
 });
 

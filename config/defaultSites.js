@@ -18,6 +18,17 @@ const defaultSites_CN = [
     hidden: false,
     supportIframe: true
   },
+
+  {
+    name: '秘塔AI',
+    url: 'https://metaso.cn/',
+    enabled: true,
+    supportUrlQuery: false,
+    description: '擅长学术搜索',
+    hidden: false,
+    supportIframe: true
+  },
+
   {
     name: '文心一言',
     url: 'https://yiyan.baidu.com/chat',
@@ -74,6 +85,15 @@ const defaultSites_CN = [
     hidden: true,
     supportIframe: false
   },
+  {
+    name: '知乎直达',
+    url: 'https://zhida.zhihu.com/',
+    enabled: true,
+    supportUrlQuery: false,
+    description: '知乎直达搜索',
+    hidden: false,
+    supportIframe: true
+  },
   
   {
     name: '小红书',
@@ -105,15 +125,7 @@ const defaultSites_CN = [
     supportIframe: true
   },
 
-  {
-    name: '秘塔AI',
-    url: 'https://metaso.cn/',
-    enabled: true,
-    supportUrlQuery: false,
-    description: '擅长学术搜索',
-    hidden: false,
-    supportIframe: true
-  },
+
 
   {
     name: 'Gemini',

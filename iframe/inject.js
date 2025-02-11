@@ -44,7 +44,7 @@ window.addEventListener('message', async function(event) {
 
     } catch (error) {
       console.error('ChatGPT 消息处理失败:', error);
-    }
+    } 
   }
 
   if (event.data.type === 'KIMI') {
@@ -111,6 +111,72 @@ window.addEventListener('message', async function(event) {
     // 开始尝试点击
     setTimeout(tryClick, 100); 
   }
+
+  if (event.data.type === 'zhihu') {
+    const searchQuery = event.data.query;
+    console.log('收到 zhihu 消息:', searchQuery);
+     // 等待页面加载
+    await new Promise(resolve => setTimeout(resolve, 500));
+          
+
+        
+          
+          
+          const textarea = document.querySelector('textarea');
+          if (!textarea) {
+            console.error('未找到输入框');
+            return;
+          }
+
+          if (textarea) {
+            textarea.focus();
+            textarea.value = searchQuery;
+            // 触发必要的事件
+            textarea.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+
+          
+          // 3. 触发必要的事件
+          const events = ['input', 'change', 'blur', 'focus'];
+          events.forEach(eventName => {
+            textarea.dispatchEvent(new Event(eventName, { bubbles: true }));
+          });
+
+          // 4. 查找并点击发送按钮
+          setTimeout(() => {
+              const enterEvent = new KeyboardEvent('keydown', {
+                bubbles: true,
+                cancelable: true,
+                key: 'Enter',
+                code: 'Enter',
+                keyCode: 13,
+                which: 13,
+                location: 0,
+                repeat: false,
+                isComposing: false
+              });
+              textarea.dispatchEvent(enterEvent);
+              /*
+              // 使用更精确的选择器匹配按钮
+              const sendButton = document.querySelector('div.css-175oi2r.r-1loqt21.r-1otgn73');
+              
+              // 备用选择器：通过组合类名和SVG来定位
+              const altSendButton = document.querySelector('div.css-175oi2r.r-1loqt21.r-1otgn73 svg')?.closest('.css-175oi2r');
+              
+              const buttonToClick = sendButton || altSendButton;
+              
+              if (buttonToClick) {
+                buttonToClick.click();
+                console.log("知乎直达发送按钮点击成功");
+
+              } else {
+                console.log('未找到知乎直达发送按钮，当前按钮结构:', document.querySelector('div.css-175oi2r')?.outerHTML);
+              }*/
+          
+          }, 100);
+    
+  }
+
 // 处理 GEMINI 消息
 if (event.data.type === 'gemini') {
   const searchQuery = event.data.query;
@@ -479,7 +545,7 @@ if (event.data.type === 'deepseek') {
               textarea.dispatchEvent(enterEvent);
               
               resolve();  // 完成所有操作后 resolve
-            }, 1000);
+            }, 500);
           });
         } else {
           console.log('未找到推荐区域');
