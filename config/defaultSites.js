@@ -1,20 +1,11 @@
 // 默认站点配置
 const defaultSites_CN = [
   {
-    name: 'Kimi',
-    url: 'https://kimi.moonshot.cn/',
-    enabled: false,
+    name: 'DeepSeek',
+    url: 'https://chat.deepseek.com/',
+    enabled: true,
     supportUrlQuery: false,
-    description: '',
-    hidden: false,
-    supportIframe: false
-  },
-  {
-    name: '豆包',
-    url: 'https://doubao.com/chat',
-    enabled: false,
-    supportUrlQuery: false,
-    description: 'By Bytedance',
+    description: 'By DeepSeek',
     hidden: false,
     supportIframe: true
   },
@@ -77,6 +68,24 @@ const defaultSites_CN = [
     supportIframe: false
   },
   {
+    name: 'Kimi',
+    url: 'https://kimi.moonshot.cn/',
+    enabled: false,
+    supportUrlQuery: false,
+    description: '',
+    hidden: false,
+    supportIframe: false
+  },
+  {
+    name: '豆包',
+    url: 'https://doubao.com/chat',
+    enabled: false,
+    supportUrlQuery: false,
+    description: 'By Bytedance',
+    hidden: false,
+    supportIframe: true
+  },
+  {
     name: '通义千问',
     url: 'https://tongyi.aliyun.com/qianwen',
     enabled: false,
@@ -115,12 +124,13 @@ const defaultSites_CN = [
   },
   
   
+  
   {
-    name: 'DeepSeek',
-    url: 'https://chat.deepseek.com/',
-    enabled: true,
+    name: 'Grok',
+    url: 'https://grok.com/',
+    enabled: false,
     supportUrlQuery: false,
-    description: 'By DeepSeek',
+    description: 'By Grok',
     hidden: false,
     supportIframe: true
   },
@@ -227,7 +237,15 @@ const defaultSites_EN = [
     hidden: false,
     supportIframe: true
   },
-
+  {
+    name: 'Grok',
+    url: 'https://grok.com/',
+    enabled: false,
+    supportUrlQuery: false,
+    description: 'By Grok',
+    hidden: false,
+    supportIframe: true
+  },
   { 
     name: 'Perplexity', 
     url: 'https://www.perplexity.ai/search?q={query}',

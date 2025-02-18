@@ -572,7 +572,21 @@ const iframeHandlers = {
         console.error('知乎直达 iframe 处理失败:', error);
       }
     },
-
+  'grok.com': async function(iframe, query) { 
+    try {
+      // 等待页面加载
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      console.log('Grok iframe 处理开始');
+      // 向 iframe 发送消息
+      iframe.contentWindow.postMessage({
+        type: 'grok',
+        query: query
+      }, '*');
+      
+    } catch (error) {
+      console.error('Grok iframe 处理失败:', error);
+    }
+  },
   'chat.deepseek.com': async function(iframe, query) {
     try {
       // 等待页面加载

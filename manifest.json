@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "__MSG_appName__",
-  "version": "1.19",
+  "version": "1.20",
   "description": "__MSG_extDescription__",
   "permissions": [
     "storage",
@@ -54,7 +54,8 @@
         "https://gemini.google.com/*",
         "https://poe.com/*",
         "https://copilot.microsoft.com/*",
-        "https://zhida.zhihu.com/*"
+        "https://zhida.zhihu.com/*",
+        "https://grok.com/*"
 
       ],
       "js": ["lib/jquery-3.7.1.min.js", "iframe/inject.js"],

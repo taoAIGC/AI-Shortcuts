@@ -220,6 +220,52 @@ if (event.data.type === 'gemini') {
           }, 100);
   
 }
+if (event.data.type === 'grok') {
+  const searchQuery = event.data.query;
+  console.log('收到 Grok 消息:', searchQuery);
+
+  // 等待页面加载
+  await new Promise(resolve => setTimeout(resolve, 100));
+
+  
+  const textarea = document.querySelector('textarea');
+  if (!textarea) {
+    console.error('未找到输入框');
+    return;
+  }
+
+  if (textarea) {
+    textarea.focus();
+    textarea.value = searchQuery;
+    // 触发必要的事件
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  
+  // 3. 触发必要的事件
+  const events = ['input', 'change', 'blur', 'focus'];
+  events.forEach(eventName => {
+    textarea.dispatchEvent(new Event(eventName, { bubbles: true }));
+  });
+
+  // 4. 发送回车
+  setTimeout(() => {
+    const enterEvent = new KeyboardEvent('keydown', {
+      bubbles: true,
+      cancelable: true,
+      key: 'Enter',
+      code: 'Enter',
+      keyCode: 13,
+      which: 13,
+      location: 0,
+      repeat: false,
+      isComposing: false
+    });
+    textarea.dispatchEvent(enterEvent);
+  }, 100);
+
+}
+
 // 处理 POE 消息
 if (event.data.type === 'poe') {
   const searchQuery = event.data.query;
