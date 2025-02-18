@@ -88,7 +88,7 @@ const defaultSites_CN = [
   {
     name: '知乎直达',
     url: 'https://zhida.zhihu.com/',
-    enabled: true,
+    enabled: false,
     supportUrlQuery: false,
     description: '知乎直达搜索',
     hidden: false,

@@ -1152,7 +1152,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 });
 
 // 监听扩展卸载事件
-chrome.runtime.setUninstallURL('https://wenjuan.feishu.cn/m/cfm?t=sTFPGe4oetOi-9m3a', () => {
+chrome.runtime.setUninstallURL('https://wenjuan.feishu.cn/m?t=sxcO29Fz913i-1ad4', () => {
   if (chrome.runtime.lastError) {
     console.error('设置卸载 URL 失败:', chrome.runtime.lastError);
   }
