@@ -31,6 +31,16 @@ const defaultSites_CN = [
   },
 
   {
+    name: '腾讯元宝',
+    url: 'https://yuanbao.tencent.com/chat/',
+    enabled: true,
+    supportUrlQuery: false,
+    description: 'By Tencent',
+    hidden: false,
+    supportIframe: true
+  },
+
+  {
     name: 'Google',
     url: 'https://www.google.com/search?q={query}',
     enabled: false,

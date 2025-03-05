@@ -15,7 +15,17 @@
             placeholder=""
             autofocus
         >
+        <!-- 
+        <div id="iconContainer">
+            <img id="toggleIcon" src="../icons/down.png" alt="Toggle" />
+        </div>
+        -->
         <button id="searchButton" data-i18n="startCompare">发送</button>
+        <!-- 
+        <select id="analysisDropdown" disabled >
+            <option value="">深度分析</option>
+        </select>
+        -->
         <select id="columnSelect">
             <option value="1" data-i18n="column1">1列</option>
             <option value="2" data-i18n="column2">2列</option>
@@ -41,6 +51,9 @@
     </div>
     <div id="iframes-container">
         <!-- iframes 将被动态插入到这里 -->
+    </div>
+    <div id="queryList" style="display: none;">
+        <!-- 推荐的 query 列表将动态添加到这里 -->
     </div>
     <script type="module" src="iframe.js"></script>
 </body>

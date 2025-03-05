@@ -113,6 +113,17 @@ html {
     margin: 0 10px;
 }
 
+#analysisDropdown  {
+    
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    background: white;
+    margin: 0 10px;
+}
+
+
 #iframes-container[data-columns="1"] {
     grid-template-columns: 1fr;
 }
@@ -291,4 +302,38 @@ html {
 .close-btn:hover {
     opacity: 1;
 }
+
+.query-item {
+    padding: 8px;
+    border: 1px solid #ddd;
+    margin: 5px 0;
+    cursor: pointer;
+}
+
+.query-item:hover {
+    background-color: #f0f0f0; /* 鼠标悬停时的背景色 */
+}
   
+
+#iconContainer {
+    cursor: pointer;            /* 鼠标悬停时显示为手型 */
+}
+
+#toggleIcon {
+    width: 20px;               /* 图标宽度 */
+    height: 20px;              /* 图标高度*/
+}
+
+#queryList {
+    position: fixed;
+    top: 55px;
+    left: 0;
+    width: 800px;
+    max-height: 300px;
+    overflow-y: auto;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 0 0 4px 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    z-index: 1000;
+}

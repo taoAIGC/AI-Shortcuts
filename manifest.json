@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "__MSG_appName__",
-  "version": "1.20",
+  "version": "1.21",
   "description": "__MSG_extDescription__",
   "permissions": [
     "storage",
@@ -55,7 +55,8 @@
         "https://poe.com/*",
         "https://copilot.microsoft.com/*",
         "https://zhida.zhihu.com/*",
-        "https://grok.com/*"
+        "https://grok.com/*",
+        "https://yuanbao.tencent.com/*"
 
       ],
       "js": ["lib/jquery-3.7.1.min.js", "iframe/inject.js"],

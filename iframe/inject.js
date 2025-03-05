@@ -48,68 +48,43 @@ window.addEventListener('message', async function(event) {
   }
 
   if (event.data.type === 'KIMI') {
-    const searchQuery = event.data.query;
-    
-    const editableDiv = document.querySelector('.editorContentEditable___FZJd9');
+    let searchQuery = event.data.query;
+    searchQuery = '<span data-lexical-text="true">'+searchQuery+'</span>';
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    const editableDiv = document.querySelector('[contenteditable="true"]');
           if (!editableDiv) {
             console.error('未找到输入框');
             return;
           }
-          console.log('找到输入框editableDiv:', editableDiv);
-          const p = document.createElement('p');
-          const span = document.createElement('span');
-          span.setAttribute('data-lexical-text', 'true');
-          span.textContent = searchQuery;
-          p.appendChild(span);
-          
-          // 清空并插入新内容
-          editableDiv.innerHTML = '';
-          editableDiv.appendChild(p);
-          console.log('插入新内容:', editableDiv);
 
-          // 触发输入事件
-          const inputEvent = new InputEvent('input', {
-            bubbles: true,
-            cancelable: true,
-            inputType: 'insertText',
-            data: searchQuery
-          });
-          editableDiv.dispatchEvent(inputEvent);
+          // 1. 先聚焦输入框
+          editableDiv.focus();
           
-          // 触发变更事件
-          editableDiv.dispatchEvent(new Event('change', { bubbles: true }));
-    // 4. 延长等待时间，并多次尝试点击
-    const maxAttempts = 5;
-    let attempts = 0;
+          // 2. 修改 p 标签的文本内容
+          const pElement = editableDiv.querySelector('p');
+          if (pElement) {
+            pElement.innerText = searchQuery;
+          } else {
+            editableDiv.innerHTML = '<p></p>';
+            editableDiv.querySelector('p').innerText = searchQuery;
+          }
 
-    const tryClick = () => {
-      const sendButton = document.querySelector('button[data-testid="msh-chatinput-send-button"]');
-      console.log('尝试点击次数:', attempts + 1);
-      
-      if (sendButton) {
-        console.log('按钮状态:', {
-          disabled: sendButton.disabled,
-          'aria-disabled': sendButton.getAttribute('aria-disabled'),
-          className: sendButton.className
+        // 3. 触发必要的事件
+        const events = ['input', 'change', 'blur', 'focus'];
+        events.forEach(eventName => {
+          editableDiv.dispatchEvent(new Event(eventName, { bubbles: true }));
         });
-        
-        if (!sendButton.disabled) {
-          sendButton.click();
-          console.log('按钮点击成功');
-          return true;
-        }
-      }
 
-      attempts++;
-      if (attempts < maxAttempts) {
-        setTimeout(tryClick, 200); // 每200ms尝试一次
-      } else {
-        console.error('达到最大尝试次数，按钮仍然被禁用');
-      }
-    };
-
-    // 开始尝试点击
-    setTimeout(tryClick, 100); 
+        // 4. 使用更精确的选择器找到发送按钮并点击
+        setTimeout(() => {
+          const sendButton = document.querySelector('button[type="button"][aria-label="Send Message"]');
+          if (sendButton && !sendButton.disabled) {
+            sendButton.click();
+          } else {
+            console.error('未找到发送按钮或按钮被禁用');
+          }
+        }, 100);
   }
 
   if (event.data.type === 'zhihu') {
@@ -263,6 +238,58 @@ if (event.data.type === 'grok') {
     });
     textarea.dispatchEvent(enterEvent);
   }, 100);
+
+}
+// 处理元宝 消息
+if (event.data.type === 'yuanbao') {
+  const searchQuery = event.data.query;
+  console.log('收到 Yuanbao 消息:', searchQuery);
+
+  // 等待页面加载
+  await new Promise(resolve => setTimeout(resolve, 100));
+
+
+  const editableDiv = document.querySelector('[contenteditable="true"]');
+          if (!editableDiv) {
+            console.error('未找到输入框');
+            return;
+          }
+
+          // 1. 先聚焦输入框
+          editableDiv.focus();
+          
+          // 2. 修改 p 标签的文本内容
+          const pElement = editableDiv.querySelector('p');
+          if (pElement) {
+            console.log('找到 p 元素:', pElement);  
+            pElement.innerText = searchQuery;
+          } else {
+            editableDiv.innerHTML = '<p></p>';
+            editableDiv.querySelector('p').innerText = searchQuery;
+          }
+          
+          // 3. 触发必要的事件
+          const events = ['input', 'change', 'blur', 'focus'];
+          events.forEach(eventName => {
+            editableDiv.dispatchEvent(new Event(eventName, { bubbles: true }));
+          });
+
+  // 4. 发送回车
+  setTimeout(() => {
+    const enterEvent = new KeyboardEvent('keydown', {
+      bubbles: true,
+      cancelable: true,
+      key: 'Enter',
+      code: 'Enter',
+      keyCode: 13,
+      which: 13,
+      location: 0,
+      repeat: false,
+      isComposing: false
+    });
+    editableDiv.dispatchEvent(enterEvent);
+  }, 100);
+
 
 }
 

@@ -1,4 +1,3 @@
-
 // 页面加载完成后的初始化
 document.addEventListener('DOMContentLoaded', async function() {
     // 初始化列数选择
@@ -622,22 +621,46 @@ const iframeHandlers = {
     }
   },
 
+  'yuanbao.tencent.com': async function(iframe, query) {
+    try {
+      // 等待页面加载
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      console.log('腾讯元宝 iframe 处理开始');
+      // 向 iframe 发送消息
+      iframe.contentWindow.postMessage({
+        type: 'yuanbao',
+        query: query
+      }, '*');
+    } catch (error) {
+      console.error('腾讯元宝 iframe 处理失败:', error);
+    }
+  } 
+
 };
 
 // 添加搜索按钮
 document.getElementById('searchButton').addEventListener('click', () => {
-  iframeFresh();
+  const query = document.getElementById('searchInput').value.trim();
+  if (query) {
+    shanshuo();
+    iframeFresh(query);
+    generateRecommendedQuery(query);
+  }
 });
 
 // 处理回车键
 document.getElementById('searchInput').addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
-        iframeFresh();
-      
+        const query = document.getElementById('searchInput').value.trim();
+        if (query) {
+            shanshuo();
+            iframeFresh(query);
+            generateRecommendedQuery(query);
+        }
         
     }
-});
+});   
 
 // 在 DOMContentLoaded 时设置按钮文案
 document.addEventListener('DOMContentLoaded', () => {
@@ -864,17 +887,117 @@ function initializeI18n() {
 }
 
 
-async function iframeFresh() {    
-  const query = document.getElementById('searchInput').value.trim();
-  if (query) {
-      // 触发搜索按钮的active效果
-      const searchButton = document.getElementById('searchButton');
+async function generateRecommendedQuery(query) {
+  return;
+
+  console.log('生成推荐查询语句', query);
+    // 定义推荐查询语句列表
+    const recommendedQueries = [
+
+
+      {
+        name: '风险分析',
+        query: '导致失败的原因:「' + query + '」'
+      },
+      {
+        name: '解决方案', 
+        query: '如何解决问题:「' + query + '」'
+      },
+      {
+        name: '相关知识',
+        query: '相关知识点:「' + query + '」'
+      },
+      {
+        name: '最佳实践',
+        query: '最佳实践:「' + query + '」'
+      }
+    ];
+    // 调用接口分析用户的 searchInput 中的文本，生成推荐的查询语句
+      /*
+      const url = 'https://cloud.infini-ai.com/maas/v1/chat/completions';
+      const options = {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', Authorization: 'Bearer sk-daskic33qjbwsu7w'},
+        body: '{"model":"deepseek-r1","messages":[{"role":"user","content":"你是谁"}]}'
+      };
+
+      // 调用接口分析用户的 searchInput 中的文本，生成推荐的查询语句
+      try {
+        const response = await fetch(url, options);
+        const data = await response.json();
+        console.log(data);
+      } catch (error) {
+        console.error(error);
+      }
+    */
+   /*
+  const dropdown = document.getElementById('analysisDropdown');
+  
+  recommendedQueries.forEach(query => {
+    const option = document.createElement('option');
+    option.value = query.query;
+    option.textContent = query.name;
+    dropdown.appendChild(option);
+  });
+  const analysisDropdown = document.getElementById('analysisDropdown');
+    analysisDropdown.disabled = false; // 移除 disabled 属性
+
+  dropdown.addEventListener('change', () => {
+    const selectedQuery = dropdown.value;
+    iframeFresh(selectedQuery);
+  });
+  */
+  
+  const queryList = document.getElementById('queryList');
+  queryList.innerHTML = ''; // 清空之前的内容
+
+  recommendedQueries.forEach(recommendedQuery => {
+      const queryItem = document.createElement('div');
+      queryItem.textContent = recommendedQuery.name; // 使用 name 作为文案
+      queryItem.classList.add('query-item'); // 添加样式类
+      queryItem.addEventListener('click', () => {
+          iframeFresh(recommendedQuery.query); // 执行 iframeFresh 函数
+          queryList.style.display = 'none'; // 隐藏查询列表
+      });
+      queryList.appendChild(queryItem);
+  });
+
+  // 切换图标
+  const toggleIcon = document.getElementById('toggleIcon');
+  toggleIcon.src = '../icons/up.png'; // 切换为 up.png
+  queryList.style.display = 'block'; // 显示推荐查询列表
+  
+}
+
+
+// 添加图标点击事件
+document.getElementById('toggleIcon').addEventListener('click', () => {
+  const queryList = document.getElementById('queryList');
+  if (queryList.style.display === 'none') {
+      queryList.style.display = 'block'; // 显示查询列表
+  } else {
+      queryList.style.display = 'none'; // 隐藏查询列表
+      document.getElementById('toggleIcon').src = '../icons/down.png'; // 切换回 down.png
+  }
+});
+
+
+// 创建闪烁效果函数
+function shanshuo() {
+  // 获取搜索按钮元素
+  const searchButton = document.getElementById('searchButton');
       searchButton.classList.add('active');
       
       // 200ms后移除active效果
       setTimeout(() => {
           searchButton.classList.remove('active');
       }, 200);
+}
+
+
+
+async function iframeFresh(query) {    
+        
       // 获取所有 iframe
       const iframes = document.querySelectorAll('iframe');
           // 从 storage 获取站点配置
@@ -922,7 +1045,7 @@ async function iframeFresh() {
 
       
       
-  }
+  
 
 
 }
