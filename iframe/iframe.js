@@ -644,7 +644,7 @@ document.getElementById('searchButton').addEventListener('click', () => {
   if (query) {
     shanshuo();
     iframeFresh(query);
-    generateRecommendedQuery(query);
+    //generateRecommendedQuery(query);
   }
 });
 
@@ -656,7 +656,7 @@ document.getElementById('searchInput').addEventListener('keydown', (e) => {
         if (query) {
             shanshuo();
             iframeFresh(query);
-            generateRecommendedQuery(query);
+            //generateRecommendedQuery(query);
         }
         
     }
@@ -888,7 +888,7 @@ function initializeI18n() {
 
 
 async function generateRecommendedQuery(query) {
-  return;
+  //return;
 
   console.log('生成推荐查询语句', query);
     // 定义推荐查询语句列表
@@ -909,7 +909,7 @@ async function generateRecommendedQuery(query) {
       },
       {
         name: '最佳实践',
-        query: '最佳实践:「' + query + '」'
+        query: '写一份这件事做成功的回顾报告:「' + query + '」'
       }
     ];
     // 调用接口分析用户的 searchInput 中的文本，生成推荐的查询语句

@@ -57,6 +57,7 @@ window.addEventListener('message', async function(event) {
             console.error('未找到输入框');
             return;
           }
+          console.log('找到输入框:', editableDiv);
 
           // 1. 先聚焦输入框
           editableDiv.focus();
@@ -76,14 +77,23 @@ window.addEventListener('message', async function(event) {
           editableDiv.dispatchEvent(new Event(eventName, { bubbles: true }));
         });
 
-        // 4. 使用更精确的选择器找到发送按钮并点击
+        // 4. 发送回车
         setTimeout(() => {
-          const sendButton = document.querySelector('button[type="button"][aria-label="Send Message"]');
-          if (sendButton && !sendButton.disabled) {
-            sendButton.click();
-          } else {
-            console.error('未找到发送按钮或按钮被禁用');
-          }
+          console.log('准备发送回车事件');
+          const enterEvent = new KeyboardEvent('keydown', {
+            bubbles: true,
+            cancelable: true,
+            key: 'Enter',
+            code: 'Enter',
+            keyCode: 13,
+            which: 13,
+            location: 0,
+            repeat: false,
+            isComposing: false
+          });
+          console.log('创建回车事件对象:', enterEvent);
+          editableDiv.dispatchEvent(enterEvent);
+          console.log('已发送回车事件');
         }, 100);
   }
 
@@ -164,6 +174,7 @@ if (event.data.type === 'gemini') {
             console.error('未找到输入框');
             return;
           }
+          console.log('找到输入框:', editableDiv);
 
           // 1. 先聚焦输入框
           editableDiv.focus();
@@ -183,16 +194,27 @@ if (event.data.type === 'gemini') {
             editableDiv.dispatchEvent(new Event(eventName, { bubbles: true }));
           });
 
-          // 4. 查找并点击发送按钮
+          // 4. 发送回车
           setTimeout(() => {
-            // Gemini 的发送按钮通常有特定的 aria-label
-            const sendButton = document.querySelector('button[aria-label="发送消息"]');
-            if (sendButton && !sendButton.disabled) {
-              sendButton.click();
-            } else {
-              console.error('未找到发送按钮或按钮被禁用');
-            }
+            console.log('准备发送回车事件');
+            const enterEvent = new KeyboardEvent('keydown', {
+              bubbles: true,
+              cancelable: true,
+              key: 'Enter',
+              code: 'Enter',
+              keyCode: 13,
+              which: 13,
+              location: 0,
+              repeat: false,
+              isComposing: false
+            });
+            console.log('创建回车事件对象:', enterEvent);
+            editableDiv.dispatchEvent(enterEvent);
+            console.log('已发送回车事件');
           }, 100);
+
+
+
   
 }
 if (event.data.type === 'grok') {
@@ -254,6 +276,7 @@ if (event.data.type === 'yuanbao') {
             console.error('未找到输入框');
             return;
           }
+          console.log('找到输入框:', editableDiv);
 
           // 1. 先聚焦输入框
           editableDiv.focus();
@@ -274,21 +297,47 @@ if (event.data.type === 'yuanbao') {
             editableDiv.dispatchEvent(new Event(eventName, { bubbles: true }));
           });
 
-  // 4. 发送回车
-  setTimeout(() => {
-    const enterEvent = new KeyboardEvent('keydown', {
-      bubbles: true,
-      cancelable: true,
-      key: 'Enter',
-      code: 'Enter',
-      keyCode: 13,
-      which: 13,
-      location: 0,
-      repeat: false,
-      isComposing: false
-    });
-    editableDiv.dispatchEvent(enterEvent);
-  }, 100);
+          // 4. 发送回车
+          setTimeout(() => {
+            console.log('准备发送消息');
+            
+            // 先触发回车事件
+            const enterEvent = new KeyboardEvent('keydown', {
+              bubbles: true,
+              cancelable: true,
+              key: 'Enter',
+              code: 'Enter',
+              keyCode: 13,
+              which: 13,
+              location: 0,
+              repeat: false,
+              isComposing: false
+            });
+            editableDiv.dispatchEvent(enterEvent);
+            
+            // 等待一小段时间后尝试点击发送按钮
+            setTimeout(() => {
+              // 尝试多种可能的发送按钮选择器
+              const sendButtonSelectors = [
+                'button[type="button"][aria-label="Send Message"]',
+                'button[aria-label="Send"]',
+                'button[data-testid="send-button"]',
+                'button:has(svg)'
+              ];
+              
+              for (const selector of sendButtonSelectors) {
+                const sendButton = document.querySelector(selector);
+                if (sendButton && !sendButton.disabled) {
+                  console.log('找到发送按钮:', selector);
+                  sendButton.click();
+                  return;
+                }
+              }
+              
+              console.log('未找到可用的发送按钮');
+            }, 200);
+            
+          }, 100);
 
 
 }
@@ -342,6 +391,7 @@ if (event.data.type === 'claude') {
             console.error('未找到输入框');
             return;
           }
+          console.log('找到输入框:', editableDiv);
 
           // 1. 先聚焦输入框
           editableDiv.focus();
@@ -361,15 +411,48 @@ if (event.data.type === 'claude') {
             editableDiv.dispatchEvent(new Event(eventName, { bubbles: true }));
           });
 
-          // 4. 使用更精确的选择器找到发送按钮并点击
+          // 4. 发送回车
           setTimeout(() => {
-            const sendButton = document.querySelector('button[type="button"][aria-label="Send Message"]');
-            if (sendButton && !sendButton.disabled) {
-              sendButton.click();
-            } else {
-              console.error('未找到发送按钮或按钮被禁用');
-            }
+            console.log('准备发送消息');
+            
+            // 先触发回车事件
+            const enterEvent = new KeyboardEvent('keydown', {
+              bubbles: true,
+              cancelable: true,
+              key: 'Enter',
+              code: 'Enter',
+              keyCode: 13,
+              which: 13,
+              location: 0,
+              repeat: false,
+              isComposing: false
+            });
+            editableDiv.dispatchEvent(enterEvent);
+            
+            // 等待一小段时间后尝试点击发送按钮
+            setTimeout(() => {
+              // 尝试多种可能的发送按钮选择器
+              const sendButtonSelectors = [
+                'button[type="button"][aria-label="Send Message"]',
+                'button[aria-label="Send"]',
+                'button[data-testid="send-button"]',
+                'button:has(svg)'
+              ];
+              
+              for (const selector of sendButtonSelectors) {
+                const sendButton = document.querySelector(selector);
+                if (sendButton && !sendButton.disabled) {
+                  console.log('找到发送按钮:', selector);
+                  sendButton.click();
+                  return;
+                }
+              }
+              
+              console.log('未找到可用的发送按钮');
+            }, 200);
+            
           }, 100);
+
 }
 // 处理 deepseek 消息
 if (event.data.type === 'deepseek') {
@@ -397,7 +480,7 @@ if (event.data.type === 'deepseek') {
     textarea.dispatchEvent(new Event(eventName, { bubbles: true }));
   });
 
-  // 4. 查找并点击发送按钮
+  /*/ 4. 查找并点击发送按钮
   setTimeout(() => {
     const sendButton = document.querySelector('.f286936b');
     if (sendButton && !sendButton.disabled) {
@@ -406,6 +489,22 @@ if (event.data.type === 'deepseek') {
     } else {
       console.error('deepseek未找到发送按钮或按钮被禁用');
     }
+  }, 100);*/
+
+   // 4. 发送回车
+   setTimeout(() => {
+    const enterEvent = new KeyboardEvent('keydown', {
+      bubbles: true,
+      cancelable: true,
+      key: 'Enter',
+      code: 'Enter',
+      keyCode: 13,
+      which: 13,
+      location: 0,
+      repeat: false,
+      isComposing: false
+    });
+    textarea.dispatchEvent(enterEvent);
   }, 100);
   
 }
