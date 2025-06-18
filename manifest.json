@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "__MSG_appName__",
-  "version": "1.21",
+  "version": "1.23",
   "description": "__MSG_extDescription__",
   "permissions": [
     "storage",
@@ -44,7 +44,7 @@
         "https://kimi.moonshot.cn/*",
         "https://chatgpt.com/*",
         "https://nanoai.live/*",
-        "https://tongyi.aliyun.com/*",
+        "https://tongyi.com/*",
         "https://www.doubao.com/*",
         "https://doubao.com/*",
         "https://yiyan.baidu.com/*",
@@ -56,7 +56,8 @@
         "https://copilot.microsoft.com/*",
         "https://zhida.zhihu.com/*",
         "https://grok.com/*",
-        "https://yuanbao.tencent.com/*"
+        "https://yuanbao.tencent.com/*",
+        "https://www.wenxiaobai.com/*"
 
       ],
       "js": ["lib/jquery-3.7.1.min.js", "iframe/inject.js"],

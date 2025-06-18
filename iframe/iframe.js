@@ -605,10 +605,7 @@ const iframeHandlers = {
     try {
       // 等待页面加载
       await new Promise(resolve => setTimeout(resolve, 2000));
-      console.log('秘塔 iframe 处理开始', {
-        时间: new Date().toISOString(),
-        调用栈: new Error().stack
-      });
+      console.log('秘塔 iframe 处理开始');
       // 向 iframe 发送消息
       iframe.contentWindow.postMessage({
         type: 'metaso',
@@ -633,6 +630,111 @@ const iframeHandlers = {
       }, '*');
     } catch (error) {
       console.error('腾讯元宝 iframe 处理失败:', error);
+    }
+  },
+'tongyi.com': async function(iframe, query) {
+    const maxRetries = 3;
+    let retryCount = 0;
+    
+    const trySendMessage = async () => {
+        try {
+            // 检查 iframe 是否可访问
+            if (!iframe || !iframe.contentWindow) {
+                throw new Error('iframe 不可访问');
+            }
+
+            // 等待 iframe 加载完成
+            await new Promise((resolve, reject) => {
+                const checkReady = () => {
+                    try {
+                        // 尝试访问 contentWindow
+                        if (iframe.contentWindow) {
+                            resolve();
+                        } else {
+                            reject(new Error('无法访问 iframe contentWindow'));
+                        }
+                    } catch (error) {
+                        // 如果是跨域错误，我们仍然继续
+                        console.log('跨域访问受限，继续执行');
+                        resolve();
+                    }
+                };
+
+                if (iframe.contentWindow) {
+                    checkReady();
+                } else {
+                    iframe.addEventListener('load', checkReady);
+                }
+            });
+            
+            // 给页面一些加载时间
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            console.log('千问 处理开始，第', retryCount + 1, '次尝试');
+            
+            // 创建消息确认 Promise
+            const messageConfirmed = new Promise((resolve) => {
+                const timeout = setTimeout(() => {
+                    console.log('消息确认超时');
+                    resolve(false);
+                }, 2000);
+
+                const handler = (event) => {
+                    console.log('收到消息:', event.data);
+                    if (event.data.type === 'message_received' && 
+                        event.data.originalType === 'tongyi') {
+                        console.log('收到消息确认');
+                        clearTimeout(timeout);
+                        window.removeEventListener('message', handler);
+                        resolve(true);
+                    }
+                };
+
+                window.addEventListener('message', handler);
+            });
+            
+            // 发送消息
+            console.log('发送消息到千问 iframe');
+            iframe.contentWindow.postMessage({
+                type: 'tongyi',
+                query: query
+            }, '*');
+            
+            // 等待确认
+            const received = await messageConfirmed;
+            
+            if (!received && retryCount < maxRetries) {
+                retryCount++;
+                console.log('消息未收到确认，准备重试');
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                return trySendMessage();
+            }
+        } catch (error) {
+            console.error('千问 处理失败:', error);
+            if (retryCount < maxRetries) {
+                retryCount++;
+                console.log('发生错误，准备重试');
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                return trySendMessage();
+            }
+        }
+    };
+    
+    await trySendMessage();
+},
+
+  'www.wenxiaobai.com': async function(iframe, query) {
+    try {
+      // 等待页面加载
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      console.log('问小白 iframe 处理开始');
+      // 向 iframe 发送消息
+      iframe.contentWindow.postMessage({
+        type: 'wenxiaobai',
+        query: query
+      }, '*');
+    } catch (error) {
+      console.error('问小白 处理失败:', error);
     }
   } 
 
@@ -1035,6 +1137,10 @@ async function iframeFresh(query) {
                   });
                   // 调用处理函数
                   handler(iframe, query);
+              }
+              else 
+              {
+                console.log('没有找到处理函数');
               }
           }
         } catch (error) {

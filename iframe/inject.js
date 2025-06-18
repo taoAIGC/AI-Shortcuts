@@ -96,7 +96,58 @@ window.addEventListener('message', async function(event) {
           console.log('已发送回车事件');
         }, 100);
   }
+  if (event.data.type === 'tongyi') {
+    const searchQuery = event.data.query;
+    console.log('收到 tongyi:', searchQuery);
 
+    try {
+      // 等待页面加载
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      const textarea = document.querySelector('textarea');
+      if (!textarea) {
+        console.error('未找到输入框');
+        return;
+      }
+
+      if (textarea) {
+        textarea.focus();
+        textarea.value = searchQuery;
+        // 触发必要的事件
+        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+
+      // 触发必要的事件
+      const events = ['input', 'change', 'blur', 'focus'];
+      events.forEach(eventName => {
+        textarea.dispatchEvent(new Event(eventName, { bubbles: true }));
+      });
+
+      // 发送回车
+      setTimeout(() => {
+        const enterEvent = new KeyboardEvent('keydown', {
+          bubbles: true,
+          cancelable: true,
+          key: 'Enter',
+          code: 'Enter',
+          keyCode: 13,
+          which: 13,
+          location: 0,
+          repeat: false,
+          isComposing: false
+        });
+        textarea.dispatchEvent(enterEvent);
+      }, 100);
+
+      // 发送确认消息到父窗口
+      window.parent.postMessage({
+        type: 'message_received',
+        originalType: 'tongyi'
+      }, '*');
+    } catch (error) {
+      console.error('处理 tongyi 消息失败:', error);
+    }
+  }
   if (event.data.type === 'zhihu') {
     const searchQuery = event.data.query;
     console.log('收到 zhihu 消息:', searchQuery);
@@ -262,6 +313,53 @@ if (event.data.type === 'grok') {
   }, 100);
 
 }
+
+if (event.data.type === 'wenxiaobai') {
+  const searchQuery = event.data.query;
+  console.log('收到 wenxiaobai 消息:', searchQuery);
+
+  // 等待页面加载
+  await new Promise(resolve => setTimeout(resolve, 100));
+
+  
+  const textarea = document.querySelector('textarea');
+  if (!textarea) {
+    console.error('未找到输入框');
+    return;
+  }
+
+  if (textarea) {
+    textarea.focus();
+    textarea.value = searchQuery;
+    // 触发必要的事件
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  
+  // 3. 触发必要的事件
+  const events = ['input', 'change', 'blur', 'focus'];
+  events.forEach(eventName => {
+    textarea.dispatchEvent(new Event(eventName, { bubbles: true }));
+  });
+
+  // 4. 发送回车
+  setTimeout(() => {
+    const enterEvent = new KeyboardEvent('keydown', {
+      bubbles: true,
+      cancelable: true,
+      key: 'Enter',
+      code: 'Enter',
+      keyCode: 13,
+      which: 13,
+      location: 0,
+      repeat: false,
+      isComposing: false
+    });
+    textarea.dispatchEvent(enterEvent);
+  }, 100);
+
+}
+
 // 处理元宝 消息
 if (event.data.type === 'yuanbao') {
   const searchQuery = event.data.query;

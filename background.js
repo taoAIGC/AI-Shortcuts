@@ -738,6 +738,117 @@ const siteHandlers = {
       console.error('秘塔处理出错:', error);
     }
   },
+// 问小白处理函数
+'www.wenxiaobai.com': async function(tabId, query) {
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId },
+        func: (searchQuery) => {
+          console.log('收到 wenxiaobai 消息:', searchQuery);
+        
+          // 等待页面加载
+
+          
+          const textarea = document.querySelector('textarea');
+          if (!textarea) {
+            console.error('未找到输入框');
+            return;
+          }
+        
+          if (textarea) {
+            textarea.focus();
+            textarea.value = searchQuery;
+            // 触发必要的事件
+            textarea.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+        
+          
+          // 3. 触发必要的事件
+          const events = ['input', 'change', 'blur', 'focus'];
+          events.forEach(eventName => {
+            textarea.dispatchEvent(new Event(eventName, { bubbles: true }));
+          });
+        
+          // 4. 发送回车
+          setTimeout(() => {
+            const enterEvent = new KeyboardEvent('keydown', {
+              bubbles: true,
+              cancelable: true,
+              key: 'Enter',
+              code: 'Enter',
+              keyCode: 13,
+              which: 13,
+              location: 0,
+              repeat: false,
+              isComposing: false
+            });
+            textarea.dispatchEvent(enterEvent);
+          }, 100);
+
+
+        },
+        args: [query]
+      });
+    } catch (error) {
+      console.error('秘塔处理出错:', error);
+    }
+  },
+
+  // 问小白处理函数
+'tongyi.com': async function(tabId, query) {
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      func: (searchQuery) => {
+        console.log('收到 tongyi 消息:', searchQuery);
+      
+        // 等待页面加载
+
+        
+        const textarea = document.querySelector('textarea');
+        if (!textarea) {
+          console.error('未找到输入框');
+          return;
+        }
+      
+        if (textarea) {
+          textarea.focus();
+          textarea.value = searchQuery;
+          // 触发必要的事件
+          textarea.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      
+        
+        // 3. 触发必要的事件
+        const events = ['input', 'change', 'blur', 'focus'];
+        events.forEach(eventName => {
+          textarea.dispatchEvent(new Event(eventName, { bubbles: true }));
+        });
+      
+        // 4. 发送回车
+        setTimeout(() => {
+          const enterEvent = new KeyboardEvent('keydown', {
+            bubbles: true,
+            cancelable: true,
+            key: 'Enter',
+            code: 'Enter',
+            keyCode: 13,
+            which: 13,
+            location: 0,
+            repeat: false,
+            isComposing: false
+          });
+          textarea.dispatchEvent(enterEvent);
+        }, 100);
+
+
+      },
+      args: [query]
+    });
+  } catch (error) {
+    console.error('秘塔处理出错:', error);
+  }
+},
 
   
   // 文心一言处理函数

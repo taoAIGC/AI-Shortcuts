@@ -9,6 +9,15 @@ const defaultSites_CN = [
     hidden: false,
     supportIframe: true
   },
+  {
+    name: '问小白',
+    url: 'https://www.wenxiaobai.com/',
+    enabled: true,
+    supportUrlQuery: false,
+    description: 'free DeepSeek',
+    hidden: false,
+    supportIframe: false
+  },
 
   {
     name: '秘塔AI',
@@ -97,11 +106,11 @@ const defaultSites_CN = [
   },
   {
     name: '通义千问',
-    url: 'https://tongyi.aliyun.com/qianwen',
+    url: 'https://tongyi.com/',
     enabled: false,
     supportUrlQuery: false,
     description: 'By Alibaba',
-    hidden: true,
+    hidden: false,
     supportIframe: false
   },
   {
@@ -209,15 +218,64 @@ const defaultSites_CN = [
 
 const defaultSites_EN = [
   {
+    name: 'DeepSeek',
+    url: 'https://chat.deepseek.com/',
+    enabled: true,
+    supportUrlQuery: false,
+    description: 'By DeepSeek',
+    hidden: false,
+    supportIframe: true
+  },
+
+  {
+    name: '问小白',
+    url: 'https://www.wenxiaobai.com/',
+    enabled: true,
+    supportUrlQuery: false,
+    description: 'free DeepSeek',
+    hidden: false,
+    supportIframe: false
+  },
+
+  {
+    name: '秘塔AI',
+    url: 'https://metaso.cn/',
+    enabled: false,
+    supportUrlQuery: false,
+    description: '擅长学术搜索',
+    hidden: false,
+    supportIframe: true
+  },
+
+  {
+    name: '文心一言',
+    url: 'https://yiyan.baidu.com/chat',
+    enabled: false,
+    supportUrlQuery: false,
+    description: 'By Baidu',
+    hidden: false,
+    supportIframe: false
+  },
+
+  {
+    name: '腾讯元宝',
+    url: 'https://yuanbao.tencent.com/chat/',
+    enabled: false,
+    supportUrlQuery: false,
+    description: 'By Tencent',
+    hidden: false,
+    supportIframe: true
+  },
+
+  {
     name: 'Google',
     url: 'https://www.google.com/search?q={query}',
     enabled: true,
     supportUrlQuery: true,
     description: '',
     hidden: false,
-    supportIframe: false
+    supportIframe: true
   },
-
   {
     name: 'ChatGPT',
     url: 'https://chatgpt.com/',
@@ -227,6 +285,94 @@ const defaultSites_EN = [
     hidden: false,
     supportIframe: true
   },
+  {
+    name: '纳米AI',
+    url: 'https://nanoai.live/',
+    enabled: false,
+    supportUrlQuery: false,
+    description: 'By 360',
+    hidden: true,
+    supportIframe: false
+  },
+  
+  {
+    name: '智谱 AI',
+    url: 'https://chatglm.cn/chat',
+    enabled: false,
+    supportUrlQuery: false,
+    description: '',
+    hidden: true,
+    supportIframe: false
+  },
+  {
+    name: 'Kimi',
+    url: 'https://kimi.moonshot.cn/',
+    enabled: false,
+    supportUrlQuery: false,
+    description: '',
+    hidden: false,
+    supportIframe: false
+  },
+  {
+    name: '豆包',
+    url: 'https://doubao.com/chat',
+    enabled: false,
+    supportUrlQuery: false,
+    description: 'By Bytedance',
+    hidden: false,
+    supportIframe: true
+  },
+  {
+    name: '通义千问',
+    url: 'https://tongyi.com/',
+    enabled: false,
+    supportUrlQuery: false,
+    description: 'By Alibaba',
+    hidden: false,
+    supportIframe: false
+  },
+  {
+    name: '知乎直达',
+    url: 'https://zhida.zhihu.com/',
+    enabled: false,
+    supportUrlQuery: false,
+    description: '知乎直达搜索',
+    hidden: false,
+    supportIframe: true
+  },
+  
+  {
+    name: '小红书',
+    url: 'https://www.xiaohongshu.com/search_result?keyword={query}',
+    enabled: true,
+    supportUrlQuery:true,
+    description: '',
+    hidden: false,
+    supportIframe: false
+  },
+  {
+    name: '百度',
+    url: 'https://www.baidu.com/s?wd={query}',
+    enabled: false,
+    supportUrlQuery: true,
+    description: '',
+    hidden: false,
+    supportIframe: true  
+  },
+  
+  
+  
+  {
+    name: 'Grok',
+    url: 'https://grok.com/',
+    enabled: true,
+    supportUrlQuery: false,
+    description: 'By Grok',
+    hidden: false,
+    supportIframe: true
+  },
+
+
 
   {
     name: 'Gemini',
@@ -237,22 +383,12 @@ const defaultSites_EN = [
     hidden: false,
     supportIframe: true
   },
-
   {
     name: 'Copilot',
     url: 'https://copilot.microsoft.com/',
     enabled: true,
     supportUrlQuery: false,
     description: 'By Microsoft',
-    hidden: false,
-    supportIframe: true
-  },
-  {
-    name: 'Grok',
-    url: 'https://grok.com/',
-    enabled: false,
-    supportUrlQuery: false,
-    description: 'By Grok',
     hidden: false,
     supportIframe: true
   },
@@ -263,13 +399,14 @@ const defaultSites_EN = [
     supportUrlQuery: true,
     description: '',
     hidden: false,
-    supportIframe: false
+    supportIframe: true
   },
   
+ 
   {
     name: 'Claude',
     url: 'https://claude.ai/chat',
-    enabled: false,
+    enabled: true,
     supportUrlQuery: false,
     description: '',
     hidden: false,
@@ -292,9 +429,8 @@ const defaultSites_EN = [
     supportUrlQuery: true,
     description: 'Bing 搜索',
     hidden: false,
-    supportIframe: false
+    supportIframe: true
   }
-  
 
 ];
 
