@@ -30,6 +30,10 @@
   cursor: grabbing;
 }
 
+.multi-ai-float-button:hover {
+  transform: scale(1.05);
+}
+
 .multi-ai-float-button img {
   width: 24px;
   height: 24px;
@@ -74,6 +78,18 @@
 
 .bottom-icon:hover {
   transform: scale(1.1);
+  opacity: 1;
+}
+
+/* 添加侧边栏图标的特殊样式 */
+.sidepanel-icon {
+  background-color: #f0f0f0;
+  border-radius: 4px;
+  padding: 2px;
+}
+
+.sidepanel-icon:hover {
+  background-color: #e0e0e0;
 }
 
 /* 显示/隐藏逻辑 */
@@ -276,18 +292,13 @@
 
 .multi-ai-tooltip {
   position: absolute;
+  right: 60px;
   background: rgba(0, 0, 0, 0.8);
   color: white;
   padding: 4px 8px;
   border-radius: 4px;
   font-size: 12px;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  margin-bottom: 8px;
   white-space: nowrap;
-  pointer-events: none;
-  z-index: 10000;
 }
 
 .multi-ai-tooltip::after {

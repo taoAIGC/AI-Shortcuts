@@ -1,8 +1,8 @@
 const CONFIG = {
-  IS_PRODUCTION: false  // 发布时设为 true
+  IS_PRODUCTION: true  // 发布时设为 true
 };
 
-/*
+
 // 保存原始的 console 方法
 const originalConsole = {
   log: console.log,
@@ -37,4 +37,4 @@ if (CONFIG.IS_PRODUCTION) {
     originalConsole.debug.apply(console, ['[MultiAI]', ...args]);
   };
 }
-*/
+

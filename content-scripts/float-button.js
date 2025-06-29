@@ -89,6 +89,18 @@ async function createFloatButton() {
   const iconContainer = document.createElement('div');
   iconContainer.className = 'icon-container';
 
+  // 创建侧边栏图标
+  const sidePanelIcon = document.createElement('img');
+  sidePanelIcon.src = chrome.runtime.getURL('icons/sidepanel.png');
+  sidePanelIcon.className = 'bottom-icon sidepanel-icon';
+  sidePanelIcon.title = '侧边栏';
+
+  // 添加侧边栏图标的点击事件
+  sidePanelIcon.addEventListener('click', (e) => {
+    e.stopPropagation();
+    chrome.runtime.sendMessage({ type: 'TOGGLE_SIDE_PANEL' });
+  });
+
   // 创建设置图标
   const settingIcon = document.createElement('img');
   settingIcon.src = chrome.runtime.getURL('icons/extension-setting.png');
@@ -119,6 +131,7 @@ async function createFloatButton() {
   });
 
   // 添加图标到容器
+  iconContainer.appendChild(sidePanelIcon);
   iconContainer.appendChild(settingIcon);
   iconContainer.appendChild(feedbackIcon);
 

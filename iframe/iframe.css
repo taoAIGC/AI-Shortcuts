@@ -100,6 +100,13 @@ html {
     padding: 16px;
 }
 
+/* 在侧边栏模式下默认显示1列 */
+@media (max-width: 500px) {
+    #iframes-container {
+        grid-template-columns: repeat(var(--columns, 1), 1fr);
+    }
+}
+
 .ai-iframe {
     height: calc(100vh - 60px);
 }
@@ -337,3 +344,5 @@ html {
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     z-index: 1000;
 }
+
+

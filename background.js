@@ -1269,3 +1269,10 @@ chrome.runtime.setUninstallURL('https://wenjuan.feishu.cn/m?t=sxcO29Fz913i-1ad4'
   }
 });
 
+// 监听来自内容脚本的消息
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === 'TOGGLE_SIDE_PANEL') {
+    chrome.sidePanel.open({ windowId: sender.tab.windowId });
+  }
+});
+

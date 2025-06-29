@@ -5,7 +5,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     const iframesContainer = document.getElementById('iframes-container');
 
     // 从存储中获取列数设置
-    const { preferredColumns = '3' } = await chrome.storage.sync.get('preferredColumns');
+    let { preferredColumns = '3' } = await chrome.storage.sync.get('preferredColumns');
+    if (window.innerWidth < 500) {
+       preferredColumns = '1';
+    }
     columnSelect.value = preferredColumns;
     updateColumns(preferredColumns);
 

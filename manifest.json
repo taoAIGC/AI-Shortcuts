@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "__MSG_appName__",
-  "version": "1.23",
+  "version": "1.24",
   "description": "__MSG_extDescription__",
   "permissions": [
     "storage",
@@ -10,7 +10,8 @@
     "contextMenus",
     "scripting",
     "contextMenus",
-    "declarativeNetRequest"
+    "declarativeNetRequest",
+    "sidePanel"
   ],
   "host_permissions": [
     "<all_urls>"
@@ -122,5 +123,9 @@
       "enabled": true,
       "path": "config/rules.json"
     }]
+  },
+
+  "side_panel": {
+    "default_path": "iframe/iframe.html"
   }
 } 
