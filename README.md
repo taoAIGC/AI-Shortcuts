@@ -135,3 +135,10 @@ edge：稍后支持
 wechat（微信）: aipmgpt
 
 email: AIShortcuts@outlook.com
+
+
+### 给我买杯咖啡
+
+「AI 任意门」是免费工具，如果它对你有帮助，可以送我一杯咖啡吗？我会更努力地维护它。
+
+![ef54e43355a2e803633625f428898a09](https://github.com/user-attachments/assets/4e928502-73eb-4918-959a-db17f7f747ff)
