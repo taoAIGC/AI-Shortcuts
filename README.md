@@ -141,4 +141,6 @@ email: AIShortcuts@outlook.com
 
 「AI 任意门」是免费工具，如果它对你有帮助，可以送我一杯咖啡吗？我会更努力地维护它。
 
-![ef54e43355a2e803633625f428898a09](https://github.com/user-attachments/assets/4e928502-73eb-4918-959a-db17f7f747ff =600*600)
+![ef54e43355a2e803633625f428898a09](https://github.com/user-attachments/assets/4e928502-73eb-4918-959a-db17f7f747ff)
+
+<img src="https://github-production-user-asset-6210df.s3.amazonaws.com/1812275/460316844-4e928502-73eb-4918-959a-db17f7f747ff.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAVCODYLSA53PQK4ZA%2F20250629%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20250629T152605Z&X-Amz-Expires=300&X-Amz-Signature=51f982565a095dd6ef1e05a54c01caa6e768e275291e52737150082650e4394c&X-Amz-SignedHeaders=host" width="300" height="200">
