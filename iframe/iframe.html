@@ -8,13 +8,18 @@
 </head>
 <body>
     <div class="search-bar">
-        <input 
-            type="text" 
-            id="searchInput" 
-            data-i18n="inputPlaceholder"
-            placeholder=""
-            autofocus
-        >
+        <div class="search-input-container">
+            <input 
+                type="text" 
+                id="searchInput" 
+                data-i18n="inputPlaceholder"
+                placeholder=""
+                autofocus
+            >
+            <div id="querySuggestions" class="query-suggestions" style="display: none;">
+                <!-- queryItem.name 将显示在这里 -->
+            </div>
+        </div>
         <div id="iconContainer">
             <img id="toggleIcon" src="../icons/down.png" alt="Toggle" />
         </div>
@@ -51,7 +56,7 @@
         <!-- iframes 将被动态插入到这里 -->
     </div>
     <div id="queryList" style="display: none;">
-        <!-- 推荐的 query 列表将动态添加到这里 -->
+        <!-- 收藏的 query 列表将动态添加到这里 -->
     </div>
     <script type="module" src="iframe.js"></script>
 </body>

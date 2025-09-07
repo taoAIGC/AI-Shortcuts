@@ -171,8 +171,10 @@ async function initializeSiteConfigs() {
     standaloneSites.forEach((site, index) => {
       const siteDiv = document.createElement('div');
       siteDiv.className = 'site-config';
+      siteDiv.setAttribute('data-site-name', site.name);
       siteDiv.innerHTML = `
         <div class="site-header">
+          <div class="drag-handle" title="拖拽调整顺序">⋮⋮</div>
           <label class="switch">
             <input type="checkbox" class="enable-toggle"
               ${site.enabled ? 'checked' : ''} 
@@ -184,14 +186,19 @@ async function initializeSiteConfigs() {
         </div>
       `;
       standaloneContainer.appendChild(siteDiv);
+      
+      // 添加拖拽功能
+      addDragFunctionality(siteDiv, site.name, 'standalone');
     });
 
     // 6. 渲染合集模式站点
     collectionSites.forEach((site, index) => {
       const siteDiv = document.createElement('div');
       siteDiv.className = 'site-config';
+      siteDiv.setAttribute('data-site-name', site.name);
       siteDiv.innerHTML = `
         <div class="site-header">
+          <div class="drag-handle" title="拖拽调整顺序">⋮⋮</div>
           <label class="switch">
             <input type="checkbox" class="enable-toggle"
               ${site.enabled ? 'checked' : ''} 
@@ -203,6 +210,9 @@ async function initializeSiteConfigs() {
         </div>
       `;
       collectionContainer.appendChild(siteDiv);
+      
+      // 添加拖拽功能
+      addDragFunctionality(siteDiv, site.name, 'collection');
     });
 
     // 7. 添加切换事件监听器
@@ -268,4 +278,252 @@ async function initializeSiteConfigs() {
 document.addEventListener('DOMContentLoaded', function() {
   initializeI18n();
   loadConfig();
-}); 
+  initializeNavigation();
+});
+
+// 拖拽功能实现
+function addDragFunctionality(siteDiv, siteName, mode) {
+  const dragHandle = siteDiv.querySelector('.drag-handle');
+  let isDragging = false;
+  let dragStartY = 0;
+  let initialIndex = 0;
+  let placeholder = null;
+
+  // 设置拖拽手柄样式
+  dragHandle.style.cursor = 'grab';
+  dragHandle.style.userSelect = 'none';
+
+  // 鼠标按下事件
+  dragHandle.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    isDragging = true;
+    
+    // 获取元素当前位置
+    const rect = siteDiv.getBoundingClientRect();
+    dragStartY = e.clientY;
+    
+    // 计算鼠标相对于元素的位置偏移
+    const offsetY = e.clientY - rect.top;
+    
+    // 获取当前容器在父容器中的索引
+    const container = mode === 'standalone' 
+      ? document.getElementById('standaloneSiteConfigs')
+      : document.getElementById('collectionSiteConfigs');
+    const containers = Array.from(container.children);
+    initialIndex = containers.indexOf(siteDiv);
+    
+    // 添加拖拽样式
+    siteDiv.classList.add('dragging');
+    dragHandle.style.cursor = 'grabbing';
+    
+    // 创建占位符
+    placeholder = document.createElement('div');
+    placeholder.className = 'drag-placeholder';
+    placeholder.style.height = siteDiv.offsetHeight + 'px';
+    container.insertBefore(placeholder, siteDiv.nextSibling);
+    
+    // 设置拖拽元素的样式
+    siteDiv.style.position = 'fixed';
+    siteDiv.style.zIndex = '1000';
+    siteDiv.style.opacity = '0.8';
+    siteDiv.style.transform = 'rotate(2deg)';
+    siteDiv.style.pointerEvents = 'none';
+    siteDiv.style.width = siteDiv.offsetWidth + 'px';
+    siteDiv.style.left = rect.left + 'px';
+    siteDiv.style.top = (e.clientY - offsetY) + 'px';
+    
+    // 存储偏移量供后续使用
+    siteDiv.dataset.offsetY = offsetY;
+    
+    document.addEventListener('mousemove', handleDrag);
+    document.addEventListener('mouseup', handleDragEnd);
+  });
+
+  // 拖拽过程中的处理
+  function handleDrag(e) {
+    if (!isDragging) return;
+    
+    // 获取存储的偏移量
+    const offsetY = parseFloat(siteDiv.dataset.offsetY) || 0;
+    
+    // 更新拖拽元素位置，让元素跟随鼠标
+    siteDiv.style.top = (e.clientY - offsetY) + 'px';
+    
+    // 检测是否应该移动占位符
+    const container = mode === 'standalone' 
+      ? document.getElementById('standaloneSiteConfigs')
+      : document.getElementById('collectionSiteConfigs');
+    const containers = Array.from(container.children).filter(child => 
+      child !== placeholder && child.classList.contains('site-config')
+    );
+    
+    let newIndex = initialIndex;
+    for (let i = 0; i < containers.length; i++) {
+      const rect = containers[i].getBoundingClientRect();
+      if (e.clientY < rect.top + rect.height / 2) {
+        newIndex = i;
+        break;
+      }
+      newIndex = i + 1;
+    }
+    
+    // 移动占位符到新位置
+    if (newIndex !== initialIndex) {
+      if (newIndex >= containers.length) {
+        container.appendChild(placeholder);
+      } else {
+        container.insertBefore(placeholder, containers[newIndex]);
+      }
+      initialIndex = newIndex;
+    }
+  }
+
+  // 拖拽结束处理
+  function handleDragEnd(e) {
+    if (!isDragging) return;
+    
+    isDragging = false;
+    
+    // 移除拖拽样式
+    siteDiv.classList.remove('dragging');
+    dragHandle.style.cursor = 'grab';
+    
+    // 将元素移动到占位符位置
+    if (placeholder && placeholder.parentNode) {
+      placeholder.parentNode.insertBefore(siteDiv, placeholder);
+    }
+    
+    // 恢复拖拽元素样式
+    siteDiv.style.position = '';
+    siteDiv.style.zIndex = '';
+    siteDiv.style.opacity = '';
+    siteDiv.style.transform = '';
+    siteDiv.style.pointerEvents = '';
+    siteDiv.style.left = '';
+    siteDiv.style.top = '';
+    siteDiv.style.width = '';
+    
+    // 清理存储的偏移量
+    delete siteDiv.dataset.offsetY;
+    
+    // 移除占位符
+    if (placeholder) {
+      placeholder.remove();
+      placeholder = null;
+    }
+    
+    // 更新站点顺序
+    updateSiteOrder(mode);
+    
+    // 移除事件监听器
+    document.removeEventListener('mousemove', handleDrag);
+    document.removeEventListener('mouseup', handleDragEnd);
+  }
+}
+
+// 更新站点顺序
+async function updateSiteOrder(mode) {
+  const container = mode === 'standalone' 
+    ? document.getElementById('standaloneSiteConfigs')
+    : document.getElementById('collectionSiteConfigs');
+  const containers = Array.from(container.children).filter(child => 
+    child.classList.contains('site-config')
+  );
+  
+  // 获取新的顺序
+  const newOrder = containers.map(container => {
+    return container.getAttribute('data-site-name');
+  }).filter(name => name !== null);
+  
+  console.log(`${mode}模式新的站点顺序:`, newOrder);
+  
+  // 更新存储中的站点顺序
+  try {
+    const { sites = [] } = await chrome.storage.sync.get('sites');
+    
+    // 创建新的站点数组，按照拖拽后的顺序排列
+    const reorderedSites = [];
+    
+    // 首先添加拖拽后的站点（按新模式顺序）
+    newOrder.forEach(siteName => {
+      const site = sites.find(s => s.name === siteName);
+      if (site) {
+        reorderedSites.push(site);
+      }
+    });
+    
+    // 然后添加其他未显示的站点
+    sites.forEach(site => {
+      if (!newOrder.includes(site.name)) {
+        reorderedSites.push(site);
+      }
+    });
+    
+    // 保存新的顺序
+    await chrome.storage.sync.set({ sites: reorderedSites });
+    
+    console.log(`${mode}模式站点顺序已更新`);
+    showToast('站点顺序已保存');
+    
+  } catch (error) {
+    console.error('更新站点顺序失败:', error);
+    showToast('保存顺序失败');
+  }
+}
+
+// 初始化导航功能
+function initializeNavigation() {
+  const navLinks = document.querySelectorAll('.nav-link');
+  
+  navLinks.forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      
+      const targetSection = link.getAttribute('data-section');
+      const targetElement = document.getElementById(targetSection);
+      
+      if (targetElement) {
+        // 移除所有激活状态
+        navLinks.forEach(navLink => {
+          navLink.classList.remove('active');
+        });
+        
+        // 添加当前激活状态
+        link.classList.add('active');
+        
+        // 平滑滚动到目标区域
+        targetElement.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        });
+      }
+    });
+  });
+  
+  // 监听页面滚动，自动更新导航激活状态
+  window.addEventListener('scroll', updateActiveNavigation);
+}
+
+// 更新导航激活状态
+function updateActiveNavigation() {
+  const sections = document.querySelectorAll('.settings-section');
+  const navLinks = document.querySelectorAll('.nav-link');
+  
+  let currentSection = '';
+  
+  sections.forEach(section => {
+    const rect = section.getBoundingClientRect();
+    // 当section顶部距离视口顶部小于100px时，认为该section是当前激活的
+    if (rect.top <= 100 && rect.bottom > 100) {
+      currentSection = section.id;
+    }
+  });
+  
+  // 更新导航链接的激活状态
+  navLinks.forEach(link => {
+    link.classList.remove('active');
+    if (link.getAttribute('data-section') === currentSection) {
+      link.classList.add('active');
+    }
+  });
+}

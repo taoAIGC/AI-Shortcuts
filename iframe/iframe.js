@@ -749,7 +749,6 @@ document.getElementById('searchButton').addEventListener('click', () => {
   if (query) {
     shanshuo();
     iframeFresh(query);
-    //generateRecommendedQuery(query);
   }
 });
 
@@ -761,11 +760,34 @@ document.getElementById('searchInput').addEventListener('keydown', (e) => {
         if (query) {
             shanshuo();
             iframeFresh(query);
-            //generateRecommendedQuery(query);
+
         }
         
     }
 });   
+
+// 添加输入监听器，当searchInput有内容时显示建议
+document.getElementById('searchInput').addEventListener('input', (e) => {
+    const query = e.target.value.trim();
+    showQuerySuggestions(query);
+});
+
+// 添加焦点事件监听器
+document.getElementById('searchInput').addEventListener('focus', (e) => {
+    const query = e.target.value.trim();
+    if (query) {
+        showQuerySuggestions(query);
+    }
+});
+
+// 添加失焦事件监听器，延迟隐藏建议
+document.getElementById('searchInput').addEventListener('blur', (e) => {
+    // 延迟隐藏，以便用户能够点击建议项
+    setTimeout(() => {
+        const querySuggestions = document.getElementById('querySuggestions');
+        querySuggestions.style.display = 'none';
+    }, 200);
+});
 
 // 在 DOMContentLoaded 时设置按钮文案
 document.addEventListener('DOMContentLoaded', () => {
@@ -999,7 +1021,6 @@ async function generateRecommendedQuery(query) {
     // 定义推荐查询语句列表
     const recommendedQueries = [
 
-
       {
         name: '风险分析',
         query: '导致失败的原因:「' + query + '」'
@@ -1017,41 +1038,7 @@ async function generateRecommendedQuery(query) {
         query: '写一份这件事做成功的回顾报告:「' + query + '」'
       }
     ];
-    // 调用接口分析用户的 searchInput 中的文本，生成推荐的查询语句
-      /*
-      const url = 'https://cloud.infini-ai.com/maas/v1/chat/completions';
-      const options = {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json', Authorization: 'Bearer sk-daskic33qjbwsu7w'},
-        body: '{"model":"deepseek-r1","messages":[{"role":"user","content":"你是谁"}]}'
-      };
-
-      // 调用接口分析用户的 searchInput 中的文本，生成推荐的查询语句
-      try {
-        const response = await fetch(url, options);
-        const data = await response.json();
-        console.log(data);
-      } catch (error) {
-        console.error(error);
-      }
-    */
-   /*
-  const dropdown = document.getElementById('analysisDropdown');
-  
-  recommendedQueries.forEach(query => {
-    const option = document.createElement('option');
-    option.value = query.query;
-    option.textContent = query.name;
-    dropdown.appendChild(option);
-  });
-  const analysisDropdown = document.getElementById('analysisDropdown');
-    analysisDropdown.disabled = false; // 移除 disabled 属性
-
-  dropdown.addEventListener('change', () => {
-    const selectedQuery = dropdown.value;
-    iframeFresh(selectedQuery);
-  });
-  */
+   
   
   const queryList = document.getElementById('queryList');
   queryList.innerHTML = ''; // 清空之前的内容
@@ -1061,17 +1048,60 @@ async function generateRecommendedQuery(query) {
       queryItem.textContent = recommendedQuery.name; // 使用 name 作为文案
       queryItem.classList.add('query-item'); // 添加样式类
       queryItem.addEventListener('click', () => {
-          iframeFresh(recommendedQuery.query); // 执行 iframeFresh 函数
+          document.getElementById('searchInput').value = recommendedQuery.query;
           queryList.style.display = 'none'; // 隐藏查询列表
       });
       queryList.appendChild(queryItem);
   });
-
-  // 切换图标
-  const toggleIcon = document.getElementById('toggleIcon');
-  toggleIcon.src = '../icons/up.png'; // 切换为 up.png
-  queryList.style.display = 'block'; // 显示推荐查询列表
   
+}
+
+// 显示查询建议
+function showQuerySuggestions(query) {
+  const querySuggestions = document.getElementById('querySuggestions');
+  
+  if (!query || query.trim() === '') {
+    querySuggestions.style.display = 'none';
+    return;
+  }
+
+  // 定义推荐查询语句列表
+  const recommendedQueries = [
+    {
+      name: '风险分析',
+      query: '导致失败的原因:「' + query + '」'
+    },
+    {
+      name: '解决方案', 
+      query: '如何解决问题:「' + query + '」'
+    },
+    {
+      name: '相关知识',
+      query: '相关知识点:「' + query + '」'
+    },
+    {
+      name: '最佳实践',
+      query: '写一份这件事做成功的回顾报告:「' + query + '」'
+    }
+  ];
+
+  // 清空之前的内容
+  querySuggestions.innerHTML = '';
+
+  // 创建建议项
+  recommendedQueries.forEach(recommendedQuery => {
+    const suggestionItem = document.createElement('div');
+    suggestionItem.textContent = recommendedQuery.name;
+    suggestionItem.classList.add('query-suggestion-item');
+    suggestionItem.addEventListener('click', () => {
+      document.getElementById('searchInput').value = recommendedQuery.query;
+      querySuggestions.style.display = 'none';
+    });
+    querySuggestions.appendChild(suggestionItem);
+  });
+
+  // 显示建议
+  querySuggestions.style.display = 'flex';
 }
 
 
@@ -1079,7 +1109,12 @@ async function generateRecommendedQuery(query) {
 document.getElementById('toggleIcon').addEventListener('click', () => {
   const queryList = document.getElementById('queryList');
   if (queryList.style.display === 'none') {
-      queryList.style.display = 'block'; // 显示查询列表
+      // 切换图标
+       const toggleIcon = document.getElementById('toggleIcon');
+       toggleIcon.src = '../icons/up.png'; // 切换为 up.png
+      queryList.style.display = 'block'; // 显示收藏的query列表
+      const query = document.getElementById('searchInput').value;
+      generateRecommendedQuery(query);
   } else {
       queryList.style.display = 'none'; // 隐藏查询列表
       document.getElementById('toggleIcon').src = '../icons/down.png'; // 切换回 down.png

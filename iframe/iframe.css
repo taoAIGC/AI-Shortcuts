@@ -63,11 +63,51 @@ html {
     justify-content: center;
 }
 
-.search-bar input {
+.search-input-container {
     flex: 1;
+    position: relative;
+}
+
+.search-bar input {
+    width: 100%;
     padding: 8px;
     border: 1px solid #ddd;
     border-radius: 4px;
+    box-sizing: border-box;
+}
+
+.query-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #ddd;
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    z-index: 1001;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 8px;
+    max-height: 60px;
+    overflow-y: auto;
+}
+
+.query-suggestion-item {
+    padding: 4px 8px;
+    background: #f0f0f0;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 12px;
+    white-space: nowrap;
+    transition: background-color 0.2s;
+}
+
+.query-suggestion-item:hover {
+    background: #e0e0e0;
 }
 
 .search-bar button {

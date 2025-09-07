@@ -1,17 +1,85 @@
 body {
   margin: 0;
-  padding: 20px;
+  padding: 0;
   background-color: #f5f5f5;
   font-family: Arial, sans-serif;
 }
 
+.page-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* 左侧导航栏 */
+.sidebar {
+  width: 250px;
+  background: #2c3e50;
+  color: white;
+  position: fixed;
+  height: 100vh;
+  overflow-y: auto;
+  z-index: 1000;
+}
+
+.nav-header {
+  padding: 20px;
+  border-bottom: 1px solid #34495e;
+}
+
+.nav-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.nav-menu {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.nav-item {
+  margin: 0;
+}
+
+.nav-link {
+  display: block;
+  padding: 15px 20px;
+  color: #bdc3c7;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  border-left: 3px solid transparent;
+}
+
+.nav-link:hover {
+  background-color: #34495e;
+  color: white;
+}
+
+.nav-link.active {
+  background-color: #3498db;
+  color: white;
+  border-left-color: #2980b9;
+}
+
+/* 主内容区域 */
+.main-content {
+  flex: 1;
+  margin-left: 250px;
+  padding: 20px;
+}
+
 .container {
-  max-width: 600px;
+  max-width: 800px;
   margin: 0 auto;
   background: white;
   padding: 20px;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.settings-section {
+  margin-bottom: 40px;
 }
 
 h1 {
@@ -27,12 +95,47 @@ h1 {
   border-radius: 8px;
   padding: 10px;
   margin-bottom: 5px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.site-config.dragging {
+  transform: rotate(2deg) scale(1.02);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+  z-index: 1000;
+}
+
+.drag-placeholder {
+  background: #e3f2fd;
+  border: 2px dashed #2196f3;
+  border-radius: 8px;
+  margin-bottom: 5px;
+  opacity: 0.7;
+  transition: all 0.2s ease;
 }
 
 /* 站点头部 */
 .site-header {
   display: flex;
   align-items: center;
+}
+
+.drag-handle {
+  cursor: grab;
+  color: #999;
+  font-size: 14px;
+  line-height: 1;
+  padding: 4px;
+  margin-right: 8px;
+  user-select: none;
+  transition: color 0.2s;
+}
+
+.drag-handle:hover {
+  color: #666;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
 }
 
 .site-name-display {
@@ -138,4 +241,45 @@ input:checked + .slider:before {
 .site-configs {
     display: grid;
     gap: 5px;
-} 
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .sidebar {
+    width: 200px;
+  }
+  
+  .main-content {
+    margin-left: 200px;
+  }
+  
+  .nav-header h3 {
+    font-size: 16px;
+  }
+  
+  .nav-link {
+    padding: 12px 15px;
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 600px) {
+  .sidebar {
+    width: 100%;
+    height: auto;
+    position: relative;
+  }
+  
+  .main-content {
+    margin-left: 0;
+    padding: 10px;
+  }
+  
+  .container {
+    padding: 15px;
+  }
+  
+  .page-layout {
+    flex-direction: column;
+  }
+}

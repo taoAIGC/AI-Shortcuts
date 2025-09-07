@@ -1,5 +1,5 @@
 const CONFIG = {
-  IS_PRODUCTION: true  // 发布时设为 true
+  IS_PRODUCTION: false  // 发布时设为 true
 };
 
 

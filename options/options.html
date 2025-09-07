@@ -6,27 +6,56 @@
   <link rel="stylesheet" href="options.css">
 </head>
 <body>
-  <div class="container">
-    <h1 data-i18n="configButtonTitle">快捷入口设置</h1>
-    <!-- 独立模式站点列表 -->
-    <div class="site-section">
-      <div id="buttonSiteConfigs" class="site-configs"></div>
-    </div>
+  <div class="page-layout">
+    <!-- 左侧导航栏 -->
+    <nav class="sidebar">
+      <div class="nav-header">
+        <h3 data-i18n="appName">MultiAI</h3>
+      </div>
+      <ul class="nav-menu">
+        <li class="nav-item">
+          <a href="#quick-entry" class="nav-link active" data-section="quick-entry">
+            <span data-i18n="configButtonTitle">快捷入口设置</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="#ai-sites" class="nav-link" data-section="ai-sites">
+            <span data-i18n="configTitle">AI站点设置</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
 
-    <h1 data-i18n="configTitle"></h1>
-    <!-- 独立模式站点列表 -->
-    <div class="site-section">
-      <h2 data-i18n="standaloneModeTitle">独立模式</h2>
-      <div id="standaloneSiteConfigs" class="site-configs"></div>
-    </div>
-    
-    <!-- 合集模式站点列表 -->
-    <div class="site-section">
-      <h2 data-i18n="collectionModeTitle">合集模式</h2>
-      <div id="collectionSiteConfigs" class="site-configs"></div>
-    </div>
-    
-    <div class="contact-info" data-i18n="contactInfo"></div>
+    <!-- 主内容区域 -->
+    <main class="main-content">
+      <div class="container">
+        <!-- 快捷入口设置 -->
+        <section id="quick-entry" class="settings-section">
+          <h1 data-i18n="configButtonTitle">快捷入口设置</h1>
+          <div class="site-section">
+            <div id="buttonSiteConfigs" class="site-configs"></div>
+          </div>
+        </section>
+
+        <!-- AI站点设置 -->
+        <section id="ai-sites" class="settings-section">
+          <h1 data-i18n="configTitle">AI站点设置</h1>
+          <!-- 独立模式站点列表 -->
+          <div class="site-section">
+            <h2 data-i18n="standaloneModeTitle">独立模式</h2>
+            <div id="standaloneSiteConfigs" class="site-configs"></div>
+          </div>
+          
+          <!-- 合集模式站点列表 -->
+          <div class="site-section">
+            <h2 data-i18n="collectionModeTitle">合集模式</h2>
+            <div id="collectionSiteConfigs" class="site-configs"></div>
+          </div>
+        </section>
+        
+        <div class="contact-info" data-i18n="contactInfo"></div>
+      </div>
+    </main>
   </div>
   
   <!-- Toast提示 -->
