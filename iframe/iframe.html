@@ -9,13 +9,18 @@
 <body>
     <div class="search-bar">
         <div class="search-input-container">
-            <input 
-                type="text" 
-                id="searchInput" 
-                data-i18n="inputPlaceholder"
-                placeholder=""
-                autofocus
-            >
+            <div class="input-wrapper">
+                <input 
+                    type="text" 
+                    id="searchInput" 
+                    data-i18n="inputPlaceholder"
+                    placeholder=""
+                    autofocus
+                >
+                <button id="favoriteButton" class="favorite-btn" style="display: none;" title="收藏提示词">
+                    <img id="favoriteIcon" src="../icons/star_unsaved.png" alt="收藏">
+                </button>
+            </div>
             <div id="querySuggestions" class="query-suggestions" style="display: none;">
                 <!-- queryItem.name 将显示在这里 -->
             </div>

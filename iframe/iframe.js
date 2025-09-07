@@ -770,6 +770,7 @@ document.getElementById('searchInput').addEventListener('keydown', (e) => {
 document.getElementById('searchInput').addEventListener('input', (e) => {
     const query = e.target.value.trim();
     showQuerySuggestions(query);
+    updateFavoriteButtonVisibility(query);
 });
 
 // 添加焦点事件监听器
@@ -1105,6 +1106,29 @@ function showQuerySuggestions(query) {
 }
 
 
+// 切换图标晃动动画函数
+function shakeToggleIcon() {
+  const toggleIcon = document.getElementById('toggleIcon');
+  if (toggleIcon) {
+    // 添加晃动动画类
+    toggleIcon.classList.add('toggle-icon-shake');
+    
+    // 动画结束后移除类名
+    setTimeout(() => {
+      toggleIcon.classList.remove('toggle-icon-shake');
+    }, 500); // 与CSS动画持续时间一致
+  }
+}
+
+// 添加收藏按钮点击事件
+document.getElementById('favoriteButton').addEventListener('click', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  toggleFavorite();
+  // 触发切换图标晃动动画
+  shakeToggleIcon();
+});
+
 // 添加图标点击事件
 document.getElementById('toggleIcon').addEventListener('click', () => {
   const queryList = document.getElementById('queryList');
@@ -1113,11 +1137,35 @@ document.getElementById('toggleIcon').addEventListener('click', () => {
        const toggleIcon = document.getElementById('toggleIcon');
        toggleIcon.src = '../icons/up.png'; // 切换为 up.png
       queryList.style.display = 'block'; // 显示收藏的query列表
-      const query = document.getElementById('searchInput').value;
-      generateRecommendedQuery(query);
+      
+      // 显示收藏夹
+      showFavorites();
   } else {
       queryList.style.display = 'none'; // 隐藏查询列表
       document.getElementById('toggleIcon').src = '../icons/down.png'; // 切换回 down.png
+  }
+});
+
+// 点击收藏夹以外区域隐藏收藏夹
+document.addEventListener('click', (e) => {
+  const queryList = document.getElementById('queryList');
+  const toggleIcon = document.getElementById('toggleIcon');
+  
+  // 如果收藏夹是显示的
+  if (queryList && queryList.style.display === 'block') {
+    // 检查点击的元素是否在收藏夹或切换图标内
+    const isClickInsideFavorites = queryList.contains(e.target);
+    const isClickOnToggleIcon = toggleIcon && toggleIcon.contains(e.target);
+    
+    // 如果点击在收藏夹和切换图标以外
+    if (!isClickInsideFavorites && !isClickOnToggleIcon) {
+      // 隐藏收藏夹
+      queryList.style.display = 'none';
+      // 切换图标回 down.png
+      if (toggleIcon) {
+        toggleIcon.src = '../icons/down.png';
+      }
+    }
   }
 });
 
@@ -1197,7 +1245,175 @@ async function iframeFresh(query) {
 
 
 // 在页面加载时调用
-document.addEventListener('DOMContentLoaded', initializeI18n);
+document.addEventListener('DOMContentLoaded', async () => {
+  initializeI18n();
+  await initializeFavorites();
+});
+
+// 收藏功能实现
+let favoritePrompts = [];
+
+// 初始化收藏功能
+async function initializeFavorites() {
+  try {
+    const { favoritePrompts: savedFavorites = [] } = await chrome.storage.sync.get('favoritePrompts');
+    favoritePrompts = savedFavorites;
+    console.log('加载的收藏提示词:', favoritePrompts);
+  } catch (error) {
+    console.error('加载收藏提示词失败:', error);
+  }
+}
+
+// 更新收藏按钮的显示状态
+function updateFavoriteButtonVisibility(query) {
+  const favoriteButton = document.getElementById('favoriteButton');
+  const favoriteIcon = document.getElementById('favoriteIcon');
+  
+  if (query) {
+    favoriteButton.style.display = 'block';
+    // 检查当前文本是否已收藏
+    const isFavorited = favoritePrompts.includes(query);
+    favoriteIcon.src = isFavorited ? '../icons/star_saved.png' : '../icons/star_unsaved.png';
+  } else {
+    favoriteButton.style.display = 'none';
+  }
+}
+
+// 切换收藏状态
+async function toggleFavorite() {
+  const searchInput = document.getElementById('searchInput');
+  const query = searchInput.value.trim();
+  const favoriteIcon = document.getElementById('favoriteIcon');
+  
+  if (!query) return;
+  
+  try {
+    const index = favoritePrompts.indexOf(query);
+    
+    if (index > -1) {
+      // 取消收藏
+      favoritePrompts.splice(index, 1);
+      favoriteIcon.src = '../icons/star_unsaved.png';
+      console.log('取消收藏:', query);
+    } else {
+      // 添加收藏
+      favoritePrompts.push(query);
+      favoriteIcon.src = '../icons/star_saved.png';
+      console.log('添加收藏:', query);
+    }
+    
+    // 保存到存储
+    await chrome.storage.sync.set({ favoritePrompts: favoritePrompts });
+    console.log('收藏列表已更新:', favoritePrompts);
+    
+  } catch (error) {
+    console.error('保存收藏失败:', error);
+  }
+}
+
+// 显示收藏夹
+function showFavorites() {
+  const queryList = document.getElementById('queryList');
+  
+  if (favoritePrompts.length === 0) {
+    queryList.innerHTML = '<div class="favorites-section"><div class="favorites-title">提示词收藏夹</div><div style="padding: 10px; color: #666; text-align: center;">暂无收藏的提示词</div></div>';
+  } else {
+    let html = '<div class="favorites-section"><div class="favorites-title">提示词收藏夹</div>';
+    
+    favoritePrompts.forEach((prompt, index) => {
+      html += `
+        <div class="favorite-item" data-prompt="${prompt.replace(/"/g, '&quot;')}" data-index="${index}">
+          <div class="favorite-item-content">${prompt}</div>
+          <div class="favorite-item-actions">
+          
+           <!--
+            <button class="favorite-item-edit" title="编辑">
+              <img src="../icons/edit.png" alt="编辑">
+            </button>
+            -->
+
+            <button class="favorite-item-delete" title="删除">
+              <img src="../icons/close.png" alt="删除">
+            </button>
+           
+          </div>
+        </div>
+      `;
+    });
+    
+    html += '</div>';
+    queryList.innerHTML = html;
+    
+    // 添加点击事件
+    queryList.querySelectorAll('.favorite-item').forEach(item => {
+      const content = item.querySelector('.favorite-item-content');
+      const editBtn = item.querySelector('.favorite-item-edit');
+      const deleteBtn = item.querySelector('.favorite-item-delete');
+      
+      // 点击内容区域选择提示词
+      content.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const prompt = item.getAttribute('data-prompt');
+        document.getElementById('searchInput').value = prompt;
+        queryList.style.display = 'none';
+        document.getElementById('toggleIcon').src = '../icons/down.png';
+        
+        // 更新收藏按钮状态
+        updateFavoriteButtonVisibility(prompt);
+      });
+      
+      // 编辑按钮点击事件（如果存在）
+      if (editBtn) {
+        editBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          editFavoriteItem(item);
+        });
+      }
+      
+      // 删除按钮点击事件
+      if (deleteBtn) {
+        deleteBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          console.log('删除按钮被点击');
+          deleteFavoriteItem(item);
+        });
+      }
+    });
+  }
+  
+  queryList.style.display = 'block';
+}
+
+// 编辑收藏项
+function editFavoriteItem(item) {
+  console.log('进入编辑收藏项');
+  showToast('coming soon');
+}
+
+// 删除收藏项
+async function deleteFavoriteItem(item) {
+  console.log('deleteFavoriteItem 函数被调用');
+  const index = parseInt(item.getAttribute('data-index'));
+  const prompt = item.getAttribute('data-prompt');
+  console.log('删除索引:', index, '提示词:', prompt);
+  
+  if (confirm(`确定要删除提示词"${prompt}"吗？`)) {
+    try {
+      // 从数组中删除
+      favoritePrompts.splice(index, 1);
+      
+      // 保存到存储
+      await chrome.storage.sync.set({ favoritePrompts: favoritePrompts });
+      
+      // 重新显示收藏夹
+      showFavorites();
+      
+      console.log('删除收藏提示词:', prompt);
+    } catch (error) {
+      console.error('删除收藏失败:', error);
+    }
+  }
+}
 
 
 
