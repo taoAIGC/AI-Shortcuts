@@ -463,7 +463,9 @@ async function updateSiteOrder(mode) {
     await chrome.storage.sync.set({ sites: reorderedSites });
     
     console.log(`${mode}模式站点顺序已更新`);
-    showToast('站点顺序已保存');
+    
+    showToast(chrome.i18n.getMessage("saveSuccess"));
+
     
   } catch (error) {
     console.error('更新站点顺序失败:', error);
