@@ -21,12 +21,16 @@ document.addEventListener('DOMContentLoaded', async function() {
         // 获取站点配置并初始化 iframes
         chrome.storage.sync.get('sites', (result) => {
             if (result.sites) {
-                // 过滤出启用的且支持 iframe 的站点
+                // 过滤出启用的且支持 iframe 的站点，并按order排序
                 const availableSites = result.sites.filter(site => 
                     site.enabled && 
                     site.supportIframe !== false && 
                     !site.hidden
-                );
+                ).sort((a, b) => {
+                    const orderA = a.order !== undefined ? a.order : 999;
+                    const orderB = b.order !== undefined ? b.order : 999;
+                    return orderA - orderB;
+                });
 
                 if (availableSites.length > 0) {
                     console.log('初始化可用站点:', availableSites);
@@ -69,17 +73,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 // 处理 iframe 的创建和加载
 async function createIframes(query, sites) {
-    // 直接从 storage 获取站点配置
-  const enabledSites = sites;
+    // 按照 order 字段排序站点
+  const enabledSites = sites.sort((a, b) => {
+    const orderA = a.order !== undefined ? a.order : 999;
+    const orderB = b.order !== undefined ? b.order : 999;
+    return orderA - orderB;
+  });
     
   console.log('过滤后的站点:', enabledSites);
     
     // 获取容器元素
-    const container = document.getElementById('iframes-container');
-    if (!container) {
-      console.error('未找到 iframes 容器');
-      return;
-    }
+  const container = document.getElementById('iframes-container');
+  if (!container) {
+    console.error('未找到 iframes 容器');
+    return;
+  }
+  
+  // 保持原有的grid布局，但确保支持order属性
+  // 不覆盖CSS中定义的display: grid
     
   try {
     if (query) {
@@ -193,157 +204,14 @@ async function createIframes(query, sites) {
   
 }
 
-// 添加拖拽排序功能到导航列表
-function addDragAndDropToNavList(navList, enabledSites) {
-  let draggedElement = null;
-  let draggedIndex = null;
-
-  // 拖拽开始
-  navList.addEventListener('dragstart', (e) => {
-    if (e.target.classList.contains('nav-item')) {
-      draggedElement = e.target;
-      draggedIndex = Array.from(navList.children).indexOf(e.target);
-      e.target.classList.add('dragging');
-      navList.classList.add('drag-active');
-      
-      // 设置拖拽数据
-      e.dataTransfer.effectAllowed = 'move';
-      e.dataTransfer.setData('text/html', e.target.outerHTML);
-    }
-  });
-
-  // 拖拽结束
-  navList.addEventListener('dragend', (e) => {
-    if (e.target.classList.contains('nav-item')) {
-      e.target.classList.remove('dragging');
-      navList.classList.remove('drag-active');
-      
-      // 移除所有拖拽悬停效果
-      navList.querySelectorAll('.nav-item').forEach(item => {
-        item.classList.remove('drag-over');
-      });
-      
-      draggedElement = null;
-      draggedIndex = null;
-    }
-  });
-
-  // 拖拽悬停
-  navList.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    
-    const afterElement = getDragAfterElement(navList, e.clientY);
-    const dragging = navList.querySelector('.dragging');
-    
-    if (afterElement == null) {
-      navList.appendChild(dragging);
-    } else {
-      navList.insertBefore(dragging, afterElement);
-    }
-  });
-
-  // 拖拽进入
-  navList.addEventListener('dragenter', (e) => {
-    e.preventDefault();
-    if (e.target.classList.contains('nav-item') && e.target !== draggedElement) {
-      e.target.classList.add('drag-over');
-    }
-  });
-
-  // 拖拽离开
-  navList.addEventListener('dragleave', (e) => {
-    if (e.target.classList.contains('nav-item')) {
-      e.target.classList.remove('drag-over');
-    }
-  });
-
-  // 拖拽放置
-  navList.addEventListener('drop', async (e) => {
-    e.preventDefault();
-    
-    if (draggedElement) {
-      const newIndex = Array.from(navList.children).indexOf(draggedElement);
-      
-      if (newIndex !== draggedIndex) {
-        // 更新站点顺序
-        await updateSitesOrder(enabledSites, draggedIndex, newIndex);
-        
-        // 重新排列iframe
-        await reorderIframes(draggedIndex, newIndex);
-        
-        console.log('导航项顺序已更新');
-      }
-    }
-  });
-}
-
-// 获取拖拽后的元素位置
-function getDragAfterElement(container, y) {
-  const draggableElements = [...container.querySelectorAll('.nav-item:not(.dragging)')];
-  
-  return draggableElements.reduce((closest, child) => {
-    const box = child.getBoundingClientRect();
-    const offset = y - box.top - box.height / 2;
-    
-    if (offset < 0 && offset > closest.offset) {
-      return { offset: offset, element: child };
-    } else {
-      return closest;
-    }
-  }, { offset: Number.NEGATIVE_INFINITY }).element;
-}
-
-// 更新站点顺序
-async function updateSitesOrder(enabledSites, fromIndex, toIndex) {
-  // 移动数组中的元素
-  const movedSite = enabledSites.splice(fromIndex, 1)[0];
-  enabledSites.splice(toIndex, 0, movedSite);
-  
-  // 获取所有站点配置
-  const { sites = [] } = await chrome.storage.sync.get('sites');
-  
-  // 更新站点配置中的顺序
-  const updatedSites = sites.map(site => {
-    const enabledSite = enabledSites.find(es => es.name === site.name);
-    if (enabledSite) {
-      return { ...site, order: enabledSites.indexOf(enabledSite) };
-    }
-    return site;
-  });
-  
-  // 保存更新后的配置
-  await chrome.storage.sync.set({ sites: updatedSites });
-  
-  console.log('站点顺序已保存到存储');
-}
-
-// 重新排列iframe
-async function reorderIframes(fromIndex, toIndex) {
-  const container = document.getElementById('iframes-container');
-  const iframeContainers = container.querySelectorAll('.iframe-container');
-  
-  if (iframeContainers.length > 0) {
-    const movedContainer = iframeContainers[fromIndex];
-    
-    if (toIndex >= iframeContainers.length) {
-      // 移动到末尾
-      container.appendChild(movedContainer);
-    } else {
-      // 移动到指定位置
-      container.insertBefore(movedContainer, iframeContainers[toIndex]);
-    }
-    
-    console.log('iframe顺序已更新');
-  }
-}
-
 
 
 // 创建单个 iframe 时添加标识
 function createSingleIframe(siteName, url, container, query) {
   const iframeContainer = document.createElement('div');
   iframeContainer.className = 'iframe-container';
+  
+  // iframe容器不需要特殊的布局设置，CSS Grid会自动处理
   
   const iframe = document.createElement('iframe');
   iframe.className = 'ai-iframe';
@@ -1565,6 +1433,161 @@ async function deleteFavoriteItem(item) {
     } catch (error) {
       console.error('删除收藏失败:', error);
     }
+  }
+}
+
+// 添加拖拽排序功能到导航列表
+function addDragAndDropToNavList(navList, enabledSites) {
+  let draggedElement = null;
+  let draggedIndex = null;
+
+  // 拖拽开始
+  navList.addEventListener('dragstart', (e) => {
+    if (e.target.classList.contains('nav-item')) {
+      draggedElement = e.target;
+      draggedIndex = Array.from(navList.children).indexOf(e.target);
+      e.target.classList.add('dragging');
+      navList.classList.add('drag-active');
+      
+      // 设置拖拽数据
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/html', e.target.outerHTML);
+    }
+  });
+
+  // 拖拽结束
+  navList.addEventListener('dragend', (e) => {
+    if (e.target.classList.contains('nav-item')) {
+      e.target.classList.remove('dragging');
+      navList.classList.remove('drag-active');
+      
+      // 移除所有拖拽悬停效果
+      navList.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.remove('drag-over');
+      });
+      
+      draggedElement = null;
+      draggedIndex = null;
+    }
+  });
+
+  // 拖拽悬停
+  navList.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    
+    const afterElement = getDragAfterElement(navList, e.clientY);
+    const dragging = navList.querySelector('.dragging');
+    
+    if (afterElement == null) {
+      navList.appendChild(dragging);
+    } else {
+      navList.insertBefore(dragging, afterElement);
+    }
+  });
+
+  // 拖拽进入
+  navList.addEventListener('dragenter', (e) => {
+    e.preventDefault();
+    if (e.target.classList.contains('nav-item') && e.target !== draggedElement) {
+      e.target.classList.add('drag-over');
+    }
+  });
+
+  // 拖拽离开
+  navList.addEventListener('dragleave', (e) => {
+    if (e.target.classList.contains('nav-item')) {
+      e.target.classList.remove('drag-over');
+    }
+  });
+
+  // 拖拽放置
+  navList.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    
+    if (draggedElement) {
+      const newIndex = Array.from(navList.children).indexOf(draggedElement);
+      
+      if (newIndex !== draggedIndex) {
+        // 更新站点顺序
+        await updateSitesOrder(enabledSites, draggedIndex, newIndex);
+        
+        // 重新排列iframe
+        await reorderIframes(draggedIndex, newIndex);
+        
+        console.log('导航项顺序已更新');
+      }
+    }
+  });
+}
+
+// 获取拖拽后的元素位置
+function getDragAfterElement(container, y) {
+  const draggableElements = [...container.querySelectorAll('.nav-item:not(.dragging)')];
+  
+  return draggableElements.reduce((closest, child) => {
+    const box = child.getBoundingClientRect();
+    const offset = y - box.top - box.height / 2;
+    
+    if (offset < 0 && offset > closest.offset) {
+      return { offset: offset, element: child };
+    } else {
+      return closest;
+    }
+  }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
+// 更新站点顺序
+async function updateSitesOrder(enabledSites, fromIndex, toIndex) {
+  // 移动数组中的元素
+  const movedSite = enabledSites.splice(fromIndex, 1)[0];
+  enabledSites.splice(toIndex, 0, movedSite);
+  
+  // 获取所有站点配置
+  const { sites = [] } = await chrome.storage.sync.get('sites');
+  
+  // 更新站点配置中的顺序
+  const updatedSites = sites.map(site => {
+    const enabledSite = enabledSites.find(es => es.name === site.name);
+    if (enabledSite) {
+      return { ...site, order: enabledSites.indexOf(enabledSite) };
+    }
+    return site;
+  });
+  
+  // 保存更新后的配置
+  await chrome.storage.sync.set({ sites: updatedSites });
+  
+  console.log('站点顺序已保存到存储');
+}
+
+// 重新排列iframe
+async function reorderIframes(fromIndex, toIndex) {
+  const container = document.getElementById('iframes-container');
+  const iframeContainers = Array.from(container.querySelectorAll('.iframe-container'));
+  
+  if (iframeContainers.length > 0) {
+    // 获取导航项的新顺序
+    const navList = document.querySelector('.nav-list');
+    const navItems = Array.from(navList.children);
+    
+    // 为每个iframe容器设置CSS order属性，避免移动DOM元素
+    navItems.forEach((navItem, index) => {
+      const siteName = navItem.textContent;
+      const iframeContainer = iframeContainers.find(container => {
+        const iframe = container.querySelector('iframe');
+        return iframe && iframe.getAttribute('data-site') === siteName;
+      });
+      
+      if (iframeContainer) {
+        // 使用CSS order属性来控制显示顺序，不移动DOM元素
+        iframeContainer.style.order = index;
+      }
+    });
+    
+    // CSS Grid布局已经支持order属性，无需额外设置
+    
+    console.log('iframe顺序已更新，使用CSS order属性');
   }
 }
 

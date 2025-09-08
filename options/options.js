@@ -153,10 +153,18 @@ async function initializeSiteConfigs() {
     const { sites = [] } = await chrome.storage.sync.get('sites');
     console.log('获取到的站点数组:', sites);
 
-    // 2. 过滤非隐藏的站点，并分成两组
+    // 2. 过滤非隐藏的站点，并分成两组，按order排序
     const visibleSites = sites.filter(site => site.hidden === false);
-    const standaloneSites = visibleSites.filter(site => !site.supportIframe);
-    const collectionSites = visibleSites.filter(site => site.supportIframe);
+    const standaloneSites = visibleSites.filter(site => !site.supportIframe).sort((a, b) => {
+      const orderA = a.order !== undefined ? a.order : 999;
+      const orderB = b.order !== undefined ? b.order : 999;
+      return orderA - orderB;
+    });
+    const collectionSites = visibleSites.filter(site => site.supportIframe).sort((a, b) => {
+      const orderA = a.order !== undefined ? a.order : 999;
+      const orderB = b.order !== undefined ? b.order : 999;
+      return orderA - orderB;
+    });
     
 
     // 3. 获取两个容器
@@ -441,26 +449,18 @@ async function updateSiteOrder(mode) {
   try {
     const { sites = [] } = await chrome.storage.sync.get('sites');
     
-    // 创建新的站点数组，按照拖拽后的顺序排列
-    const reorderedSites = [];
-    
-    // 首先添加拖拽后的站点（按新模式顺序）
-    newOrder.forEach(siteName => {
-      const site = sites.find(s => s.name === siteName);
-      if (site) {
-        reorderedSites.push(site);
+    // 更新拖拽后站点的order字段
+    const updatedSites = sites.map(site => {
+      const newIndex = newOrder.indexOf(site.name);
+      if (newIndex !== -1) {
+        // 更新拖拽后站点的order
+        return { ...site, order: newIndex };
       }
+      return site;
     });
     
-    // 然后添加其他未显示的站点
-    sites.forEach(site => {
-      if (!newOrder.includes(site.name)) {
-        reorderedSites.push(site);
-      }
-    });
-    
-    // 保存新的顺序
-    await chrome.storage.sync.set({ sites: reorderedSites });
+    // 保存更新后的配置
+    await chrome.storage.sync.set({ sites: updatedSites });
     
     console.log(`${mode}模式站点顺序已更新`);
     

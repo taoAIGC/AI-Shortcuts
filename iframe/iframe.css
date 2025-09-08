@@ -555,7 +555,6 @@ html {
 /* 拖拽排序样式 */
 .nav-item {
     cursor: move;
-    user-select: none;
     transition: all 0.2s ease;
 }
 
@@ -566,12 +565,10 @@ html {
 .nav-item.dragging {
     opacity: 0.5;
     transform: rotate(5deg);
-    z-index: 1000;
 }
 
 .nav-item.drag-over {
     border-top: 2px solid #007bff;
-    transform: translateY(-2px);
 }
 
 .nav-list.drag-active {
