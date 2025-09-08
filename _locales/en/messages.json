@@ -99,5 +99,21 @@
   "searchEngine": {
     "message": "Search Engine",
     "description": "The name for the search engine"
+  },
+  "deleteConfirm": {
+    "message": "Are you sure you want to delete this prompt?",
+    "description": "Confirmation message for deleting a prompt"
+  },
+  "favoritesTitle": {
+    "message": "Prompt Favorites",
+    "description": "Title for the favorites section"
+  },
+  "noFavorites": {
+    "message": "No saved prompts yet",
+    "description": "Message shown when there are no saved prompts"
+  },
+  "favoriteButton": {
+    "message": "Save Prompt",
+    "description": "Title for the favorite button"
   }
 } 

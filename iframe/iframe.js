@@ -115,12 +115,7 @@ async function createIframes(query, sites) {
   } catch (error) {
     console.error('创建 iframes 失败:', error);
   }
-  // 滚动到页面顶部
-  /*
-  window.scrollTo({
-    top: 0,
-    behavior: 'smooth'
-  });*/
+ 
   
   // 创建导航栏
   const nav = document.createElement('nav');
@@ -135,6 +130,9 @@ async function createIframes(query, sites) {
     const navItem = document.createElement('li');
     navItem.className = 'nav-item';
     navItem.textContent = site.name;
+    navItem.draggable = true;
+    navItem.dataset.siteName = site.name;
+    navItem.dataset.originalIndex = index;
     
 
 
@@ -185,11 +183,159 @@ async function createIframes(query, sites) {
     navList.appendChild(navItem);
   });
 
+  // 添加拖拽排序功能
+  addDragAndDropToNavList(navList, enabledSites);
+
   nav.appendChild(navList);
   document.body.insertBefore(nav, container);
 
 
   
+}
+
+// 添加拖拽排序功能到导航列表
+function addDragAndDropToNavList(navList, enabledSites) {
+  let draggedElement = null;
+  let draggedIndex = null;
+
+  // 拖拽开始
+  navList.addEventListener('dragstart', (e) => {
+    if (e.target.classList.contains('nav-item')) {
+      draggedElement = e.target;
+      draggedIndex = Array.from(navList.children).indexOf(e.target);
+      e.target.classList.add('dragging');
+      navList.classList.add('drag-active');
+      
+      // 设置拖拽数据
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/html', e.target.outerHTML);
+    }
+  });
+
+  // 拖拽结束
+  navList.addEventListener('dragend', (e) => {
+    if (e.target.classList.contains('nav-item')) {
+      e.target.classList.remove('dragging');
+      navList.classList.remove('drag-active');
+      
+      // 移除所有拖拽悬停效果
+      navList.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.remove('drag-over');
+      });
+      
+      draggedElement = null;
+      draggedIndex = null;
+    }
+  });
+
+  // 拖拽悬停
+  navList.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    
+    const afterElement = getDragAfterElement(navList, e.clientY);
+    const dragging = navList.querySelector('.dragging');
+    
+    if (afterElement == null) {
+      navList.appendChild(dragging);
+    } else {
+      navList.insertBefore(dragging, afterElement);
+    }
+  });
+
+  // 拖拽进入
+  navList.addEventListener('dragenter', (e) => {
+    e.preventDefault();
+    if (e.target.classList.contains('nav-item') && e.target !== draggedElement) {
+      e.target.classList.add('drag-over');
+    }
+  });
+
+  // 拖拽离开
+  navList.addEventListener('dragleave', (e) => {
+    if (e.target.classList.contains('nav-item')) {
+      e.target.classList.remove('drag-over');
+    }
+  });
+
+  // 拖拽放置
+  navList.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    
+    if (draggedElement) {
+      const newIndex = Array.from(navList.children).indexOf(draggedElement);
+      
+      if (newIndex !== draggedIndex) {
+        // 更新站点顺序
+        await updateSitesOrder(enabledSites, draggedIndex, newIndex);
+        
+        // 重新排列iframe
+        await reorderIframes(draggedIndex, newIndex);
+        
+        console.log('导航项顺序已更新');
+      }
+    }
+  });
+}
+
+// 获取拖拽后的元素位置
+function getDragAfterElement(container, y) {
+  const draggableElements = [...container.querySelectorAll('.nav-item:not(.dragging)')];
+  
+  return draggableElements.reduce((closest, child) => {
+    const box = child.getBoundingClientRect();
+    const offset = y - box.top - box.height / 2;
+    
+    if (offset < 0 && offset > closest.offset) {
+      return { offset: offset, element: child };
+    } else {
+      return closest;
+    }
+  }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
+// 更新站点顺序
+async function updateSitesOrder(enabledSites, fromIndex, toIndex) {
+  // 移动数组中的元素
+  const movedSite = enabledSites.splice(fromIndex, 1)[0];
+  enabledSites.splice(toIndex, 0, movedSite);
+  
+  // 获取所有站点配置
+  const { sites = [] } = await chrome.storage.sync.get('sites');
+  
+  // 更新站点配置中的顺序
+  const updatedSites = sites.map(site => {
+    const enabledSite = enabledSites.find(es => es.name === site.name);
+    if (enabledSite) {
+      return { ...site, order: enabledSites.indexOf(enabledSite) };
+    }
+    return site;
+  });
+  
+  // 保存更新后的配置
+  await chrome.storage.sync.set({ sites: updatedSites });
+  
+  console.log('站点顺序已保存到存储');
+}
+
+// 重新排列iframe
+async function reorderIframes(fromIndex, toIndex) {
+  const container = document.getElementById('iframes-container');
+  const iframeContainers = container.querySelectorAll('.iframe-container');
+  
+  if (iframeContainers.length > 0) {
+    const movedContainer = iframeContainers[fromIndex];
+    
+    if (toIndex >= iframeContainers.length) {
+      // 移动到末尾
+      container.appendChild(movedContainer);
+    } else {
+      // 移动到指定位置
+      container.insertBefore(movedContainer, iframeContainers[toIndex]);
+    }
+    
+    console.log('iframe顺序已更新');
+  }
 }
 
 
@@ -1006,6 +1152,9 @@ function initializeI18n() {
                 element.type === 'text') {
                 // 对于输入框，设置 placeholder
                 element.placeholder = message;
+            } else if (element.tagName.toLowerCase() === 'button') {
+                // 对于按钮，设置 title 属性
+                element.title = message;
             } else {
                 // 对于其他元素，设置文本内容
                 element.textContent = message;
@@ -1316,9 +1465,12 @@ function showFavorites() {
   const queryList = document.getElementById('queryList');
   
   if (favoritePrompts.length === 0) {
-    queryList.innerHTML = '<div class="favorites-section"><div class="favorites-title">提示词收藏夹</div><div style="padding: 10px; color: #666; text-align: center;">暂无收藏的提示词</div></div>';
+    const favoritesTitle = chrome.i18n.getMessage('favoritesTitle');
+    const noFavoritesMessage = chrome.i18n.getMessage('noFavorites');
+    queryList.innerHTML = `<div class="favorites-section"><div class="favorites-title">${favoritesTitle}</div><div style="padding: 10px; color: #666; text-align: center;">${noFavoritesMessage}</div></div>`;
   } else {
-    let html = '<div class="favorites-section"><div class="favorites-title">提示词收藏夹</div>';
+    const favoritesTitle = chrome.i18n.getMessage('favoritesTitle');
+    let html = `<div class="favorites-section"><div class="favorites-title">${favoritesTitle}</div>`;
     
     favoritePrompts.forEach((prompt, index) => {
       html += `
@@ -1397,7 +1549,8 @@ async function deleteFavoriteItem(item) {
   const prompt = item.getAttribute('data-prompt');
   console.log('删除索引:', index, '提示词:', prompt);
   
-  if (confirm(`确定要删除提示词"${prompt}"吗？`)) {
+  const deleteConfirmMessage = chrome.i18n.getMessage('deleteConfirm');
+  if (confirm(deleteConfirmMessage)) {
     try {
       // 从数组中删除
       favoritePrompts.splice(index, 1);

@@ -549,7 +549,33 @@ html {
 }
 
 .toggle-icon-shake {
-    animation: shake s0.5 ease-in-out;
+    animation: shake 0.3s ease-in-out;
+}
+
+/* 拖拽排序样式 */
+.nav-item {
+    cursor: move;
+    user-select: none;
+    transition: all 0.2s ease;
+}
+
+.nav-item:hover {
+    background-color: #f0f0f0;
+}
+
+.nav-item.dragging {
+    opacity: 0.5;
+    transform: rotate(5deg);
+    z-index: 1000;
+}
+
+.nav-item.drag-over {
+    border-top: 2px solid #007bff;
+    transform: translateY(-2px);
+}
+
+.nav-list.drag-active {
+    background-color: #f8f9fa;
 }
 
 

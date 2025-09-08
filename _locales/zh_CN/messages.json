@@ -94,5 +94,21 @@
   "searchEngine": {
     "message": "搜索引擎",
     "description": "搜索引擎的名称"
+  },
+  "deleteConfirm": {
+    "message": "确定要删除这个提示词吗？",
+    "description": "删除提示词的确认消息"
+  },
+  "favoritesTitle": {
+    "message": "提示词收藏夹",
+    "description": "收藏夹部分的标题"
+  },
+  "noFavorites": {
+    "message": "暂无收藏的提示词",
+    "description": "没有保存提示词时显示的消息"
+  },
+  "favoriteButton": {
+    "message": "收藏提示词",
+    "description": "收藏按钮的标题"
   }
 } 
