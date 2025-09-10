@@ -22,20 +22,7 @@
 chrome：https://chromewebstore.google.com/detail/multi-ai/dkhpgbbhlnmjbkihoeniojpkggkabbbl
 
 
-how to install the newest version extension：
-1. Extract the .zip file
-- Locate the .zip file and extract it to a folder.
-2. Open the Chrome Extensions page
-- Type chrome://extensions/ into the Chrome address bar and press Enter.
--  Enable "Developer mode" by toggling the switch in the upper-right corner.
-3. Load the unpacked extension
-- Click the "Load unpacked" button in the upper-left corner.
-- Select the folder where you extracted the extension.
-4. Verify successful installation
-- Once loaded, the extension will appear on the Extensions page, and its icon will be visible in the top-right corner of Chrome.
-
-
-edge：coming soon
+edge：https://microsoftedge.microsoft.com/addons/detail/ai-%E4%BB%BB%E6%84%8F%E9%97%A8-%E5%BF%AB%E9%80%9F%E8%AE%BF%E9%97%AE-chatgpt-%E8%B1%86%E5%8C%85-/pehoogkkiaidofipnnafdpcfbkhkhddo （This is an old version and not recommended for use. The latest version has not yet been approved.）
 
 🎉 Pin the extension to the toolbar and click the extension icon.
 Access the Multi-AI collection page, enter a keyword once, and view results from multiple AIs on a single page.
@@ -86,25 +73,10 @@ This project is licensed under the GNU General Public License v3.0.
 
 😄下载扩展
 
-chrome：https://chromewebstore.google.com/detail/multi-ai/dkhpgbbhlnmjbkihoeniojpkggkabbbl （老版本）
-
-最新版本 version: https://github.com/taoAIGC/AI-Shortcuts/blob/master/AIShortcuts_V%201.11.zip
-扩展安装方法：
-
-1. 解压 .zip 文件
-- 找到你的 .zip 文件，并将其解压到一个文件夹中。
-2. 打开 Chrome 的扩展程序页面
-- 在 Chrome 地址栏输入 chrome://extensions/ 并按回车。
-- 点击页面右上角的 “开发者模式” 开关，将其启用。
-3. 加载解压的扩展程序
-- 点击左上角的 “加载已解压的扩展程序” 按钮。
-- 在文件选择窗口中，选择解压后的扩展文件夹。
-4. 确认加载成功
-- 成功加载后，扩展会显示在扩展程序页面中，你可以在右上角找到它的图标。
+chrome：https://chromewebstore.google.com/detail/multi-ai/dkhpgbbhlnmjbkihoeniojpkggkabbbl 
 
 
-
-edge：稍后支持
+edge：https://microsoftedge.microsoft.com/addons/detail/ai-%E4%BB%BB%E6%84%8F%E9%97%A8-%E5%BF%AB%E9%80%9F%E8%AE%BF%E9%97%AE-chatgpt-%E8%B1%86%E5%8C%85-/pehoogkkiaidofipnnafdpcfbkhkhddo( 新版本一直审核不通过，所以版本较老)
 
 
 
