@@ -1,0 +1,229 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "2024-01-01T00:00:00Z",
+  "description": "AI站点处理器配置 - 支持远程更新",
+  "author": "AI Shortcuts Team",
+  "sites": [
+
+      {
+        "name": "DeepSeek",
+        "url": "https://chat.deepseek.com/",
+        "enabled": true,
+        "supportUrlQuery": false,
+        "region": "China",
+        "hidden": false,
+        "supportIframe": true,
+        "searchHandler": "async function(query) { const textarea = document.querySelector('textarea'); if (!textarea) { console.error('未找到输入框'); return; } textarea.focus(); textarea.value = query; const events = ['input', 'change', 'blur', 'focus']; events.forEach(eventName => { textarea.dispatchEvent(new Event(eventName, { bubbles: true })); }); setTimeout(() => { const enterEvent = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'Enter', code: 'Enter', keyCode: 13, which: 13, location: 0, repeat: false, isComposing: false }); textarea.dispatchEvent(enterEvent); }, 100); }"
+      },
+      {
+        "name": "问小白",
+        "url": "https://www.wenxiaobai.com/",
+        "enabled": true,
+        "supportUrlQuery": false,
+        "region": "China",
+        "hidden": false,
+        "supportIframe": false,
+        "searchHandler": "async function(query) { const textarea = document.querySelector('textarea'); if (!textarea) { console.error('未找到输入框'); return; } textarea.focus(); textarea.value = query; const events = ['input', 'change', 'blur', 'focus']; events.forEach(eventName => { textarea.dispatchEvent(new Event(eventName, { bubbles: true })); }); setTimeout(() => { const enterEvent = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'Enter', code: 'Enter', keyCode: 13, which: 13, location: 0, repeat: false, isComposing: false }); textarea.dispatchEvent(enterEvent); }, 100); }"
+      },
+      {
+        "name": "秘塔AI",
+        "url": "https://metaso.cn/",
+        "enabled": true,
+        "supportUrlQuery": false,
+        "region": "China",
+        "hidden": false,
+        "supportIframe": true,
+        "searchHandler": "async function(query) { const iframeUrl = window.frameElement ? window.frameElement.src : window.location.href; if (iframeUrl.includes('/search/')) { const recommendBox = document.querySelector('div.MuiBox-root.css-qtri4c'); if (recommendBox) { recommendBox.click(); await new Promise(resolve => setTimeout(resolve, 500)); } } const textarea = document.querySelector('.search-consult-textarea'); if (!textarea) { console.error('未找到秘塔输入框'); return; } textarea.value = query; textarea.dispatchEvent(new Event('input', { bubbles: true })); const enterEvent = new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }); textarea.dispatchEvent(enterEvent); window.parent.postMessage({ type: 'metaso_response', success: true }, '*'); }"
+      },
+      {
+        "name": "文心一言",
+        "url": "https://yiyan.baidu.com/chat",
+        "enabled": false,
+        "supportUrlQuery": false,
+        "region": "China",
+        "hidden": false,
+        "supportIframe": false,
+        "searchHandler": "async function(query) { const editableDiv = document.querySelector('.yc-editor'); if (!editableDiv) { console.error('未找到输入框'); return; } editableDiv.focus(); const p = document.querySelector('p.yc-editor-paragraph'); if (p) { p.innerHTML = ''; } const span = document.createElement('span'); span.setAttribute('data-lexical-text', 'true'); span.textContent = query; p.appendChild(span); const inputEvent = new InputEvent('input', { bubbles: true, cancelable: true, inputType: 'insertText', data: query }); editableDiv.dispatchEvent(inputEvent); editableDiv.dispatchEvent(new Event('change', { bubbles: true })); const events = ['input', 'change', 'blur', 'focus']; events.forEach(eventName => { editableDiv.dispatchEvent(new Event(eventName, { bubbles: true })); }); const maxAttempts = 5; let attempts = 0; const tryClick = () => { const sendButton = document.querySelector('#sendBtn'); if (sendButton && !sendButton.disabled) { sendButton.click(); return true; } attempts++; if (attempts < maxAttempts) { setTimeout(tryClick, 200); } else { console.error('达到最大尝试次数，按钮仍然被禁用'); } }; setTimeout(tryClick, 100); }"
+      },
+      {
+        "name": "腾讯元宝",
+        "url": "https://yuanbao.tencent.com/chat/",
+        "enabled": true,
+        "supportUrlQuery": false,
+        "region": "China",
+        "hidden": false,
+        "supportIframe": true,
+        "searchHandler": "async function(query) { const editableDiv = document.querySelector('[contenteditable=\"true\"]'); if (!editableDiv) { console.error('未找到输入框'); return; } editableDiv.focus(); const pElement = editableDiv.querySelector('p'); if (pElement) { pElement.innerText = query; } else { editableDiv.innerHTML = '<p></p>'; editableDiv.querySelector('p').innerText = query; } const events = ['input', 'change', 'blur', 'focus']; events.forEach(eventName => { editableDiv.dispatchEvent(new Event(eventName, { bubbles: true })); }); setTimeout(() => { const enterEvent = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'Enter', code: 'Enter', keyCode: 13, which: 13, location: 0, repeat: false, isComposing: false }); editableDiv.dispatchEvent(enterEvent); }, 100); }"
+      },
+      {
+        "name": "Google",
+        "url": "https://www.google.com/search?q={query}",
+        "enabled": false,
+        "supportUrlQuery": true,
+        "region": "US",
+        "hidden": false,
+        "supportIframe": true,
+        "searchHandler": "async function(query) { console.log('Google站点使用URL查询，无需搜索处理器'); }"
+      },
+      {
+        "name": "ChatGPT",
+        "url": "https://chatgpt.com/",
+        "enabled": true,
+        "supportUrlQuery": false,
+        "region": "US",
+        "hidden": false,
+        "supportIframe": true,
+        "searchHandler": "async function(query) { const editableDiv = document.querySelector('#prompt-textarea'); if (!editableDiv) { console.error('未找到输入框'); return; } editableDiv.focus(); const pElement = editableDiv.querySelector('p'); if (pElement) { pElement.innerText = query; } else { editableDiv.innerHTML = '<p></p>'; editableDiv.querySelector('p').innerText = query; } const events = ['input', 'change', 'blur', 'focus']; events.forEach(eventName => { editableDiv.dispatchEvent(new Event(eventName, { bubbles: true })); }); setTimeout(() => { const sendButton = document.querySelector('button[data-testid=\"send-button\"]'); if (sendButton && !sendButton.disabled) { sendButton.click(); } }, 100); }"
+      },
+      {
+        "name": "纳米AI",
+        "url": "https://nanoai.live/",
+        "enabled": false,
+        "supportUrlQuery": false,
+        "region": "China",
+        "hidden": true,
+        "supportIframe": false,
+        "searchHandler": "async function(query) { console.log('纳米AI站点暂未实现搜索处理器'); }"
+      },
+      {
+        "name": "智谱",
+        "url": "https://chatglm.cn/chat",
+        "enabled": false,
+        "supportUrlQuery": false,
+        "region": "China",
+        "hidden": true,
+        "supportIframe": false,
+        "searchHandler": "async function(query) { console.log('智谱站点暂未实现搜索处理器'); }"
+      },
+      {
+        "name": "Kimi",
+        "url": "https://kimi.moonshot.cn/",
+        "enabled": false,
+        "supportUrlQuery": false,
+        "region": "China",
+        "hidden": false,
+        "supportIframe": false,
+        "searchHandler": "async function(query) { const editableDiv = document.querySelector('[contenteditable=\"true\"]'); if (!editableDiv) { console.error('未找到输入框'); return; } editableDiv.focus(); const pElement = editableDiv.querySelector('p'); if (pElement) { pElement.innerText = query; } else { editableDiv.innerHTML = '<p></p>'; editableDiv.querySelector('p').innerText = query; } const events = ['input', 'change', 'blur', 'focus']; events.forEach(eventName => { editableDiv.dispatchEvent(new Event(eventName, { bubbles: true })); }); setTimeout(() => { const enterEvent = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'Enter', code: 'Enter', keyCode: 13, which: 13, location: 0, repeat: false, isComposing: false }); editableDiv.dispatchEvent(enterEvent); }, 100); }"
+      },
+      {
+        "name": "豆包",
+        "url": "https://doubao.com/chat",
+        "enabled": false,
+        "supportUrlQuery": false,
+        "region": "China",
+        "hidden": false,
+        "supportIframe": true,
+        "searchHandler": "async function(query) { const textarea = document.querySelector('textarea[data-testid=\"chat_input_input\"]'); if (!textarea) { console.error('未找到输入框'); return; } textarea.focus(); textarea.value = query; const events = ['input', 'change', 'blur', 'focus', 'keydown', 'keyup', 'keypress']; events.forEach(eventName => { textarea.dispatchEvent(new Event(eventName, { bubbles: true })); if (eventName.startsWith('key')) { textarea.dispatchEvent(new KeyboardEvent(eventName, { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true })); } }); }"
+      },
+      {
+        "name": "通义千问",
+        "url": "https://tongyi.com/",
+        "enabled": false,
+        "supportUrlQuery": false,
+        "region": "China",
+        "hidden": false,
+        "supportIframe": false,
+        "searchHandler": "async function(query) { const textarea = document.querySelector('textarea'); if (!textarea) { console.error('未找到输入框'); return; } textarea.focus(); textarea.value = query; const events = ['input', 'change', 'blur', 'focus']; events.forEach(eventName => { textarea.dispatchEvent(new Event(eventName, { bubbles: true })); }); setTimeout(() => { const enterEvent = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'Enter', code: 'Enter', keyCode: 13, which: 13, location: 0, repeat: false, isComposing: false }); textarea.dispatchEvent(enterEvent); }, 100); window.parent.postMessage({ type: 'message_received', originalType: 'tongyi' }, '*'); }"
+      },
+      {
+        "name": "知乎直达",
+        "url": "https://zhida.zhihu.com/",
+        "enabled": false,
+        "supportUrlQuery": false,
+        "region": "China",
+        "hidden": false,
+        "supportIframe": true,
+        "searchHandler": "async function(query) { const textarea = document.querySelector('textarea'); if (!textarea) { console.error('未找到输入框'); return; } textarea.focus(); textarea.value = query; const events = ['input', 'change', 'blur', 'focus']; events.forEach(eventName => { textarea.dispatchEvent(new Event(eventName, { bubbles: true })); }); setTimeout(() => { const enterEvent = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'Enter', code: 'Enter', keyCode: 13, which: 13, location: 0, repeat: false, isComposing: false }); textarea.dispatchEvent(enterEvent); }, 100); }"
+      },
+      {
+        "name": "小红书",
+        "url": "https://www.xiaohongshu.com/search_result?keyword={query}",
+        "enabled": true,
+        "supportUrlQuery": true,
+        "region": "China",
+        "hidden": false,
+        "supportIframe": false,
+        "searchHandler": "async function(query) { console.log('小红书站点使用URL查询，无需搜索处理器'); }"
+      },
+      {
+        "name": "百度",
+        "url": "https://www.baidu.com/s?wd={query}",
+        "enabled": false,
+        "supportUrlQuery": true,
+        "region": "China",
+        "hidden": false,
+        "supportIframe": true,
+        "searchHandler": "async function(query) { console.log('百度站点使用URL查询，无需搜索处理器'); }"
+      },
+      {
+        "name": "Grok",
+        "url": "https://grok.com/",
+        "enabled": false,
+        "supportUrlQuery": false,
+        "region": "US",
+        "hidden": false,
+        "supportIframe": true,
+        "searchHandler": "async function(query) { const textarea = document.querySelector('textarea'); if (!textarea) { console.error('未找到输入框'); return; } textarea.focus(); textarea.value = query; const events = ['input', 'change', 'blur', 'focus']; events.forEach(eventName => { textarea.dispatchEvent(new Event(eventName, { bubbles: true })); }); setTimeout(() => { const enterEvent = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'Enter', code: 'Enter', keyCode: 13, which: 13, location: 0, repeat: false, isComposing: false }); textarea.dispatchEvent(enterEvent); }, 100); }"
+      },
+      {
+        "name": "Gemini",
+        "url": "https://gemini.google.com/",
+        "enabled": false,
+        "supportUrlQuery": false,
+        "region": "US",
+        "hidden": false,
+        "supportIframe": true,
+        "searchHandler": "async function(query) { const editableDiv = document.querySelector('[contenteditable=\"true\"]'); if (!editableDiv) { console.error('未找到输入框'); return; } editableDiv.focus(); const pElement = editableDiv.querySelector('p'); if (pElement) { pElement.innerText = query; } else { editableDiv.innerHTML = '<p></p>'; editableDiv.querySelector('p').innerText = query; } const events = ['input', 'change', 'blur', 'focus']; events.forEach(eventName => { editableDiv.dispatchEvent(new Event(eventName, { bubbles: true })); }); setTimeout(() => { const enterEvent = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'Enter', code: 'Enter', keyCode: 13, which: 13, location: 0, repeat: false, isComposing: false }); editableDiv.dispatchEvent(enterEvent); }, 100); }"
+      },
+      {
+        "name": "Copilot",
+        "url": "https://copilot.microsoft.com/",
+        "enabled": false,
+        "supportUrlQuery": false,
+        "region": "US",
+        "hidden": false,
+        "supportIframe": true,
+        "searchHandler": "async function(query) { const textArea = document.querySelector('textarea#userInput'); if (!textArea) { console.error('未找到输入框'); return; } textArea.focus(); textArea.value = query; const events = ['input', 'change', 'blur', 'focus']; events.forEach(eventName => { textArea.dispatchEvent(new Event(eventName, { bubbles: true })); }); setTimeout(() => { const sendButton = document.querySelector('button[title=\"Submit message\"]'); if (sendButton && !sendButton.disabled) { sendButton.click(); } else { console.error('未找到发送按钮或按钮被禁用'); } }, 100); }"
+      },
+      {
+        "name": "Perplexity",
+        "url": "https://www.perplexity.ai/search?q={query}",
+        "enabled": false,
+        "supportUrlQuery": true,
+        "region": "US",
+        "hidden": false,
+        "supportIframe": true,
+        "searchHandler": "async function(query) { console.log('Perplexity站点使用URL查询，无需搜索处理器'); }"
+      },
+      {
+        "name": "Claude",
+        "url": "https://claude.ai/chat",
+        "enabled": false,
+        "supportUrlQuery": false,
+        "region": "US",
+        "hidden": false,
+        "supportIframe": true,
+        "searchHandler": "async function(query) { const editableDiv = document.querySelector('[contenteditable=\"true\"]'); if (!editableDiv) { console.error('未找到输入框'); return; } editableDiv.focus(); const pElement = editableDiv.querySelector('p'); if (pElement) { pElement.innerText = query; } else { editableDiv.innerHTML = '<p></p>'; editableDiv.querySelector('p').innerText = query; } const events = ['input', 'change', 'blur', 'focus']; events.forEach(eventName => { editableDiv.dispatchEvent(new Event(eventName, { bubbles: true })); }); setTimeout(() => { const enterEvent = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'Enter', code: 'Enter', keyCode: 13, which: 13, location: 0, repeat: false, isComposing: false }); editableDiv.dispatchEvent(enterEvent); setTimeout(() => { const sendButtonSelectors = ['button[type=\"button\"][aria-label=\"Send Message\"]', 'button[aria-label=\"Send\"]', 'button[data-testid=\"send-button\"]', 'button:has(svg)']; for (const selector of sendButtonSelectors) { const sendButton = document.querySelector(selector); if (sendButton && !sendButton.disabled) { sendButton.click(); return; } } }, 200); }, 100); }"
+      },
+      {
+        "name": "POE",
+        "url": "https://poe.com/",
+        "enabled": false,
+        "supportUrlQuery": false,
+        "region": "US",
+        "hidden": false,
+        "supportIframe": true,
+        "searchHandler": "async function(query) { const growingTextArea = document.querySelector('.GrowingTextArea_growWrap__im5W3'); if (!growingTextArea) { console.error('未找到输入框容器'); return; } growingTextArea.setAttribute('data-replicated-value', query); const textarea = growingTextArea.querySelector('textarea'); if (textarea) { textarea.value = query; textarea.dispatchEvent(new Event('input', { bubbles: true })); } setTimeout(() => { const sendButton = document.querySelector('button[data-button-send=\"true\"]'); if (sendButton && !sendButton.disabled) { sendButton.click(); } else { console.error('未找到发送按钮或按钮被禁用'); } }, 100); }"
+      },
+      {
+        "name": "Bing",
+        "url": "https://www.bing.com/search?q={query}",
+        "enabled": false,
+        "supportUrlQuery": true,
+        "region": "US",
+        "hidden": false,
+        "supportIframe": true,
+        "searchHandler": "async function(query) { console.log('Bing站点使用URL查询，无需搜索处理器'); }"
+      }
+    ]
+}

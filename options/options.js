@@ -1,14 +1,11 @@
 let currentButtonConfig = null;
-console.log('系统默认站点设置:', defaultSites);
+// 系统默认站点设置将通过 getDefaultSites() 动态获取
 
 
 // 加载保存的配置
-function loadConfig() {
-  chrome.storage.sync.get('sites', function(data) {
-    const  sites = data.sites || window.defaultSites;
-    console.log('加载的sites:', sites);
-    initializeSiteConfigs();
-  });
+async function loadConfig() {
+  // 直接从 initializeSiteConfigs 中处理站点配置加载
+  initializeSiteConfigs();
 
   chrome.storage.sync.get('buttonConfig', function(data) {
     currentButtonConfig = data.buttonConfig || window.defaultButtonConfig;
@@ -149,8 +146,8 @@ async function initializeButtonConfigs() {
 
 async function initializeSiteConfigs() {
   try {
-    // 1. 获取存储的站点配置
-    const { sites = [] } = await chrome.storage.sync.get('sites');
+    // 1. 从 local storage 获取站点配置
+    const { sites = [] } = await chrome.storage.local.get('sites');
     console.log('获取到的站点数组:', sites);
 
     // 2. 过滤非隐藏的站点，并分成两组，按order排序
@@ -227,46 +224,33 @@ async function initializeSiteConfigs() {
     document.querySelectorAll('.enable-toggle').forEach(toggle => {
       toggle.addEventListener('change', async function() {
         try {
-          // 获取最新的存储数据
-          const { sites: currentSites } = await chrome.storage.sync.get('sites');
           const siteName = this.closest('.site-config').querySelector('.site-name-display').textContent;
           
-          // 直接通过站点名称在完整数组中查找
-          const siteIndex = currentSites.findIndex(s => s.name === siteName);
-          if (siteIndex !== -1) {
-            const updatedSites = [...currentSites];
-            updatedSites[siteIndex] = {
-              ...updatedSites[siteIndex],
-              enabled: this.checked
-            };
-            
-            // 保存更新后的配置
-            await new Promise((resolve, reject) => {
-              chrome.storage.sync.set({ sites: updatedSites }, () => {
-                if (chrome.runtime.lastError) {
-                  reject(chrome.runtime.lastError);
-                } else {
-                  resolve();
-                }
-              });
-            });
-            
-            console.log('保存的站点数组:', updatedSites[siteIndex]);
-            
-            // 确保保存完成后再获取
-            const result = await new Promise((resolve) => {
-              chrome.storage.sync.get('sites', resolve);
-            });
-            console.log('获取到的站点数组:', result.sites);
-
-            if (chrome.runtime.lastError) {
-              showToast(chrome.i18n.getMessage("saveFailed", [chrome.runtime.lastError.message]));
-              return;
-            }
-            showToast(chrome.i18n.getMessage("saveSuccess"));
-            
-
+          // 获取当前的用户设置
+          const { siteSettings = {} } = await chrome.storage.sync.get('siteSettings');
+          
+          // 更新用户设置
+          siteSettings[siteName] = this.checked;
+          
+          // 保存用户设置到 sync storage
+          await chrome.storage.sync.set({ siteSettings });
+          
+          // 同时更新 local storage 中的站点配置
+          const { sites: currentSites } = await chrome.storage.local.get('sites');
+          if (currentSites && currentSites.length > 0) {
+            const updatedSites = currentSites.map(site => 
+              site.name === siteName ? { ...site, enabled: this.checked } : site
+            );
+            await chrome.storage.local.set({ sites: updatedSites });
           }
+          
+          console.log('保存的站点设置:', siteName, this.checked);
+
+          if (chrome.runtime.lastError) {
+            showToast(chrome.i18n.getMessage("saveFailed", [chrome.runtime.lastError.message]));
+            return;
+          }
+          showToast(chrome.i18n.getMessage("saveSuccess"));
         } catch (error) {
           console.error('保存设置失败:', error);
           showToast('保存失败');

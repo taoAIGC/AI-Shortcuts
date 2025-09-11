@@ -23,7 +23,7 @@ function updateFavoriteButton() {
 // 创建工具栏
 async function createToolbar() {
     // 从 storage 获取站点配置
-    const { sites } = await chrome.storage.sync.get('sites');
+    const { sites } = await chrome.storage.local.get('sites');
     if (!sites || !sites.length) return;
   
     // 只显示非隐藏的站点
@@ -66,10 +66,14 @@ function initializeSiteDropdown() {
         return;
       }
 
+      console.log('点击站点:', site.name, '查询:', currentSelectedText);
+      
       chrome.runtime.sendMessage({
         action: 'singleSiteSearch',
         query: currentSelectedText,
         siteName: site.name
+      }).catch(error => {
+        console.error('发送消息失败:', error);
       });
       
       const newFavoriteSite = [{
@@ -79,7 +83,14 @@ function initializeSiteDropdown() {
       // 更新存储
       await chrome.storage.sync.set({ favoriteSites: newFavoriteSite });
       
+      // 隐藏工具栏和下拉菜单
       siteDropdown.classList.remove('show');
+      if (toolbar) {
+        toolbar.style.display = 'none';
+        isToolbarVisible = false;
+        currentSelectedText = '';
+        lastSelectedText = '';
+      }
     });
     
     siteDropdown.appendChild(siteItem);
@@ -116,6 +127,8 @@ function initializeSiteDropdown() {
           action: 'singleSiteSearch',
           query: currentSelectedText,
           siteName: settings.favoriteSites[0].name
+        }).catch(error => {
+          console.error('发送消息失败:', error);
         });
       }
     });
@@ -139,6 +152,8 @@ function initializeSiteDropdown() {
       await chrome.runtime.sendMessage({
         action: 'createComparisonPage',
         query: currentSelectedText
+      }).catch(error => {
+        console.error('发送消息失败:', error);
       });
     }
   };

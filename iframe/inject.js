@@ -1,9 +1,85 @@
+// 获取当前域名
+function getCurrentDomain() {
+  try {
+    return window.location.hostname;
+  } catch (error) {
+    console.error('获取域名失败:', error);
+    return null;
+  }
+}
+
+// 根据域名获取站点处理器
+async function getSiteHandler(domain) {
+  try {
+    // 使用远程配置获取站点列表
+    let sites = [];
+    if (window.RemoteConfigManager) {
+      sites = await window.RemoteConfigManager.getCurrentSites('CN');
+    }
+    
+    if (!sites || sites.length === 0) {
+      console.warn('没有找到站点配置，请检查网络连接或重新加载扩展');
+      return null;
+    }
+    
+    // 查找匹配的站点
+    for (const site of sites) {
+      if (!site.url) continue;
+      
+      try {
+        const siteUrl = new URL(site.url);
+        const siteDomain = siteUrl.hostname;
+        
+        // 直接匹配域名
+        if (domain === siteDomain) {
+          return {
+            name: site.name,
+            searchHandler: site.searchHandler
+          };
+        }
+        
+        // 模糊匹配域名
+        if (domain.includes(siteDomain) || siteDomain.includes(domain)) {
+          return {
+            name: site.name,
+            searchHandler: site.searchHandler
+          };
+        }
+      } catch (urlError) {
+        // 如果URL解析失败，跳过这个站点
+        continue;
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('获取站点处理器失败:', error);
+    return null;
+  }
+}
+
 // 监听来自扩展的消息
 window.addEventListener('message', async function(event) {
     console.log('收到query:',event.data.query, '收到type:',event.data.type);
     console.log('收到消息event 原始:',event);
 
-  // 处理 ChatGPT 消息
+  // 使用新的统一处理逻辑
+  const domain = getCurrentDomain();
+  const siteHandler = await getSiteHandler(domain);
+  
+  if (siteHandler && siteHandler.searchHandler && event.data.query) {
+    console.log(`使用 ${siteHandler.name} 处理器处理消息`);
+    try {
+      // 将字符串形式的函数转换为可执行的函数
+      const handlerFunction = new Function('return ' + siteHandler.searchHandler)();
+      await handlerFunction(event.data.query);
+    } catch (error) {
+      console.error(`${siteHandler.name} 处理失败:`, error);
+    }
+    return;
+  }
+
+  // 兼容旧的类型处理方式（如果新方式失败）
   if (event.data.type === 'chatgpt') {
     const searchQuery = event.data.query;
     console.log('处理 ChatGPT 消息:', searchQuery);

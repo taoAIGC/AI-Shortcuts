@@ -127,7 +127,7 @@ async function createFloatButton() {
   feedbackIcon.addEventListener('click', (e) => {
     e.stopPropagation();
     // 打开飞书问卷链接
-    window.open('https://wenjuan.feishu.cn/m/cfm?t=sTFPGe4oetOi-9m3a', '_blank');
+    window.open(window.externalLinks?.feedbackSurvey || '#', '_blank');
   });
 
   // 添加图标到容器
@@ -251,7 +251,7 @@ async function createFloatButton() {
 // 加载站点列表
 async function loadSites() {
   console.log('loadSites');
-  const { sites } = await chrome.storage.sync.get('sites');
+  const { sites } = await chrome.storage.local.get('sites');
   const visibleSites = sites.filter(site => !site.hidden);
   const siteList = document.querySelector('.multi-ai-dialog .site-list');
   

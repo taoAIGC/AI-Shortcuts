@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     // 只有在直接打开（方式1）时才执行初始化 iframes
     if (!hasQueryParam) {
         // 获取站点配置并初始化 iframes
-        chrome.storage.sync.get('sites', (result) => {
+        chrome.storage.local.get('sites', (result) => {
             if (result.sites) {
                 // 过滤出启用的且支持 iframe 的站点，并按order排序
                 const availableSites = result.sites.filter(site => 
@@ -388,7 +388,7 @@ function createSingleIframe(siteName, url, container, query) {
     // 从 storage 获取站点配置，检查是否支持 URL 查询
     console.log("iframe onload 加载完成，准备查询页面内容处理函数")
 
-    chrome.storage.sync.get('sites', (result) => {
+    chrome.storage.local.get('sites', (result) => {
       const site = result.sites.find(s => s.url === url || url.startsWith(s.url));
       if (site && !site.supportUrlQuery) {
         // 查找对应的处理函数
@@ -836,7 +836,7 @@ async function initializeSiteSettings() {
     
     try {
         // 从 storage 获取数据
-        const { sites = [] } = await chrome.storage.sync.get('sites');
+        const { sites = [] } = await chrome.storage.local.get('sites');
         
         // 过滤支持 iframe 的站点
         const supportedSites = sites.filter(site => 
@@ -929,7 +929,7 @@ async function initializeSiteSettings() {
                 const checkboxes = document.querySelectorAll('.site-checkbox');
                 
                 // 获取当前所有站点配置
-                const { sites: currentSites = [] } = await chrome.storage.sync.get('sites');
+                const { sites: currentSites = [] } = await chrome.storage.local.get('sites');
                 
                 // 更新站点启用状态
                 const updatedSites = currentSites.map(site => {
@@ -946,8 +946,15 @@ async function initializeSiteSettings() {
                     return site;
                 });
                 
-                // 保存更新后的配置
-                await chrome.storage.sync.set({ sites: updatedSites });
+                // 保存更新后的配置到 local storage
+                await chrome.storage.local.set({ sites: updatedSites });
+                
+                // 同时保存用户设置到 sync storage
+                const siteSettings = {};
+                updatedSites.forEach(site => {
+                    siteSettings[site.name] = site.enabled;
+                });
+                await chrome.storage.sync.set({ siteSettings });
                 
                 // 显示成功提示
                 showToast('设置已保存');
@@ -1207,7 +1214,7 @@ async function iframeFresh(query) {
       const iframes = document.querySelectorAll('iframe');
           // 从 storage 获取站点配置
      
-      const { sites = [] } = await chrome.storage.sync.get('sites');
+      const { sites = [] } = await chrome.storage.local.get('sites');
 
         // 遍历每个 iframe
       iframes.forEach(iframe => {
@@ -1265,7 +1272,96 @@ async function iframeFresh(query) {
 document.addEventListener('DOMContentLoaded', async () => {
   initializeI18n();
   await initializeFavorites();
+  checkForSiteConfigUpdates();
 });
+
+// 检查站点配置更新
+async function checkForSiteConfigUpdates() {
+  try {
+    if (window.RemoteConfigManager) {
+      const updateInfo = await window.RemoteConfigManager.autoCheckUpdate();
+      if (updateInfo && updateInfo.hasUpdate) {
+        console.log('发现新版本站点配置');
+        showUpdateNotification(updateInfo);
+      }
+    }
+  } catch (error) {
+    console.error('检查站点配置更新失败:', error);
+  }
+}
+
+// 显示更新通知
+function showUpdateNotification(updateInfo) {
+  const notification = document.createElement('div');
+  notification.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #4CAF50;
+    color: white;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    z-index: 10000;
+    max-width: 300px;
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.4;
+  `;
+  
+  notification.innerHTML = `
+    <div style="font-weight: bold; margin-bottom: 8px;">发现新版本站点配置</div>
+    <div>是否更新到最新版本？</div>
+    <div style="margin-top: 10px;">
+      <button onclick="updateSiteConfig()" style="
+        background: white;
+        color: #4CAF50;
+        border: none;
+        padding: 5px 10px;
+        border-radius: 4px;
+        margin-right: 8px;
+        cursor: pointer;
+        font-size: 12px;
+      ">更新</button>
+      <button onclick="this.parentElement.parentElement.remove()" style="
+        background: transparent;
+        color: white;
+        border: 1px solid white;
+        padding: 5px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+      ">稍后</button>
+    </div>
+  `;
+  
+  document.body.appendChild(notification);
+  
+  // 全局更新函数
+  window.updateSiteConfig = async function() {
+    try {
+      const result = await window.RemoteConfigManager.updateLocalConfig(updateInfo.config);
+      if (result.success) {
+        notification.innerHTML = `
+          <div style="font-weight: bold; margin-bottom: 8px;">更新成功</div>
+          <div>站点配置已更新到最新版本</div>
+        `;
+        setTimeout(() => notification.remove(), 3000);
+      } else {
+        console.error('更新失败:', result.error);
+      }
+    } catch (error) {
+      console.error('更新失败:', error);
+    }
+  };
+  
+  // 10秒后自动消失
+  setTimeout(() => {
+    if (notification.parentElement) {
+      notification.remove();
+    }
+  }, 10000);
+}
 
 // 收藏功能实现
 let favoritePrompts = [];
@@ -1544,7 +1640,7 @@ async function updateSitesOrder(enabledSites, fromIndex, toIndex) {
   enabledSites.splice(toIndex, 0, movedSite);
   
   // 获取所有站点配置
-  const { sites = [] } = await chrome.storage.sync.get('sites');
+  const { sites = [] } = await chrome.storage.local.get('sites');
   
   // 更新站点配置中的顺序
   const updatedSites = sites.map(site => {
@@ -1555,8 +1651,8 @@ async function updateSitesOrder(enabledSites, fromIndex, toIndex) {
     return site;
   });
   
-  // 保存更新后的配置
-  await chrome.storage.sync.set({ sites: updatedSites });
+  // 保存更新后的配置到 local storage
+  await chrome.storage.local.set({ sites: updatedSites });
   
   console.log('站点顺序已保存到存储');
 }

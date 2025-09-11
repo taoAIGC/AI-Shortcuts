@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "__MSG_appName__",
-  "version": "1.26",
+  "version": "1.27",
   "description": "__MSG_extDescription__",
   "permissions": [
     "storage",
@@ -11,7 +11,9 @@
     "scripting",
     "contextMenus",
     "declarativeNetRequest",
-    "sidePanel"
+    "sidePanel",
+    "clipboardRead",
+    "clipboardWrite"
   ],
   "host_permissions": [
     "<all_urls>"
@@ -61,7 +63,7 @@
         "https://www.wenxiaobai.com/*"
 
       ],
-      "js": ["lib/jquery-3.7.1.min.js", "iframe/inject.js"],
+      "js": ["iframe/inject.js"],
       "run_at": "document_start",
       "all_frames": true
     },
@@ -74,9 +76,8 @@
       "matches": ["<all_urls>"],
       "css": ["content-scripts/float-button.css"],
       "js": [
-        "config/config.js",
-        "content-scripts/float-button.js",
-        "lib/jquery-3.7.1.min.js"
+        "config/consoleConfig.js",
+        "content-scripts/float-button.js"
       ],
       "run_at": "document_end"
     },

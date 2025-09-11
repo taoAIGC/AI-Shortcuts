@@ -41,7 +41,7 @@ function getQueryFromUrl() {
 
 // 创建工具栏
 async function createSearchToolbar(container, position) {
-  const { sites } = await chrome.storage.sync.get('sites');
+  const { sites } = await chrome.storage.local.get('sites');
     if (!sites || !sites.length) return;
   
     // 只显示非隐藏的站点
@@ -186,7 +186,7 @@ async function createSearchToolbar(container, position) {
     console.log('Compare button clicked, query:', query);  // 打印查询词
     
     if (query) {
-      chrome.storage.sync.get({
+      chrome.storage.local.get({
         sites: []
       }, (settings) => {
         console.log('Settings loaded:', settings);  // 打印设置
