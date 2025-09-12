@@ -548,32 +548,44 @@ self.addEventListener('error', (error) => {
 });
 
 
+// 防抖变量，避免短时间内多次调用
+let contextMenuTimeout = null;
+
 // 创建右键菜单
 async function createContextMenu() {
-  try {
-    // 获取配置
-    const { buttonConfig } = await chrome.storage.sync.get('buttonConfig');
-    
-    // 检查是否启用右键菜单
-    if (buttonConfig && buttonConfig.contextMenu) {
-      // 先移除已存在的菜单（避免重复）
-      await chrome.contextMenus.removeAll();
-      
-      // 创建新菜单
-      chrome.contextMenus.create({
-        id: "searchWithMultiAI",
-        title: chrome.i18n.getMessage("searchWithMultiAI"),
-        contexts: ["selection"]  // 只在选中文本时显示
-      });
-      console.log('右键菜单已创建');
-    } else {
-      // 如果未启用，确保移除菜单
-      await chrome.contextMenus.removeAll();
-      console.log('右键菜单已移除');
-    }
-  } catch (error) {
-    console.error('创建右键菜单失败:', error);
+  // 清除之前的定时器
+  if (contextMenuTimeout) {
+    clearTimeout(contextMenuTimeout);
   }
+  
+  // 设置防抖延迟
+  contextMenuTimeout = setTimeout(async () => {
+    try {
+      // 获取配置
+      const { buttonConfig } = await chrome.storage.sync.get('buttonConfig');
+      
+      // 检查是否启用右键菜单
+      if (buttonConfig && buttonConfig.contextMenu) {
+        // 先移除所有现有菜单，然后创建新菜单
+        // 这样可以避免重复创建的问题
+        await chrome.contextMenus.removeAll();
+        
+        // 创建新菜单
+        chrome.contextMenus.create({
+          id: "searchWithMultiAI",
+          title: chrome.i18n.getMessage("searchWithMultiAI"),
+          contexts: ["selection"]  // 只在选中文本时显示
+        });
+        console.log('右键菜单已创建');
+      } else {
+        // 如果未启用，确保移除菜单
+        await chrome.contextMenus.removeAll();
+        console.log('右键菜单已移除');
+      }
+    } catch (error) {
+      console.error('创建右键菜单失败:', error);
+    }
+  }, 100); // 100ms 防抖延迟
 }
 
 // 监听存储变化，当配置更改时更新右键菜单
@@ -584,12 +596,12 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
 });
 
 
-// 在每次页面加载时检查并创建右键菜单
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (changeInfo.status === 'complete') {
-    createContextMenu();
-  }
-});
+// 移除频繁的页面加载监听，只在必要时创建右键菜单
+// chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+//   if (changeInfo.status === 'complete') {
+//     createContextMenu();
+//   }
+// });
 
 // 监听扩展卸载事件
 chrome.runtime.setUninstallURL(self.externalLinks?.uninstallSurvey || '', () => {

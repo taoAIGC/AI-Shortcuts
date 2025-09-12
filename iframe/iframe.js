@@ -388,22 +388,16 @@ function createSingleIframe(siteName, url, container, query) {
     // 从 storage 获取站点配置，检查是否支持 URL 查询
     console.log("iframe onload 加载完成，准备查询页面内容处理函数")
 
-    chrome.storage.local.get('sites', (result) => {
+    chrome.storage.local.get('sites', async (result) => {
       const site = result.sites.find(s => s.url === url || url.startsWith(s.url));
       if (site && !site.supportUrlQuery) {
-        // 查找对应的处理函数
-        const hostname = new URL(url).hostname;
-        console.log('当前域名:', hostname);
-        console.log('可用处理器:', Object.keys(iframeHandlers));
-        const handler = Object.entries(iframeHandlers).find(([domain]) => 
-          hostname.includes(domain)
-        )?.[1];
-
+        // 使用动态处理函数
+        const handler = await getIframeHandler(url);
         if (handler) {
-          console.log('执行 iframe 处理函数:', hostname);
-          handler(iframe, query);
+          console.log('执行动态 iframe 处理函数:', site.name);
+          await handler(iframe, query);
         } else {
-          console.log('未找到对应的处理函数', hostname);
+          console.log('未找到对应的处理函数', site.name);
         }
       }
     });
@@ -448,314 +442,86 @@ function getHandlerForUrl(url) {
     }
   }
 
-// iframe 内的处理函数集合
-const iframeHandlers = {
-  // Kimi 处理函数
-  'kimi.moonshot.cn': async function(iframe, query) {
+// 简化的 iframe 处理函数 - 只负责消息发送
+async function getIframeHandler(iframeUrl) {
+  try {
+    // 解析 iframe URL 获取域名
+    let domain;
     try {
-      // 等待页面加载
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // 向 iframe 发送消息
-      iframe.contentWindow.postMessage({
-        type: 'KIMI',
-        query: query
-      }, '*');
-      
-    } catch (error) {
-      console.error('Kimi iframe 处理失败:', error);
+      const urlObj = new URL(iframeUrl);
+      domain = urlObj.hostname;
+    } catch (e) {
+      console.error('URL解析失败:', iframeUrl);
+      return null;
     }
-  },
-  // 文心一言处理函数
-  'yiyan.baidu.com': async function(iframe, query) {
-    try {
-      // 等待页面加载
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // 向 iframe 发送消息
-      iframe.contentWindow.postMessage({
-        type: 'YIYAN',
-        query: query
-      }, '*');
-      
-    } catch (error) {
-      console.error('文心一言 iframe 处理失败:', error);
+    
+    // 从配置中获取站点信息
+    let sites = [];
+    if (window.RemoteConfigManager) {
+      sites = await window.RemoteConfigManager.getCurrentSites('CN');
     }
-  },
-  // 文心一言处理函数
-  'doubao.com': async function(iframe, query) {
-    try {
-      // 等待页面加载
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      console.log('豆包 iframe 处理开始');
-      // 向 iframe 发送消息
-      iframe.contentWindow.postMessage({
-        type: 'doubao',
-        query: query
-      }, '*');
-      
-    } catch (error) {
-      console.error('豆包 iframe 处理失败:', error);
+    
+    if (!sites || sites.length === 0) {
+      const result = await chrome.storage.local.get('sites');
+      sites = result.sites || [];
     }
-  },
-  'chatgpt.com': async function(iframe, query) {
-    try {
-      // 等待页面加载
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      console.log('ChatGPT iframe 处理开始');
-      // 向 iframe 发送消息
-      iframe.contentWindow.postMessage({
-        type: 'chatgpt',
-        query: query
-      }, '*');
-      
-    } catch (error) {
-      console.error('ChatGPT iframe 处理失败:', error);
+    
+    if (!sites || sites.length === 0) {
+      console.warn('没有找到站点配置');
+      return null;
     }
-  },
-  'claude.ai': async function(iframe, query) {
-    try {
-      // 等待页面加载
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      console.log('Claude iframe 处理开始');
-      // 向 iframe 发送消息
-      iframe.contentWindow.postMessage({
-        type: 'claude',
-        query: query
-      }, '*');
+    
+    // 查找匹配的站点
+    for (const site of sites) {
+      if (!site.url) continue;
       
-    } catch (error) {
-      console.error('Claude iframe 处理失败:', error);
-    }
-  },
-  'poe.com': async function(iframe, query) {
-    try {
-      // 等待页面加载
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      console.log('Poe iframe 处理开始');
-      // 向 iframe 发送消息
-      iframe.contentWindow.postMessage({
-        type: 'poe',
-        query: query
-      }, '*');
-      
-    } catch (error) {
-      console.error('Poe iframe 处理失败:', error);
-    }
-  },
-  'copilot.microsoft.com': async function(iframe, query) {
-    try {
-      // 等待页面加载
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      console.log('Copilot iframe 处理开始');
-      // 向 iframe 发送消息
-      iframe.contentWindow.postMessage({
-        type: 'copilot', 
-        query: query
-      }, '*');
-      
-    } catch (error) {
-      console.error('Copilot iframe 处理失败:', error);
-    }
-  },
-  'gemini.google.com': async function(iframe, query) {
-    try {
-      // 等待页面加载
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      console.log('Gemini iframe 处理开始');
-      // 向 iframe 发送消息
-      iframe.contentWindow.postMessage({
-        type: 'gemini',
-        query: query
-      }, '*');
-      
-    } catch (error) {
-      console.error('Gemini iframe 处理失败:', error);
-    }
-  },
-  'zhida.zhihu.com': async function(iframe, query) {
       try {
-        // 等待页面加载
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        console.log('知乎直达 iframe 处理开始');
-        // 向 iframe 发送消息
-        iframe.contentWindow.postMessage({
-          type: 'zhihu',
-          query: query
-        }, '*');
+        const siteUrl = new URL(site.url);
+        const siteDomain = siteUrl.hostname;
         
-      } catch (error) {
-        console.error('知乎直达 iframe 处理失败:', error);
-      }
-    },
-  'grok.com': async function(iframe, query) { 
-    try {
-      // 等待页面加载
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      console.log('Grok iframe 处理开始');
-      // 向 iframe 发送消息
-      iframe.contentWindow.postMessage({
-        type: 'grok',
-        query: query
-      }, '*');
-      
-    } catch (error) {
-      console.error('Grok iframe 处理失败:', error);
-    }
-  },
-  'chat.deepseek.com': async function(iframe, query) {
-    try {
-      // 等待页面加载
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      console.log('DeepSeek iframe 处理开始');
-      // 向 iframe 发送消息
-      iframe.contentWindow.postMessage({
-        type: 'deepseek',
-        query: query
-      }, '*');
-      
-    } catch (error) {
-      console.error('DeepSeek iframe 处理失败:', error);
-    }
-  },
-  'metaso.cn': async function(iframe, query) {
-    try {
-      // 等待页面加载
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      console.log('秘塔 iframe 处理开始');
-      // 向 iframe 发送消息
-      iframe.contentWindow.postMessage({
-        type: 'metaso',
-        query: query
-      }, '*');
-      // 监听消息发送状态
-      
-    } catch (error) {
-      console.error('秘塔 iframe 处理失败:', error);
-    }
-  },
-
-  'yuanbao.tencent.com': async function(iframe, query) {
-    try {
-      // 等待页面加载
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      console.log('腾讯元宝 iframe 处理开始');
-      // 向 iframe 发送消息
-      iframe.contentWindow.postMessage({
-        type: 'yuanbao',
-        query: query
-      }, '*');
-    } catch (error) {
-      console.error('腾讯元宝 iframe 处理失败:', error);
-    }
-  },
-'tongyi.com': async function(iframe, query) {
-    const maxRetries = 3;
-    let retryCount = 0;
-    
-    const trySendMessage = async () => {
-        try {
-            // 检查 iframe 是否可访问
-            if (!iframe || !iframe.contentWindow) {
-                throw new Error('iframe 不可访问');
+        // 匹配域名
+        if (domain === siteDomain || domain.includes(siteDomain) || siteDomain.includes(domain)) {
+          // 返回简化的处理函数
+          return async function(iframe, query) {
+            try {
+              // 等待页面加载
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              
+              // 向 iframe 发送统一格式的消息
+              iframe.contentWindow.postMessage({
+                type: 'search',
+                query: query,
+                domain: domain
+              }, '*');
+              
+              console.log(`已向 ${domain} 发送搜索消息`);
+            } catch (error) {
+              console.error(`${domain} iframe 处理失败:`, error);
             }
-
-            // 等待 iframe 加载完成
-            await new Promise((resolve, reject) => {
-                const checkReady = () => {
-                    try {
-                        // 尝试访问 contentWindow
-                        if (iframe.contentWindow) {
-                            resolve();
-                        } else {
-                            reject(new Error('无法访问 iframe contentWindow'));
-                        }
-                    } catch (error) {
-                        // 如果是跨域错误，我们仍然继续
-                        console.log('跨域访问受限，继续执行');
-                        resolve();
-                    }
-                };
-
-                if (iframe.contentWindow) {
-                    checkReady();
-                } else {
-                    iframe.addEventListener('load', checkReady);
-                }
-            });
-            
-            // 给页面一些加载时间
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            
-            console.log('千问 处理开始，第', retryCount + 1, '次尝试');
-            
-            // 创建消息确认 Promise
-            const messageConfirmed = new Promise((resolve) => {
-                const timeout = setTimeout(() => {
-                    console.log('消息确认超时');
-                    resolve(false);
-                }, 2000);
-
-                const handler = (event) => {
-                    console.log('收到消息:', event.data);
-                    if (event.data.type === 'message_received' && 
-                        event.data.originalType === 'tongyi') {
-                        console.log('收到消息确认');
-                        clearTimeout(timeout);
-                        window.removeEventListener('message', handler);
-                        resolve(true);
-                    }
-                };
-
-                window.addEventListener('message', handler);
-            });
-            
-            // 发送消息
-            console.log('发送消息到千问 iframe');
-            iframe.contentWindow.postMessage({
-                type: 'tongyi',
-                query: query
-            }, '*');
-            
-            // 等待确认
-            const received = await messageConfirmed;
-            
-            if (!received && retryCount < maxRetries) {
-                retryCount++;
-                console.log('消息未收到确认，准备重试');
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                return trySendMessage();
-            }
-        } catch (error) {
-            console.error('千问 处理失败:', error);
-            if (retryCount < maxRetries) {
-                retryCount++;
-                console.log('发生错误，准备重试');
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                return trySendMessage();
-            }
+          };
         }
-    };
-    
-    await trySendMessage();
-},
-
-  'www.wenxiaobai.com': async function(iframe, query) {
-    try {
-      // 等待页面加载
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      console.log('问小白 iframe 处理开始');
-      // 向 iframe 发送消息
-      iframe.contentWindow.postMessage({
-        type: 'wenxiaobai',
-        query: query
-      }, '*');
-    } catch (error) {
-      console.error('问小白 处理失败:', error);
+      } catch (urlError) {
+        continue;
+      }
     }
-  } 
+    
+    console.warn('未找到匹配的站点配置:', domain);
+    return null;
+  } catch (error) {
+    console.error('获取 iframe 处理函数失败:', error);
+    return null;
+  }
+}
+// 添加搜索按钮
+document.getElementById('searchButton').addEventListener('click', () => {
+  const query = document.getElementById('searchInput').value.trim();
+  if (query) {
+    shanshuo();
+    iframeFresh(query);
+  }
+});
 
-};
+// 删除重复的 createIframes 函数声明
 
 // 添加搜索按钮
 document.getElementById('searchButton').addEventListener('click', () => {
@@ -1238,20 +1004,21 @@ async function iframeFresh(query) {
                 iframe.src = newUrl;
             }
             else{
-              // 查找对应的处理函数
-              const handler = iframeHandlers[domain];
-              if (handler) {
+              // 使用动态处理函数
+              getIframeHandler(iframe.src).then(handler => {
+                if (handler) {
                   console.log(`重新处理 ${domain} iframe`, {
                       时间: new Date().toISOString(),
                       query: query
                   });
                   // 调用处理函数
                   handler(iframe, query);
-              }
-              else 
-              {
-                console.log('没有找到处理函数');
-              }
+                } else {
+                  console.log('没有找到处理函数');
+                }
+              }).catch(error => {
+                console.error('获取处理函数失败:', error);
+              });
           }
         } catch (error) {
             console.error('处理 iframe 失败:', error);

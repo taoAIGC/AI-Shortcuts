@@ -1,57 +1,285 @@
-// 获取当前域名
-function getCurrentDomain() {
-  try {
-    return window.location.hostname;
-  } catch (error) {
-    console.error('获取域名失败:', error);
-    return null;
+// 删除不再需要的 getCurrentDomain 函数
+
+// 通用的配置化站点处理器 - 基于三步流程的标准化处理
+async function executeSiteHandler(query, handlerConfig) {
+  if (!handlerConfig || !handlerConfig.steps) {
+    console.error('无效的处理器配置');
+    return;
+  }
+
+  console.log('开始执行配置化处理器，步骤数:', handlerConfig.steps.length);
+
+  for (let i = 0; i < handlerConfig.steps.length; i++) {
+    const step = handlerConfig.steps[i];
+    console.log(`执行步骤 ${i + 1}:`, step.action);
+
+    try {
+      switch (step.action) {
+        case 'click':
+          await executeClick(step);
+          break;
+        case 'focus':
+          await executeFocus(step);
+          break;
+        case 'setValue':
+          await executeSetValue(step, query);
+          break;
+        case 'triggerEvents':
+          await executeTriggerEvents(step);
+          break;
+        case 'sendKeys':
+          await executeSendKeys(step, query);
+          break;
+        case 'wait':
+          await executeWait(step);
+          break;
+        case 'custom':
+          await executeCustom(step, query);
+          break;
+        default:
+          console.warn('未知的步骤类型:', step.action);
+      }
+
+      // 步骤间等待
+      if (step.waitAfter) {
+        await new Promise(resolve => setTimeout(resolve, step.waitAfter));
+      }
+    } catch (error) {
+      console.error(`步骤 ${i + 1} 执行失败:`, error);
+      if (step.required !== false) { // 默认必需步骤
+        throw error;
+      }
+    }
+  }
+
+  console.log('配置化处理器执行完成');
+}
+
+// 执行点击操作
+async function executeClick(step) {
+  const element = document.querySelector(step.selector);
+  if (!element) {
+    throw new Error(`未找到元素: ${step.selector}`);
+  }
+  
+  if (step.condition) {
+    // 检查条件
+    const conditionElement = document.querySelector(step.condition.selector);
+    if (!conditionElement) {
+      console.log(`条件元素不存在，跳过点击: ${step.condition.selector}`);
+      return;
+    }
+  }
+
+  element.click();
+  console.log('点击元素:', step.selector);
+}
+
+// 执行聚焦操作
+async function executeFocus(step) {
+  const element = document.querySelector(step.selector);
+  if (!element) {
+    throw new Error(`未找到元素: ${step.selector}`);
+  }
+  
+  element.focus();
+  console.log('聚焦元素:', step.selector);
+}
+
+// 执行设置值操作
+async function executeSetValue(step, query) {
+  const element = document.querySelector(step.selector);
+  if (!element) {
+    throw new Error(`未找到元素: ${step.selector}`);
+  }
+
+  if (step.inputType === 'contenteditable') {
+    // 处理 contenteditable 元素
+    const pElement = element.querySelector('p');
+    if (pElement) {
+      pElement.innerText = query;
+    } else {
+      element.innerHTML = '<p></p>';
+      element.querySelector('p').innerText = query;
+    }
+  } else if (step.inputType === 'special') {
+    // 处理特殊输入方式
+    if (step.customSetValue === 'wenxin') {
+      const p = document.querySelector('p.yc-editor-paragraph');
+      if (p) {
+        p.innerHTML = '';
+      }
+      const span = document.createElement('span');
+      span.setAttribute('data-lexical-text', 'true');
+      span.textContent = query;
+      p.appendChild(span);
+    } else if (step.customSetValue === 'poe') {
+      // POE 特殊处理
+      const growingTextArea = document.querySelector('.GrowingTextArea_growWrap__im5W3');
+      if (growingTextArea) {
+        growingTextArea.setAttribute('data-replicated-value', query);
+        const textarea = growingTextArea.querySelector('textarea');
+        if (textarea) {
+          textarea.value = query;
+        }
+      }
+    }
+  } else {
+    // 普通输入框
+    element.value = query;
+  }
+
+  console.log('设置元素值:', step.selector);
+}
+
+// 执行触发事件操作
+async function executeTriggerEvents(step) {
+  const element = document.querySelector(step.selector);
+  if (!element) {
+    throw new Error(`未找到元素: ${step.selector}`);
+  }
+
+  const events = step.events || ['input', 'change'];
+  events.forEach(eventName => {
+    if (eventName === 'input' && step.inputType === 'special') {
+      // 特殊输入事件
+      const inputEvent = new InputEvent('input', {
+        bubbles: true,
+        cancelable: true,
+        inputType: 'insertText',
+        data: element.value || element.innerText
+      });
+      element.dispatchEvent(inputEvent);
+    } else {
+      element.dispatchEvent(new Event(eventName, { bubbles: true }));
+    }
+  });
+
+  console.log('触发事件:', events);
+}
+
+// 执行发送按键操作
+async function executeSendKeys(step, query) {
+  const element = document.querySelector(step.selector);
+  if (!element) {
+    throw new Error(`未找到元素: ${step.selector}`);
+  }
+
+  if (step.keys === 'Enter') {
+    const enterEvent = new KeyboardEvent('keydown', {
+      bubbles: true,
+      cancelable: true,
+      key: 'Enter',
+      code: 'Enter',
+      keyCode: 13,
+      which: 13,
+      location: 0,
+      repeat: false,
+      isComposing: false
+    });
+    element.dispatchEvent(enterEvent);
+    console.log('发送回车键');
+  } else if (step.keys === 'Ctrl+V') {
+    const pasteEvent = new KeyboardEvent('keydown', {
+      key: 'v',
+      code: 'KeyV',
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true
+    });
+    element.dispatchEvent(pasteEvent);
+    console.log('发送 Ctrl+V');
   }
 }
 
-// 根据域名获取站点处理器
+// 执行等待操作
+async function executeWait(step) {
+  await new Promise(resolve => setTimeout(resolve, step.duration));
+  console.log('等待:', step.duration + 'ms');
+}
+
+// 执行自定义操作
+async function executeCustom(step, query) {
+  if (step.customAction === 'metaso_recommend') {
+    const iframeUrl = window.frameElement ? window.frameElement.src : window.location.href;
+    if (iframeUrl.includes('/search/')) {
+      const recommendBox = document.querySelector('div.MuiBox-root.css-qtri4c');
+      if (recommendBox) {
+        recommendBox.click();
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
+  } else if (step.customAction === 'send_message') {
+    window.parent.postMessage({ type: 'message_received', originalType: step.messageType }, '*');
+  } else if (step.customAction === 'retry_click') {
+    const maxAttempts = step.maxAttempts || 5;
+    let attempts = 0;
+    const tryClick = () => {
+      const sendButton = document.querySelector(step.selector);
+      if (sendButton && !sendButton.disabled) {
+        sendButton.click();
+        return true;
+      }
+      attempts++;
+      if (attempts < maxAttempts) {
+        setTimeout(tryClick, step.retryInterval || 200);
+      } else {
+        console.error('达到最大尝试次数，按钮仍然被禁用');
+      }
+    };
+    setTimeout(tryClick, 100);
+  } else if (step.customAction === 'url_query') {
+    console.log('站点使用URL查询，无需搜索处理器');
+  } else if (step.customAction === 'placeholder') {
+    console.log('站点暂未实现搜索处理器');
+  }
+  
+  console.log('执行自定义操作:', step.customAction);
+}
+
+// 根据域名获取站点处理器 - 统一处理 E F H 环节
 async function getSiteHandler(domain) {
   try {
-    // 使用远程配置获取站点列表
+    // E: 从远程配置获取站点列表
     let sites = [];
     if (window.RemoteConfigManager) {
       sites = await window.RemoteConfigManager.getCurrentSites('CN');
     }
     
+    // F: 检查配置可用性，如果远程配置失败，从本地存储获取
+    if (!sites || sites.length === 0) {
+      console.log('远程配置不可用，尝试从本地存储获取站点配置');
+      const result = await chrome.storage.local.get('sites');
+      sites = result.sites || [];
+    }
+    
+    // H: 使用配置
     if (!sites || sites.length === 0) {
       console.warn('没有找到站点配置，请检查网络连接或重新加载扩展');
       return null;
     }
     
-    // 查找匹配的站点
-    for (const site of sites) {
-      if (!site.url) continue;
-      
+    // 根据域名查找对应的站点配置
+    const site = sites.find(s => {
+      if (!s.url) return false;
       try {
-        const siteUrl = new URL(site.url);
+        const siteUrl = new URL(s.url);
         const siteDomain = siteUrl.hostname;
-        
-        // 直接匹配域名
-        if (domain === siteDomain) {
-          return {
-            name: site.name,
-            searchHandler: site.searchHandler
-          };
-        }
-        
-        // 模糊匹配域名
-        if (domain.includes(siteDomain) || siteDomain.includes(domain)) {
-          return {
-            name: site.name,
-            searchHandler: site.searchHandler
-          };
-        }
+        return domain === siteDomain || domain.includes(siteDomain) || siteDomain.includes(domain);
       } catch (urlError) {
-        // 如果URL解析失败，跳过这个站点
-        continue;
+        return false;
       }
+    });
+    
+    if (!site) {
+      console.warn('未找到匹配的站点配置:', domain);
+      return null;
     }
     
-    return null;
+    return {
+      name: site.name,
+      searchHandler: site.searchHandler
+    };
   } catch (error) {
     console.error('获取站点处理器失败:', error);
     return null;
@@ -60,894 +288,72 @@ async function getSiteHandler(domain) {
 
 // 监听来自扩展的消息
 window.addEventListener('message', async function(event) {
+    // 过滤消息：只处理来自 MultiAI 扩展的消息
+    if (!event.data || typeof event.data !== 'object') {
+        return;
+    }
+    
+    // 检查是否是 MultiAI 扩展的消息
+    if (!event.data.query && !event.data.type) {
+        return;
+    }
+    
+    // 过滤掉其他扩展的消息（如广告拦截器等）
+    if (event.data.type && (
+        event.data.type.includes('ad-finder') || 
+        event.data.type.includes('wxt') ||
+        event.data.type.includes('content-script-started') ||
+        event.data.type.includes('ads#') ||
+        event.data.type.includes('adblock') ||
+        event.data.type.includes('ublock') ||
+        event.data.type.includes('ghostery') ||
+        event.data.type.includes('privacy') ||
+        event.data.type.startsWith('laankejkbhbdhmipfmgcngdelahlfoji') ||
+        event.data.type.includes('INIT') ||
+        event.data.type.includes('EXTENSION_')
+    )) {
+        return;
+    }
+    
+    // 只处理 MultiAI 扩展的特定消息类型
+    const validMultiAITypes = ['TRIGGER_PASTE', 'search'];
+    
+    if (!validMultiAITypes.includes(event.data.type)) {
+        return;
+    }
+    
+    // 对于搜索消息，必须包含 query 字段
+    if (event.data.type !== 'TRIGGER_PASTE' && !event.data.query) {
+        return;
+    }
+    
     console.log('收到query:',event.data.query, '收到type:',event.data.type);
     console.log('收到消息event 原始:',event);
 
+  // 处理文件粘贴消息
+  if (event.data.type === 'TRIGGER_PASTE') {
+    console.log('收到文件粘贴触发消息');
+    await triggerPasteInIframe();
+    return;
+  }
+
   // 使用新的统一处理逻辑
-  const domain = getCurrentDomain();
+  const domain = event.data.domain || window.location.hostname;
   const siteHandler = await getSiteHandler(domain);
   
   if (siteHandler && siteHandler.searchHandler && event.data.query) {
-    console.log(`使用 ${siteHandler.name} 处理器处理消息`);
+    console.log(`使用 ${siteHandler.name} 配置化处理器处理消息`);
     try {
-      // 将字符串形式的函数转换为可执行的函数
-      const handlerFunction = new Function('return ' + siteHandler.searchHandler)();
-      await handlerFunction(event.data.query);
+      // 使用配置化处理器执行
+      await executeSiteHandler(event.data.query, siteHandler.searchHandler);
     } catch (error) {
       console.error(`${siteHandler.name} 处理失败:`, error);
     }
     return;
   }
 
-  // 兼容旧的类型处理方式（如果新方式失败）
-  if (event.data.type === 'chatgpt') {
-    const searchQuery = event.data.query;
-    console.log('处理 ChatGPT 消息:', searchQuery);
-
-    try {
-      // 查找输入框
-      const editableDiv = document.querySelector('#prompt-textarea');
-            if (!editableDiv) {
-              console.error('未找到输入框');
-              return;
-            }
-
-            // 1. 先聚焦输入框
-            editableDiv.focus();
-            
-            // 2. 修改文本内容
-            const pElement = editableDiv.querySelector('p');
-            if (pElement) {
-              pElement.innerText = searchQuery;
-            } else {
-              editableDiv.innerHTML = '<p></p>';
-              editableDiv.querySelector('p').innerText = searchQuery;
-            }
-            
-            // 3. 触发更多事件
-            const events = ['input', 'change', 'blur', 'focus'];
-            events.forEach(eventName => {
-              editableDiv.dispatchEvent(new Event(eventName, { bubbles: true }));
-            });
-
-            // 4. 给一个小延迟再点击发送按钮
-            setTimeout(() => {
-              const sendButton = document.querySelector('button[data-testid="send-button"]');
-              if (sendButton && !sendButton.disabled) {
-                sendButton.click();
-              }
-            }, 100);
-
-    } catch (error) {
-      console.error('ChatGPT 消息处理失败:', error);
-    } 
-  }
-
-  if (event.data.type === 'KIMI') {
-    let searchQuery = event.data.query;
-    searchQuery = '<span data-lexical-text="true">'+searchQuery+'</span>';
-    await new Promise(resolve => setTimeout(resolve, 100));
-
-    const editableDiv = document.querySelector('[contenteditable="true"]');
-          if (!editableDiv) {
-            console.error('未找到输入框');
-            return;
-          }
-          console.log('找到输入框:', editableDiv);
-
-          // 1. 先聚焦输入框
-          editableDiv.focus();
-          
-          // 2. 修改 p 标签的文本内容
-          const pElement = editableDiv.querySelector('p');
-          if (pElement) {
-            pElement.innerText = searchQuery;
-          } else {
-            editableDiv.innerHTML = '<p></p>';
-            editableDiv.querySelector('p').innerText = searchQuery;
-          }
-
-        // 3. 触发必要的事件
-        const events = ['input', 'change', 'blur', 'focus'];
-        events.forEach(eventName => {
-          editableDiv.dispatchEvent(new Event(eventName, { bubbles: true }));
-        });
-
-        // 4. 发送回车
-        setTimeout(() => {
-          console.log('准备发送回车事件');
-          const enterEvent = new KeyboardEvent('keydown', {
-            bubbles: true,
-            cancelable: true,
-            key: 'Enter',
-            code: 'Enter',
-            keyCode: 13,
-            which: 13,
-            location: 0,
-            repeat: false,
-            isComposing: false
-          });
-          console.log('创建回车事件对象:', enterEvent);
-          editableDiv.dispatchEvent(enterEvent);
-          console.log('已发送回车事件');
-        }, 100);
-  }
-  if (event.data.type === 'tongyi') {
-    const searchQuery = event.data.query;
-    console.log('收到 tongyi:', searchQuery);
-
-    try {
-      // 等待页面加载
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      const textarea = document.querySelector('textarea');
-      if (!textarea) {
-        console.error('未找到输入框');
-        return;
-      }
-
-      if (textarea) {
-        textarea.focus();
-        textarea.value = searchQuery;
-        // 触发必要的事件
-        textarea.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-
-      // 触发必要的事件
-      const events = ['input', 'change', 'blur', 'focus'];
-      events.forEach(eventName => {
-        textarea.dispatchEvent(new Event(eventName, { bubbles: true }));
-      });
-
-      // 发送回车
-      setTimeout(() => {
-        const enterEvent = new KeyboardEvent('keydown', {
-          bubbles: true,
-          cancelable: true,
-          key: 'Enter',
-          code: 'Enter',
-          keyCode: 13,
-          which: 13,
-          location: 0,
-          repeat: false,
-          isComposing: false
-        });
-        textarea.dispatchEvent(enterEvent);
-      }, 100);
-
-      // 发送确认消息到父窗口
-      window.parent.postMessage({
-        type: 'message_received',
-        originalType: 'tongyi'
-      }, '*');
-    } catch (error) {
-      console.error('处理 tongyi 消息失败:', error);
-    }
-  }
-  if (event.data.type === 'zhihu') {
-    const searchQuery = event.data.query;
-    console.log('收到 zhihu 消息:', searchQuery);
-     // 等待页面加载
-    await new Promise(resolve => setTimeout(resolve, 500));
-          
-
-        
-          
-          
-          const textarea = document.querySelector('textarea');
-          if (!textarea) {
-            console.error('未找到输入框');
-            return;
-          }
-
-          if (textarea) {
-            textarea.focus();
-            textarea.value = searchQuery;
-            // 触发必要的事件
-            textarea.dispatchEvent(new Event('input', { bubbles: true }));
-          }
-
-          
-          // 3. 触发必要的事件
-          const events = ['input', 'change', 'blur', 'focus'];
-          events.forEach(eventName => {
-            textarea.dispatchEvent(new Event(eventName, { bubbles: true }));
-          });
-
-          // 4. 查找并点击发送按钮
-          setTimeout(() => {
-              const enterEvent = new KeyboardEvent('keydown', {
-                bubbles: true,
-                cancelable: true,
-                key: 'Enter',
-                code: 'Enter',
-                keyCode: 13,
-                which: 13,
-                location: 0,
-                repeat: false,
-                isComposing: false
-              });
-              textarea.dispatchEvent(enterEvent);
-              /*
-              // 使用更精确的选择器匹配按钮
-              const sendButton = document.querySelector('div.css-175oi2r.r-1loqt21.r-1otgn73');
-              
-              // 备用选择器：通过组合类名和SVG来定位
-              const altSendButton = document.querySelector('div.css-175oi2r.r-1loqt21.r-1otgn73 svg')?.closest('.css-175oi2r');
-              
-              const buttonToClick = sendButton || altSendButton;
-              
-              if (buttonToClick) {
-                buttonToClick.click();
-                console.log("知乎直达发送按钮点击成功");
-
-              } else {
-                console.log('未找到知乎直达发送按钮，当前按钮结构:', document.querySelector('div.css-175oi2r')?.outerHTML);
-              }*/
-          
-          }, 100);
-    
-  }
-
-// 处理 GEMINI 消息
-if (event.data.type === 'gemini') {
-  const searchQuery = event.data.query;
-  console.log('收到 GEMINI 消息:', searchQuery);
-
-  // 等待页面加载
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  const editableDiv = document.querySelector('[contenteditable="true"]');
-          if (!editableDiv) {
-            console.error('未找到输入框');
-            return;
-          }
-          console.log('找到输入框:', editableDiv);
-
-          // 1. 先聚焦输入框
-          editableDiv.focus();
-          
-          // 2. 修改 p 标签的文本内容
-          const pElement = editableDiv.querySelector('p');
-          if (pElement) {
-            pElement.innerText = searchQuery;
-          } else {
-            editableDiv.innerHTML = '<p></p>';
-            editableDiv.querySelector('p').innerText = searchQuery;
-          }
-          
-          // 3. 触发必要的事件
-          const events = ['input', 'change', 'blur', 'focus'];
-          events.forEach(eventName => {
-            editableDiv.dispatchEvent(new Event(eventName, { bubbles: true }));
-          });
-
-          // 4. 发送回车
-          setTimeout(() => {
-            console.log('准备发送回车事件');
-            const enterEvent = new KeyboardEvent('keydown', {
-              bubbles: true,
-              cancelable: true,
-              key: 'Enter',
-              code: 'Enter',
-              keyCode: 13,
-              which: 13,
-              location: 0,
-              repeat: false,
-              isComposing: false
-            });
-            console.log('创建回车事件对象:', enterEvent);
-            editableDiv.dispatchEvent(enterEvent);
-            console.log('已发送回车事件');
-          }, 100);
-
-
-
-  
-}
-if (event.data.type === 'grok') {
-  const searchQuery = event.data.query;
-  console.log('收到 Grok 消息:', searchQuery);
-
-  // 等待页面加载
-  await new Promise(resolve => setTimeout(resolve, 100));
-
-  
-  const textarea = document.querySelector('textarea');
-  if (!textarea) {
-    console.error('未找到输入框');
-    return;
-  }
-
-  if (textarea) {
-    textarea.focus();
-    textarea.value = searchQuery;
-    // 触发必要的事件
-    textarea.dispatchEvent(new Event('input', { bubbles: true }));
-  }
-
-  
-  // 3. 触发必要的事件
-  const events = ['input', 'change', 'blur', 'focus'];
-  events.forEach(eventName => {
-    textarea.dispatchEvent(new Event(eventName, { bubbles: true }));
-  });
-
-  // 4. 发送回车
-  setTimeout(() => {
-    const enterEvent = new KeyboardEvent('keydown', {
-      bubbles: true,
-      cancelable: true,
-      key: 'Enter',
-      code: 'Enter',
-      keyCode: 13,
-      which: 13,
-      location: 0,
-      repeat: false,
-      isComposing: false
-    });
-    textarea.dispatchEvent(enterEvent);
-  }, 100);
-
-}
-
-if (event.data.type === 'wenxiaobai') {
-  const searchQuery = event.data.query;
-  console.log('收到 wenxiaobai 消息:', searchQuery);
-
-  // 等待页面加载
-  await new Promise(resolve => setTimeout(resolve, 100));
-
-  
-  const textarea = document.querySelector('textarea');
-  if (!textarea) {
-    console.error('未找到输入框');
-    return;
-  }
-
-  if (textarea) {
-    textarea.focus();
-    textarea.value = searchQuery;
-    // 触发必要的事件
-    textarea.dispatchEvent(new Event('input', { bubbles: true }));
-  }
-
-  
-  // 3. 触发必要的事件
-  const events = ['input', 'change', 'blur', 'focus'];
-  events.forEach(eventName => {
-    textarea.dispatchEvent(new Event(eventName, { bubbles: true }));
-  });
-
-  // 4. 发送回车
-  setTimeout(() => {
-    const enterEvent = new KeyboardEvent('keydown', {
-      bubbles: true,
-      cancelable: true,
-      key: 'Enter',
-      code: 'Enter',
-      keyCode: 13,
-      which: 13,
-      location: 0,
-      repeat: false,
-      isComposing: false
-    });
-    textarea.dispatchEvent(enterEvent);
-  }, 100);
-
-}
-
-// 处理元宝 消息
-if (event.data.type === 'yuanbao') {
-  const searchQuery = event.data.query;
-  console.log('收到 Yuanbao 消息:', searchQuery);
-
-  // 等待页面加载
-  await new Promise(resolve => setTimeout(resolve, 100));
-
-
-  const editableDiv = document.querySelector('[contenteditable="true"]');
-          if (!editableDiv) {
-            console.error('未找到输入框');
-            return;
-          }
-          console.log('找到输入框:', editableDiv);
-
-          // 1. 先聚焦输入框
-          editableDiv.focus();
-          
-          // 2. 修改 p 标签的文本内容
-          const pElement = editableDiv.querySelector('p');
-          if (pElement) {
-            console.log('找到 p 元素:', pElement);  
-            pElement.innerText = searchQuery;
-          } else {
-            editableDiv.innerHTML = '<p></p>';
-            editableDiv.querySelector('p').innerText = searchQuery;
-          }
-          
-          // 3. 触发必要的事件
-          const events = ['input', 'change', 'blur', 'focus'];
-          events.forEach(eventName => {
-            editableDiv.dispatchEvent(new Event(eventName, { bubbles: true }));
-          });
-
-          // 4. 发送回车
-          setTimeout(() => {
-            console.log('准备发送消息');
-            
-            // 先触发回车事件
-            const enterEvent = new KeyboardEvent('keydown', {
-              bubbles: true,
-              cancelable: true,
-              key: 'Enter',
-              code: 'Enter',
-              keyCode: 13,
-              which: 13,
-              location: 0,
-              repeat: false,
-              isComposing: false
-            });
-            editableDiv.dispatchEvent(enterEvent);
-            
-            // 等待一小段时间后尝试点击发送按钮
-            setTimeout(() => {
-              // 尝试多种可能的发送按钮选择器
-              const sendButtonSelectors = [
-                'button[type="button"][aria-label="Send Message"]',
-                'button[aria-label="Send"]',
-                'button[data-testid="send-button"]',
-                'button:has(svg)'
-              ];
-              
-              for (const selector of sendButtonSelectors) {
-                const sendButton = document.querySelector(selector);
-                if (sendButton && !sendButton.disabled) {
-                  console.log('找到发送按钮:', selector);
-                  sendButton.click();
-                  return;
-                }
-              }
-              
-              console.log('未找到可用的发送按钮');
-            }, 200);
-            
-          }, 100);
-
-
-}
-
-// 处理 POE 消息
-if (event.data.type === 'poe') {
-  const searchQuery = event.data.query;
-  console.log('收到 POE 消息:', searchQuery);
-
-  // 等待页面加载
-  await new Promise(resolve => setTimeout(resolve, 100));
-
-  // 找到输入框容器
-  const growingTextArea = document.querySelector('.GrowingTextArea_growWrap__im5W3');
-  if (!growingTextArea) {
-    console.error('未找到输入框容器');
-    return;
-  }
-
-  // 1. 更新 data-replicated-value 属性
-  growingTextArea.setAttribute('data-replicated-value', searchQuery);
-
-  // 2. 找到实际的 textarea 并更新值
-  const textarea = growingTextArea.querySelector('textarea');
-  if (textarea) {
-    textarea.value = searchQuery;
-    // 触发必要的事件
-    textarea.dispatchEvent(new Event('input', { bubbles: true }));
-  }
-
-  // 3. 查找并点击发送按钮
-  setTimeout(() => {
-    const sendButton = document.querySelector('button[data-button-send="true"]');
-    if (sendButton && !sendButton.disabled) {
-      sendButton.click();
-    } else {
-      console.error('未找到发送按钮或按钮被禁用');
-    }
-  }, 100);
-}
-// 处理 Claude 消息
-if (event.data.type === 'claude') {
-  const searchQuery = event.data.query;
-  console.log('收到 Claude 消息:', searchQuery);
-
-  // 等待页面加载
-  await new Promise(resolve => setTimeout(resolve, 300));
-
-  const editableDiv = document.querySelector('[contenteditable="true"]');
-          if (!editableDiv) {
-            console.error('未找到输入框');
-            return;
-          }
-          console.log('找到输入框:', editableDiv);
-
-          // 1. 先聚焦输入框
-          editableDiv.focus();
-          
-          // 2. 修改 p 标签的文本内容
-          const pElement = editableDiv.querySelector('p');
-          if (pElement) {
-            pElement.innerText = searchQuery;
-          } else {
-            editableDiv.innerHTML = '<p></p>';
-            editableDiv.querySelector('p').innerText = searchQuery;
-          }
-          
-          // 3. 触发必要的事件
-          const events = ['input', 'change', 'blur', 'focus'];
-          events.forEach(eventName => {
-            editableDiv.dispatchEvent(new Event(eventName, { bubbles: true }));
-          });
-
-          // 4. 发送回车
-          setTimeout(() => {
-            console.log('准备发送消息');
-            
-            // 先触发回车事件
-            const enterEvent = new KeyboardEvent('keydown', {
-              bubbles: true,
-              cancelable: true,
-              key: 'Enter',
-              code: 'Enter',
-              keyCode: 13,
-              which: 13,
-              location: 0,
-              repeat: false,
-              isComposing: false
-            });
-            editableDiv.dispatchEvent(enterEvent);
-            
-            // 等待一小段时间后尝试点击发送按钮
-            setTimeout(() => {
-              // 尝试多种可能的发送按钮选择器
-              const sendButtonSelectors = [
-                'button[type="button"][aria-label="Send Message"]',
-                'button[aria-label="Send"]',
-                'button[data-testid="send-button"]',
-                'button:has(svg)'
-              ];
-              
-              for (const selector of sendButtonSelectors) {
-                const sendButton = document.querySelector(selector);
-                if (sendButton && !sendButton.disabled) {
-                  console.log('找到发送按钮:', selector);
-                  sendButton.click();
-                  return;
-                }
-              }
-              
-              console.log('未找到可用的发送按钮');
-            }, 200);
-            
-          }, 100);
-
-}
-// 处理 deepseek 消息
-if (event.data.type === 'deepseek') {
-  const searchQuery = event.data.query;
-  console.log('收到 deepseek 消息:', searchQuery);
-
-  // 等待页面加载
-  await new Promise(resolve => setTimeout(resolve, 300));
-  // 找到输入框 (deepseek 使用 textarea)
-  const textarea = document.querySelector('textarea');
-  if (!textarea) {
-    console.error('未找到输入框');
-    return;
-  }
-
-  // 1. 先聚焦输入框
-  textarea.focus();
-  
-  // 2. 设置文本内容
-  textarea.value = searchQuery;
-  
-  // 3. 触发必要的事件
-  const events = ['input', 'change', 'blur', 'focus'];
-  events.forEach(eventName => {
-    textarea.dispatchEvent(new Event(eventName, { bubbles: true }));
-  });
-
-  /*/ 4. 查找并点击发送按钮
-  setTimeout(() => {
-    const sendButton = document.querySelector('.f286936b');
-    if (sendButton && !sendButton.disabled) {
-      sendButton.click();
-      console.log("deepseek 发送按钮点击成功");
-    } else {
-      console.error('deepseek未找到发送按钮或按钮被禁用');
-    }
-  }, 100);*/
-
-   // 4. 发送回车
-   setTimeout(() => {
-    const enterEvent = new KeyboardEvent('keydown', {
-      bubbles: true,
-      cancelable: true,
-      key: 'Enter',
-      code: 'Enter',
-      keyCode: 13,
-      which: 13,
-      location: 0,
-      repeat: false,
-      isComposing: false
-    });
-    textarea.dispatchEvent(enterEvent);
-  }, 100);
-  
-}
-
-// 处理 YIYAN 消息
-  if (event.data.type === 'YIYAN') {
-    const searchQuery = event.data.query;
-    console.log('收到 YIYAN 消息:', searchQuery);
-    
-    // 等待一下确保页面加载
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // 找到输入框
-    const editableDiv = document.querySelector('.yc-editor');
-    if (!editableDiv) {
-      console.error('未找到输入框');
-      return;
-    }
-
-    // 先聚焦输入框
-    editableDiv.focus();
-
-    // 找到或创建 yc-editor-paragraph 类的 p 元素
-    let p = document.querySelector('p.yc-editor-paragraph');
-    if (!p) {
-      p = document.createElement('p');
-      p.className = 'yc-editor-paragraph';
-      editableDiv.appendChild(p);
-    }
-
-    // 使用 replaceChildren 方法直接替换内容
-    const span = document.createElement('span');
-    span.setAttribute('data-lexical-text', 'true');
-    span.textContent = searchQuery;
-    requestAnimationFrame(() => {
-        p.replaceChildren(span);
-        console.log('替换后的 p:', p.innerHTML,p);
-        // 触发变更事件
-    editableDiv.dispatchEvent(new Event('change', { bubbles: true }));
-        // 6. 触发必要的事件
-        ['input', 'change', 'blur', 'focus'].forEach(eventName => {
-          editableDiv.dispatchEvent(new Event(eventName, { bubbles: true }));
-        });
-        const maxAttempts = 5;
-    let attempts = 0;
-
-    const tryClick = () => {
-      const sendButton = document.querySelector('#sendBtn');
-      if (sendButton && !sendButton.disabled) {
-        sendButton.click();
-        return true;
-      }
-      if (++attempts < maxAttempts) {
-        setTimeout(tryClick, 200);
-      }
-    };
-
-    setTimeout(tryClick, 100);
-      });
-    
-  }
-  if (event.data.type === 'doubao') {
-    const searchQuery = event.data.query;
-    console.log('收到 doubao 消息:', searchQuery);
-    await new Promise(resolve => setTimeout(resolve, 100));
-    const textarea = document.querySelector('textarea[data-testid="chat_input_input"]');
-          if (!textarea) {
-            console.error('未找到输入框');
-            return;
-          }
-
-          // 1. 先聚焦输入框
-          textarea.focus();
-          
-          // 2. 设置文本内容
-          textarea.value = searchQuery;
-          
-          // 3. 触发必要的事件
-          const events = ['input', 'change', 'blur', 'focus', 'keydown', 'keyup', 'keypress'];
-          events.forEach(eventName => {
-            textarea.dispatchEvent(new Event(eventName, { bubbles: true }));
-            // 对于键盘事件，模拟回车键
-            if (eventName.startsWith('key')) {
-              textarea.dispatchEvent(new KeyboardEvent(eventName, {
-                key: 'Enter',
-                code: 'Enter',
-                keyCode: 13,
-                bubbles: true
-              }));
-            }
-          });
-
-          // 4. 多次尝试点击发送按钮
-          const maxAttempts = 5;
-          let attempts = 0;
-
-          const tryClick = () => {
-            const sendButton = document.querySelector('button[aria-label="发送"]');
-            console.log('尝试点击次数:', attempts + 1);
-            
-            if (sendButton) {
-              console.log('按钮状态:', {
-                disabled: sendButton.disabled,
-                'aria-disabled': sendButton.getAttribute('aria-disabled'),
-                className: sendButton.className
-              });
-              
-              if (!sendButton.disabled) {
-                sendButton.click();
-                console.log('按钮点击成功');
-                return true;
-              }
-            }
-
-            attempts++;
-            if (attempts < maxAttempts) {
-              setTimeout(tryClick, 200);
-            } else {
-              console.error('达到最大尝试次数，按钮仍然被禁用');
-            }
-          };
-
-          //setTimeout(tryClick, 100);
-
-  }
-  if (event.data.type === 'copilot') {
-    const searchQuery = event.data.query;
-    console.log('收到 copilot 消息:', searchQuery);
-
-    // 等待页面加载
-    await new Promise(resolve => setTimeout(resolve, 300));
-    const textArea = document.querySelector('textarea#userInput');
-          if (!textArea) {
-            console.error('未找到输入框');
-            return;
-          }
-
-          // 1. 聚焦输入框
-          textArea.focus();
-          
-          // 2. 设置文本内容
-          textArea.value = searchQuery;
-          
-          // 3. 触发必要的事件
-          const events = ['input', 'change', 'blur', 'focus'];
-          events.forEach(eventName => {
-            textArea.dispatchEvent(new Event(eventName, { bubbles: true }));
-          });
-
-          // 4. 点击发送按钮
-          setTimeout(() => {
-            const sendButton = document.querySelector('button[title="Submit message"]');
-            if (sendButton && !sendButton.disabled) {
-              sendButton.click();
-            } else {
-              console.error('未找到发送按钮或按钮被禁用');
-            }
-          }, 100);
-  }
-  if (event.data.type === 'metaso') {
-    const searchQuery = event.data.query;
-    console.log('收到 metaso 消息:', searchQuery);
-    // 从 window.frameElement 获取 iframe 的 src
-    const getIframeUrl = () => {
-        try {
-            if (window.frameElement) {
-                return window.frameElement.src;
-            }
-            return document.baseURI || window.location.href;
-        } catch (e) {
-            console.error('获取 iframe URL 失败:', e);
-            return '';
-        }
-    };
-
-    const iframeUrl = getIframeUrl();
-    console.log('iframe URL:', iframeUrl);
-
-    if (iframeUrl.includes('/search/')) {
-        const recommendBox = document.querySelector('div.MuiBox-root.css-qtri4c');
-        if (recommendBox) {
-          recommendBox.click();
-          console.log('在搜索页面点击了推荐区域');
-          
-          return new Promise(resolve => {
-            setTimeout(() => {
-              console.log('1秒等待结束');
-              const textarea = document.querySelector('.search-consult-textarea');
-              if (!textarea) {
-                console.error('未找到秘塔输入框');
-                resolve();  // 即使失败也要 resolve
-                return;
-              }
-              
-              // 设置文本内容
-              textarea.value = searchQuery;
-              console.log('秘塔设置输入内容:', searchQuery);
-
-              // 触发输入事件
-              textarea.dispatchEvent(new Event('input', { bubbles: true }));
-              
-              // 触发回车事件
-              const enterEvent = new KeyboardEvent('keydown', {
-                key: 'Enter',
-                code: 'Enter',
-                keyCode: 13,
-                which: 13,
-                bubbles: true
-              });
-              textarea.dispatchEvent(enterEvent);
-              
-              resolve();  // 完成所有操作后 resolve
-            }, 500);
-          });
-        } else {
-          console.log('未找到推荐区域');
-        }
-      } else {
-        console.log('不在搜索页面，跳过点击操作');
-      
-      
-        const textarea = document.querySelector('.search-consult-textarea');
-        if (!textarea) {
-          console.error('未找到秘塔输入框');
-          return;
-        }
-        
-
-        // 设置文本内容
-        textarea.value = searchQuery;
-        console.log('秘塔设置输入内容:', searchQuery);
-
-        // 触发输入事件
-        textarea.dispatchEvent(new Event('input', { bubbles: true }));
-        
-        // 触发回车事件
-        const enterEvent = new KeyboardEvent('keydown', {
-          key: 'Enter',
-          code: 'Enter',
-          keyCode: 13,
-          which: 13,
-          bubbles: true
-        });
-        textarea.dispatchEvent(enterEvent);
-        // 监听回车事件是否成功触发
-        let enterTriggered = false;
-        textarea.addEventListener('keydown', (e) => {
-          if(e.key === 'Enter') {
-            console.log('回车事件成功触发');
-            enterTriggered = true;
-          }
-        });
-        
-        // 触发回车事件后检查
-        setTimeout(() => {
-          if(!enterTriggered) {
-            console.log('回车事件未成功触发');
-          }
-        }, 100);
-      }
-
-    // 处理完成后发送响应
-    window.parent.postMessage({
-        type: 'metaso_response',
-        success: true,
-        // 其他需要返回的数据...
-    }, '*');
-  } 
-
+  // 如果没有找到对应的处理器，记录警告
+  console.warn('未找到对应的站点处理器，消息类型:', event.data.type);
 }); 
 
 // 标记是否已经添加了点击处理器
@@ -967,6 +373,97 @@ function handleLinkClick(e) {
   }
 }
 
+// 在 iframe 中触发粘贴操作
+async function triggerPasteInIframe() {
+  try {
+    console.log('开始触发 iframe 中的粘贴操作');
+    
+    // 查找输入框
+    const inputSelectors = [
+      'input[type="text"]',
+      'textarea',
+      '[contenteditable="true"]',
+      '#prompt-textarea',
+      '.input-area',
+      '[role="textbox"]'
+    ];
+    
+    let inputElement = null;
+    for (const selector of inputSelectors) {
+      inputElement = document.querySelector(selector);
+      if (inputElement) {
+        console.log('找到输入框:', selector);
+        break;
+      }
+    }
+    
+    if (!inputElement) {
+      console.log('未找到输入框，尝试聚焦文档');
+      document.body.focus();
+      window.focus();
+      
+      // 尝试读取剪切板以触发权限请求
+      try {
+        await navigator.clipboard.readText();
+      } catch (err) {
+        console.log('剪切板读取失败:', err.name, err.message);
+        if (err.name === 'NotAllowedError') {
+          showClipboardPermissionTip();
+        }
+      }
+      return;
+    }
+    
+    // 聚焦输入框
+    inputElement.focus();
+    document.body.focus();
+    window.focus();
+    
+    // 等待一小段时间确保聚焦完成
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // 模拟 Ctrl+V 键盘事件
+    const pasteEvent = new KeyboardEvent('keydown', {
+      key: 'v',
+      code: 'KeyV',
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true
+    });
+    
+    inputElement.dispatchEvent(pasteEvent);
+    
+    // 也尝试直接读取剪切板
+    try {
+      const clipboardData = await navigator.clipboard.read();
+      console.log('剪切板内容:', clipboardData);
+      
+      // 如果有文件，尝试处理
+      for (const item of clipboardData) {
+        if (item.types.includes('Files')) {
+          console.log('检测到文件在剪切板中');
+          // 这里可以添加文件处理逻辑
+        }
+      }
+    } catch (err) {
+      console.log('剪切板访问失败:', err.name, err.message);
+      if (err.name === 'NotAllowedError') {
+        showClipboardPermissionTip();
+      }
+    }
+    
+  } catch (error) {
+    console.error('触发粘贴操作失败:', error);
+  }
+}
+
+// 显示剪切板权限提示
+function showClipboardPermissionTip() {
+  console.log('提示: 需要用户授权剪切板访问权限');
+  console.log('解决方法: 请重新加载扩展以应用新的权限设置');
+  console.log('或者点击页面获得焦点后重试');
+}
+
 // 监听来自父窗口的消息
 window.addEventListener('message', (event) => {
   if (event.data.type === 'INJECT_CLICK_HANDLER' && !clickHandlerAdded) {
@@ -981,4 +478,4 @@ if (!clickHandlerAdded) {
   document.addEventListener('click', handleLinkClick);
   console.log("document.addEventListener('click', handleLinkClick); 触发")
   clickHandlerAdded = true;
-} 
+}
