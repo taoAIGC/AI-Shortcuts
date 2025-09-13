@@ -32,8 +32,17 @@ const externalLinks = {
 
 // 远程配置更新功能（仅更新配置数据，不更新代码）
 const RemoteConfigManager = {
-  // 远程配置服务器
-  configUrl: 'https://raw.githubusercontent.com/taoAIGC/AI-Shortcuts/main/config/siteHandlers.json',
+  // 远程配置服务器 - 根据环境选择不同的URL
+  get configUrl() {
+    // 如果 CONFIG 对象存在，使用环境配置
+    if (typeof CONFIG !== 'undefined' && CONFIG.REMOTE_CONFIG_URL) {
+      return CONFIG.IS_PRODUCTION 
+        ? 'https://raw.githubusercontent.com/taoAIGC/AI-Shortcuts/main/config/siteHandlers.json'
+        : CONFIG.REMOTE_CONFIG_URL;
+    }
+    // 否则使用默认的生产环境URL
+    return 'https://raw.githubusercontent.com/taoAIGC/AI-Shortcuts/main/config/siteHandlers.json';
+  },
   
   // 检查并更新配置
   async checkAndUpdateConfig() {
@@ -87,7 +96,7 @@ const RemoteConfigManager = {
         siteConfigVersion: remoteConfig.version || Date.now(),
         remoteSiteHandlers: remoteConfig
       });
-      console.log('本地配置已更新');
+      console.log('本地配置已更新，最新版本号:', remoteConfig.version || Date.now());
     } catch (error) {
       console.error('更新本地配置失败:', error);
     }

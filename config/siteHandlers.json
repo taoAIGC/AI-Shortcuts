@@ -12,6 +12,7 @@
       "region": "China",
       "hidden": false,
       "supportIframe": true,
+      "note": "",
       "searchHandler": {
         "steps": [
           {
@@ -52,6 +53,7 @@
       "region": "China",
       "hidden": false,
       "supportIframe": false,
+      "note": "未来后续支持",
       "searchHandler": {
         "steps": [
           {
@@ -87,17 +89,18 @@
     {
       "name": "秘塔AI",
       "url": "https://metaso.cn/",
-      "enabled": true,
+      "enabled": false,
       "supportUrlQuery": false,
       "region": "China",
       "hidden": false,
       "supportIframe": true,
+      "note": "会触发风控机制，如果无法搜索，请尝试更换其他站点",
       "searchHandler": {
         "steps": [
           {
-            "action": "custom",
-            "customAction": "metaso_recommend",
-            "description": "点击推荐框（如果存在）"
+            "action": "focus",
+            "selector": ["div.MuiBox-root.css-qtri4c", ".search-consult-textarea"],
+            "description": "聚焦推荐框或输入框"
           },
           {
             "action": "setValue",
@@ -115,12 +118,6 @@
             "selector": ".search-consult-textarea",
             "keys": "Enter",
             "description": "发送回车键"
-          },
-          {
-            "action": "custom",
-            "customAction": "send_message",
-            "messageType": "metaso_response",
-            "description": "发送消息给父窗口"
           }
         ]
       }
@@ -133,6 +130,7 @@
       "region": "China",
       "hidden": false,
       "supportIframe": false,
+      "note": "希望有可以给出合理的 steps",
       "searchHandler": {
         "steps": [
           {
@@ -178,6 +176,7 @@
       "region": "China",
       "hidden": false,
       "supportIframe": true,
+      "note": "",
       "searchHandler": {
         "steps": [
           {
@@ -219,6 +218,7 @@
       "region": "US",
       "hidden": false,
       "supportIframe": true,
+      "note": "",
       "searchHandler": {
         "steps": [
           {
@@ -237,6 +237,7 @@
       "region": "US",
       "hidden": false,
       "supportIframe": true,
+      "note": "",
       "searchHandler": {
         "steps": [
           {
@@ -277,6 +278,7 @@
       "region": "China",
       "hidden": true,
       "supportIframe": false,
+      "note": "待后续支持",
       "searchHandler": {
         "steps": [
           {
@@ -295,6 +297,7 @@
       "region": "China",
       "hidden": true,
       "supportIframe": false,
+      "note": "待后续支持",
       "searchHandler": {
         "steps": [
           {
@@ -313,6 +316,7 @@
       "region": "China",
       "hidden": false,
       "supportIframe": false,
+      "note": "待后续支持",
       "searchHandler": {
         "steps": [
           {
@@ -354,6 +358,7 @@
       "region": "China",
       "hidden": false,
       "supportIframe": true,
+      "note": "",
       "searchHandler": {
         "steps": [
           {
@@ -383,6 +388,7 @@
       "region": "China",
       "hidden": false,
       "supportIframe": false,
+      "note": "",
       "searchHandler": {
         "steps": [
           {
@@ -429,6 +435,7 @@
       "region": "China",
       "hidden": false,
       "supportIframe": true,
+      "note": "待后续支持",
       "searchHandler": {
         "steps": [
           {
@@ -469,6 +476,7 @@
       "region": "China",
       "hidden": false,
       "supportIframe": false,
+      "note": "小红书搜索，使用URL查询方式，无需输入框操作",
       "searchHandler": {
         "steps": [
           {
@@ -487,6 +495,7 @@
       "region": "China",
       "hidden": false,
       "supportIframe": true,
+      "note": "百度搜索，使用URL查询方式，无需输入框操作",
       "searchHandler": {
         "steps": [
           {
@@ -505,24 +514,31 @@
       "region": "US",
       "hidden": false,
       "supportIframe": true,
+      "note": "",
       "searchHandler": {
         "steps": [
           {
             "action": "focus",
-            "selector": "[contenteditable=\"true\"]",
-            "description": "聚焦可编辑区域"
+            "selector": "textarea",
+            "description": "聚焦输入框"
           },
           {
             "action": "setValue",
-            "selector": "[contenteditable=\"true\"]",
-            "inputType": "contenteditable",
-            "description": "设置可编辑区域内容"
+            "selector": "textarea",
+            "inputType": "textarea",
+            "description": "设置输入框的值"
           },
           {
             "action": "triggerEvents",
-            "selector": "[contenteditable=\"true\"]",
-            "events": ["input", "change", "blur", "focus"],
+            "selector": "textarea",
+            "events": ["input"],
             "description": "触发输入事件"
+          },
+          {
+            "action": "triggerEvents",
+            "selector": "textarea",
+            "events": ["input", "change", "blur", "focus"],
+            "description": "触发完整的输入事件序列"
           },
           {
             "action": "wait",
@@ -531,7 +547,7 @@
           },
           {
             "action": "sendKeys",
-            "selector": "[contenteditable=\"true\"]",
+            "selector": "textarea",
             "keys": "Enter",
             "description": "发送回车键"
           }
@@ -546,6 +562,7 @@
       "region": "US",
       "hidden": false,
       "supportIframe": true,
+      "note": "",
       "searchHandler": {
         "steps": [
           {
@@ -587,6 +604,7 @@
       "region": "US",
       "hidden": false,
       "supportIframe": true,
+      "note": "",
       "searchHandler": {
         "steps": [
           {
@@ -626,6 +644,7 @@
       "region": "US",
       "hidden": false,
       "supportIframe": true,
+      "note": "iframe页面下，打不开网页了，暂时无法使用",
       "searchHandler": {
         "steps": [
           {
@@ -644,6 +663,7 @@
       "region": "US",
       "hidden": false,
       "supportIframe": true,
+      "note": "",
       "searchHandler": {
         "steps": [
           {
@@ -698,6 +718,7 @@
       "region": "US",
       "hidden": false,
       "supportIframe": true,
+      "note": "",
       "searchHandler": {
         "steps": [
           {
@@ -734,6 +755,7 @@
       "region": "US",
       "hidden": false,
       "supportIframe": true,
+      "note": "",
       "searchHandler": {
         "steps": [
           {

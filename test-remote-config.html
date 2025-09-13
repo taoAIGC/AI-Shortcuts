@@ -57,6 +57,21 @@
     <h1>AI Shortcuts 远程配置测试</h1>
     
     <div class="test-section">
+        <h2>0. 环境状态检查</h2>
+        <div id="environment-status">
+            <div class="info">正在检查环境状态...</div>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>0.5. 本地配置状态</h2>
+        <button class="btn-primary" onclick="checkLocalConfig()">检查本地配置</button>
+        <div id="local-config-result">
+            <div class="info">点击按钮检查本地配置状态</div>
+        </div>
+    </div>
+    
+    <div class="test-section">
         <h2>1. 检查远程配置更新</h2>
         <button class="btn-primary" onclick="checkRemoteUpdate()">检查远程更新</button>
         <div id="remote-update-result"></div>
@@ -86,8 +101,86 @@
         <div id="simulate-update-result"></div>
     </div>
 
+    <script src="config/consoleConfig.js"></script>
     <script src="config/baseConfig.js"></script>
     <script>
+        // 环境状态检查函数
+        function checkEnvironmentStatus() {
+            const statusDiv = document.getElementById('environment-status');
+            let status = '';
+            
+            // 检查 CONFIG 对象
+            if (typeof CONFIG !== 'undefined') {
+                status += `<div class="success">✅ CONFIG 对象存在</div>`;
+                status += `<div><strong>环境:</strong> ${CONFIG.IS_PRODUCTION ? '生产环境' : '开发环境'}</div>`;
+                if (CONFIG.REMOTE_CONFIG_URL) {
+                    status += `<div><strong>测试URL:</strong> ${CONFIG.REMOTE_CONFIG_URL}</div>`;
+                }
+            } else {
+                status += `<div class="error">❌ CONFIG 对象未找到</div>`;
+            }
+            
+            // 检查 RemoteConfigManager
+            if (typeof window.RemoteConfigManager !== 'undefined') {
+                status += `<div class="success">✅ RemoteConfigManager 存在</div>`;
+                status += `<div><strong>配置URL:</strong> ${window.RemoteConfigManager.configUrl}</div>`;
+            } else {
+                status += `<div class="error">❌ RemoteConfigManager 未找到</div>`;
+            }
+            
+            statusDiv.innerHTML = status;
+        }
+        
+        // 检查本地配置状态
+        async function checkLocalConfig() {
+            const resultDiv = document.getElementById('local-config-result');
+            resultDiv.innerHTML = '<div class="info">正在检查本地配置...</div>';
+            
+            try {
+                // 检查 Chrome Storage Local
+                const result = await chrome.storage.local.get([
+                    'siteConfigVersion', 
+                    'remoteSiteHandlers', 
+                    'sites'
+                ]);
+                
+                let status = '<div class="success">✅ 本地存储检查完成</div>';
+                
+                // 检查配置版本
+                if (result.siteConfigVersion) {
+                    status += `<div><strong>配置版本:</strong> ${result.siteConfigVersion}</div>`;
+                } else {
+                    status += `<div class="error">❌ 未找到配置版本</div>`;
+                }
+                
+                // 检查远程配置数据
+                if (result.remoteSiteHandlers) {
+                    status += `<div class="success">✅ 远程配置数据存在</div>`;
+                    status += `<div><strong>远程版本:</strong> ${result.remoteSiteHandlers.version || '未知'}</div>`;
+                    status += `<div><strong>站点数量:</strong> ${result.remoteSiteHandlers.sites ? result.remoteSiteHandlers.sites.length : 0}</div>`;
+                } else {
+                    status += `<div class="error">❌ 未找到远程配置数据</div>`;
+                }
+                
+                // 检查站点配置
+                if (result.sites) {
+                    status += `<div class="success">✅ 站点配置存在</div>`;
+                    status += `<div><strong>本地站点数量:</strong> ${result.sites.length}</div>`;
+                    status += `<div><strong>启用站点数量:</strong> ${result.sites.filter(s => s.enabled).length}</div>`;
+                } else {
+                    status += `<div class="error">❌ 未找到站点配置</div>`;
+                }
+                
+                // 显示详细信息
+                status += `<details><summary>详细信息</summary><pre>${JSON.stringify(result, null, 2)}</pre></details>`;
+                
+                resultDiv.innerHTML = status;
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ 检查失败: ${error.message}</div>`;
+            }
+        }
+        
         // 测试函数
         async function checkRemoteUpdate() {
             const resultDiv = document.getElementById('remote-update-result');
@@ -232,7 +325,19 @@
         // 页面加载时自动运行一些测试
         window.addEventListener('load', () => {
             console.log('页面加载完成，开始自动测试...');
-            checkRemoteUpdate();
+            console.log('CONFIG 对象:', typeof CONFIG !== 'undefined' ? CONFIG : '未找到');
+            console.log('RemoteConfigManager 对象:', typeof window.RemoteConfigManager !== 'undefined' ? '存在' : '未找到');
+            if (typeof window.RemoteConfigManager !== 'undefined') {
+                console.log('RemoteConfigManager.configUrl:', window.RemoteConfigManager.configUrl);
+            }
+            
+            // 先检查环境状态
+            checkEnvironmentStatus();
+            
+            // 然后运行远程更新测试
+            setTimeout(() => {
+                checkRemoteUpdate();
+            }, 500); // 延迟500ms确保所有脚本加载完成
         });
     </script>
 </body>

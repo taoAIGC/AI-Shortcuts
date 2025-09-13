@@ -57,9 +57,22 @@ async function executeSiteHandler(query, handlerConfig) {
 
 // 执行点击操作
 async function executeClick(step) {
-  const element = document.querySelector(step.selector);
+  let element = null;
+  let foundSelector = null;
+  
+  // 支持多个选择器
+  const selectors = Array.isArray(step.selector) ? step.selector : [step.selector];
+  
+  for (const selector of selectors) {
+    element = document.querySelector(selector);
+    if (element) {
+      foundSelector = selector;
+      break;
+    }
+  }
+  
   if (!element) {
-    throw new Error(`未找到元素: ${step.selector}`);
+    throw new Error(`未找到任何元素，尝试的选择器: ${selectors.join(', ')}`);
   }
   
   if (step.condition) {
@@ -72,25 +85,51 @@ async function executeClick(step) {
   }
 
   element.click();
-  console.log('点击元素:', step.selector);
+  console.log('点击元素:', foundSelector);
 }
 
 // 执行聚焦操作
 async function executeFocus(step) {
-  const element = document.querySelector(step.selector);
+  let element = null;
+  let foundSelector = null;
+  
+  // 支持多个选择器
+  const selectors = Array.isArray(step.selector) ? step.selector : [step.selector];
+  
+  for (const selector of selectors) {
+    element = document.querySelector(selector);
+    if (element) {
+      foundSelector = selector;
+      break;
+    }
+  }
+  
   if (!element) {
-    throw new Error(`未找到元素: ${step.selector}`);
+    throw new Error(`未找到任何元素，尝试的选择器: ${selectors.join(', ')}`);
   }
   
   element.focus();
-  console.log('聚焦元素:', step.selector);
+  console.log('聚焦元素:', foundSelector);
 }
 
 // 执行设置值操作
 async function executeSetValue(step, query) {
-  const element = document.querySelector(step.selector);
+  let element = null;
+  let foundSelector = null;
+  
+  // 支持多个选择器
+  const selectors = Array.isArray(step.selector) ? step.selector : [step.selector];
+  
+  for (const selector of selectors) {
+    element = document.querySelector(selector);
+    if (element) {
+      foundSelector = selector;
+      break;
+    }
+  }
+  
   if (!element) {
-    throw new Error(`未找到元素: ${step.selector}`);
+    throw new Error(`未找到任何元素，尝试的选择器: ${selectors.join(', ')}`);
   }
 
   if (step.inputType === 'contenteditable') {
@@ -129,14 +168,27 @@ async function executeSetValue(step, query) {
     element.value = query;
   }
 
-  console.log('设置元素值:', step.selector);
+  console.log('设置元素值:', foundSelector);
 }
 
 // 执行触发事件操作
 async function executeTriggerEvents(step) {
-  const element = document.querySelector(step.selector);
+  let element = null;
+  let foundSelector = null;
+  
+  // 支持多个选择器
+  const selectors = Array.isArray(step.selector) ? step.selector : [step.selector];
+  
+  for (const selector of selectors) {
+    element = document.querySelector(selector);
+    if (element) {
+      foundSelector = selector;
+      break;
+    }
+  }
+  
   if (!element) {
-    throw new Error(`未找到元素: ${step.selector}`);
+    throw new Error(`未找到任何元素，尝试的选择器: ${selectors.join(', ')}`);
   }
 
   const events = step.events || ['input', 'change'];
@@ -155,14 +207,27 @@ async function executeTriggerEvents(step) {
     }
   });
 
-  console.log('触发事件:', events);
+  console.log('触发事件:', events, '在元素:', foundSelector);
 }
 
 // 执行发送按键操作
 async function executeSendKeys(step, query) {
-  const element = document.querySelector(step.selector);
+  let element = null;
+  let foundSelector = null;
+  
+  // 支持多个选择器
+  const selectors = Array.isArray(step.selector) ? step.selector : [step.selector];
+  
+  for (const selector of selectors) {
+    element = document.querySelector(selector);
+    if (element) {
+      foundSelector = selector;
+      break;
+    }
+  }
+  
   if (!element) {
-    throw new Error(`未找到元素: ${step.selector}`);
+    throw new Error(`未找到任何元素，尝试的选择器: ${selectors.join(', ')}`);
   }
 
   if (step.keys === 'Enter') {
@@ -178,7 +243,7 @@ async function executeSendKeys(step, query) {
       isComposing: false
     });
     element.dispatchEvent(enterEvent);
-    console.log('发送回车键');
+    console.log('发送回车键到元素:', foundSelector);
   } else if (step.keys === 'Ctrl+V') {
     const pasteEvent = new KeyboardEvent('keydown', {
       key: 'v',
@@ -188,7 +253,7 @@ async function executeSendKeys(step, query) {
       cancelable: true
     });
     element.dispatchEvent(pasteEvent);
-    console.log('发送 Ctrl+V');
+    console.log('发送 Ctrl+V 到元素:', foundSelector);
   }
 }
 

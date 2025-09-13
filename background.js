@@ -1,5 +1,5 @@
-importScripts('./config/baseConfig.js');
-importScripts('./config/consoleConfig.js');  // 在 background.js 开头导入 consoleConfig.js
+importScripts('./config/consoleConfig.js');  // 先加载 consoleConfig.js
+importScripts('./config/baseConfig.js');     // 再加载 baseConfig.js
 
 // 扩展启动时检查配置更新
 chrome.runtime.onStartup.addListener(async () => {
@@ -98,7 +98,7 @@ chrome.declarativeNetRequest.getSessionRules().then(rules => {
 
 // 如果规则为空，尝试动态添加规则
 chrome.declarativeNetRequest.updateSessionRules({
-  removeRuleIds: [], // 如果需要，可以先清除现有规则
+  removeRuleIds: [999], // 先清除可能存在的规则 999
   addRules: [{
     "id": 999,
     "priority": 1,
@@ -147,16 +147,6 @@ chrome.declarativeNetRequest.updateSessionRules({
   console.log('更新后的规则:', rules);
 });
 
-/*
-// 监听规则匹配情况
-chrome.declarativeNetRequest.onRuleMatchedDebug.addListener(
-  (info) => {
-    console.log('规则匹配:', info);
-  }
-);*/
-
-// 后续的 background 代码
-
 
 
 
@@ -170,25 +160,45 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 
 // 处理来自 float-button 和 popup 和 content-scripts 的消息
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  console.log('收到消息:', message);
+  
   if (message.action === 'createComparisonPage') {
     console.log('createComparisonPage-opensearchtab:', message.query);
-    openSearchTabs(message.query);
+    openSearchTabs(message.query).then(() => {
+      sendResponse({ success: true });
+    }).catch(error => {
+      console.error('创建对比页面失败:', error);
+      sendResponse({ success: false, error: error.message });
+    });
+    return true; // 保持消息通道开放
   } 
   else if (message.action === 'processQuery') {
     // 添加对 processQuery 消息的处理
     console.log('processQuery:', message.query, message.sites);
-    openSearchTabs(message.query, message.sites);
+    openSearchTabs(message.query, message.sites).then(() => {
+      sendResponse({ success: true });
+    }).catch(error => {
+      console.error('处理查询失败:', error);
+      sendResponse({ success: false, error: error.message });
+    });
+    return true; // 保持消息通道开放
   }
   else if (message.action === 'singleSiteSearch') {
-    handleSingleSiteSearch(message.query, message.siteName);
     console.log('singleSiteSearch:', message.query, message.siteName);
+    handleSingleSiteSearch(message.query, message.siteName).then(() => {
+      sendResponse({ success: true });
+    }).catch(error => {
+      console.error('单站点搜索失败:', error);
+      sendResponse({ success: false, error: error.message });
+    });
+    return true; // 保持消息通道开放
   }
   else if (message.action === 'openOptionsPage') {
     // 立即打开设置页面
     chrome.tabs.create({
       url: chrome.runtime.getURL('options/options.html')
     });
-    
+    sendResponse({ success: true });
   }
 });
 
@@ -211,43 +221,42 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
 // 站点处理函数集合
 // 站点处理函数已迁移到 siteHandlers.json 中的 searchHandler 字段
 
-// 执行站点处理函数
+// 执行站点处理函数 - 使用配置化处理器
 async function executeSiteHandler(tabId, query, siteHandler) {
   try {
     console.log(`开始处理 ${siteHandler.name} 站点, tabId:`, tabId);
     console.log('待发送的查询:', query);
     
-      // 先激活标签页
-      await chrome.tabs.update(tabId, { active: true });
-      const tab = await chrome.tabs.get(tabId);
-      console.log('标签页状态:', {
-        id: tab.id,
-        url: tab.url,
-        status: tab.status,
-        active: tab.active
-      });
+    // 先激活标签页
+    await chrome.tabs.update(tabId, { active: true });
+    const tab = await chrome.tabs.get(tabId);
+    console.log('标签页状态:', {
+      id: tab.id,
+      url: tab.url,
+      status: tab.status,
+      active: tab.active
+    });
 
-      try {
-        // 给页面一点加载时间
-        await new Promise(resolve => setTimeout(resolve, 100));
+    try {
+      // 给页面一点加载时间
+      await new Promise(resolve => setTimeout(resolve, 100));
       
-      // 将字符串形式的函数转换为可执行的函数
-      const handlerFunction = new Function('return ' + siteHandler.searchHandler)();
-        
-        // 然后执行脚本
-        await chrome.scripting.executeScript({
-          target: { tabId },
-        func: handlerFunction,
-          args: [query]
-        });
+      // 使用配置化处理器 - 发送消息到页面的 inject.js
+      await chrome.tabs.sendMessage(tabId, {
+        type: 'search',
+        query: query,
+        domain: new URL(tab.url).hostname
+      });
+      
+      console.log('已发送配置化处理消息到页面');
     } catch (scriptError) {
-      console.error('脚本执行失败:', scriptError);
+      console.error('发送配置化处理消息失败:', scriptError);
       throw scriptError;
-      }
-    } catch (error) {
-    console.error(`${siteHandler.name} 处理过程出错:`, error);
-      throw error;
     }
+  } catch (error) {
+    console.error(`${siteHandler.name} 处理过程出错:`, error);
+    throw error;
+  }
 }
 
 // 根据 URL 获取处理函数
@@ -331,6 +340,12 @@ async function getHandlerForUrl(url) {
       console.error('未找到站点配置:', siteName);
       return;
     }
+    
+    // 检查站点是否被隐藏
+    if (siteConfig.hidden) {
+      console.error('站点已被隐藏，无法使用:', siteName);
+      return;
+    }
 
       // 判断是否支持URL拼接查询
       if (siteConfig.supportUrlQuery) {
@@ -340,24 +355,27 @@ async function getHandlerForUrl(url) {
       await chrome.tabs.create({ url, active: true });
       } else {
         // 需要脚本控制的站点
-      console.log('使用脚本控制方式打开:', siteConfig.url);
-      const tab = await chrome.tabs.create({ url: siteConfig.url, active: true });
-      
-          // 等待标签页加载完成
-          chrome.tabs.onUpdated.addListener(function listener(tabId, info) {
+        console.log('使用脚本控制方式打开:', siteConfig.url);
+        const tab = await chrome.tabs.create({ url: siteConfig.url, active: true });
+        
+        // 等待标签页加载完成
+        await new Promise((resolve) => {
+          const listener = (tabId, info) => {
             if (tabId === tab.id && info.status === 'complete') {
               chrome.tabs.onUpdated.removeListener(listener);
-              // 执行对应站点的处理函数
-          executeSiteHandler(tab.id, query, {
-            name: siteConfig.name,
-            searchHandler: siteConfig.searchHandler,
-            supportUrlQuery: siteConfig.supportUrlQuery
-          }).catch(error => {
-                console.error('站点处理失败:', error);
-              });
+              resolve();
             }
-          });
-    }
+          };
+          chrome.tabs.onUpdated.addListener(listener);
+        });
+        
+        // 执行对应站点的处理函数
+        await executeSiteHandler(tab.id, query, {
+          name: siteConfig.name,
+          searchHandler: siteConfig.searchHandler,
+          supportUrlQuery: siteConfig.supportUrlQuery
+        });
+      }
   } catch (error) {
     console.error('单站点搜索失败:', error);
   }
@@ -376,8 +394,8 @@ async function openSearchTabs(query, checkedSites = null) {
   // 首先检查是否有符合条件的站点
 
   const result = checkedSites 
-    ? sites.filter(site => checkedSites.includes(site.name))
-    : sites.filter(site => site.enabled);
+    ? sites.filter(site => checkedSites.includes(site.name) && !site.hidden)
+    : sites.filter(site => site.enabled && !site.hidden);
     
   console.log('符合条件的站点:', result);
 
@@ -596,12 +614,6 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
 });
 
 
-// 移除频繁的页面加载监听，只在必要时创建右键菜单
-// chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-//   if (changeInfo.status === 'complete') {
-//     createContextMenu();
-//   }
-// });
 
 // 监听扩展卸载事件
 chrome.runtime.setUninstallURL(self.externalLinks?.uninstallSurvey || '', () => {
