@@ -1,6 +1,7 @@
-// 删除不再需要的 getCurrentDomain 函数
 
-// 通用的配置化站点处理器 - 基于三步流程的标准化处理
+console.log('🎯 inject.js 脚本已加载');
+
+// 通用的配置化站点处理器 - 基于流程的标准化处理
 async function executeSiteHandler(query, handlerConfig) {
   if (!handlerConfig || !handlerConfig.steps) {
     console.error('无效的处理器配置');
@@ -35,6 +36,9 @@ async function executeSiteHandler(query, handlerConfig) {
           break;
         case 'custom':
           await executeCustom(step, query);
+          break;
+        case 'paste':
+          await executePaste(step);
           break;
         default:
           console.warn('未知的步骤类型:', step.action);
@@ -142,33 +146,166 @@ async function executeSetValue(step, query) {
       element.querySelector('p').innerText = query;
     }
   } else if (step.inputType === 'special') {
-    // 处理特殊输入方式
-    if (step.customSetValue === 'wenxin') {
-      const p = document.querySelector('p.yc-editor-paragraph');
-      if (p) {
-        p.innerHTML = '';
-      }
-      const span = document.createElement('span');
-      span.setAttribute('data-lexical-text', 'true');
-      span.textContent = query;
-      p.appendChild(span);
-    } else if (step.customSetValue === 'poe') {
-      // POE 特殊处理
-      const growingTextArea = document.querySelector('.GrowingTextArea_growWrap__im5W3');
-      if (growingTextArea) {
-        growingTextArea.setAttribute('data-replicated-value', query);
-        const textarea = growingTextArea.querySelector('textarea');
-        if (textarea) {
-          textarea.value = query;
-        }
-      }
-    }
+    // 使用配置驱动的特殊处理
+    await executeSpecialSetValue(step, query, element);
   } else {
     // 普通输入框
     element.value = query;
   }
 
   console.log('设置元素值:', foundSelector);
+}
+
+// 配置驱动的特殊值设置
+async function executeSpecialSetValue(step, query, element) {
+  const specialConfig = step.specialConfig;
+  
+  if (!specialConfig) {
+    // 兼容旧的 customSetValue 方式
+    await executeLegacySpecialSetValue(step, query);
+    return;
+  }
+  
+  switch (specialConfig.type) {
+    case 'lexical-editor':
+      await handleLexicalEditor(specialConfig, query);
+      break;
+    case 'growing-textarea':
+      await handleGrowingTextarea(specialConfig, query);
+      break;
+    case 'custom-element':
+      await handleCustomElement(specialConfig, query);
+      break;
+    case 'multi-sync':
+      await handleMultiSync(specialConfig, query);
+      break;
+    default:
+      console.warn('未知的特殊处理类型:', specialConfig.type);
+      // 回退到普通处理
+      element.value = query;
+  }
+}
+
+// 处理 Lexical 编辑器（如文心一言）
+async function handleLexicalEditor(config, query) {
+  const container = document.querySelector(config.containerSelector);
+  if (!container) {
+    throw new Error(`未找到容器元素: ${config.containerSelector}`);
+  }
+  
+  // 清空容器
+  if (config.clearContainer !== false) {
+    container.innerHTML = '';
+  }
+  
+  // 创建元素
+  const element = document.createElement(config.elementType || 'span');
+  
+  // 设置属性
+  if (config.attributes) {
+    Object.entries(config.attributes).forEach(([key, value]) => {
+      element.setAttribute(key, value);
+    });
+  }
+  
+  // 设置内容
+  if (config.contentType === 'innerHTML') {
+    element.innerHTML = query;
+  } else {
+    element.textContent = query;
+  }
+  
+  // 添加到容器
+  container.appendChild(element);
+  
+  console.log('Lexical 编辑器内容已设置');
+}
+
+// 处理自适应文本框（如 POE）
+async function handleGrowingTextarea(config, query) {
+  const container = document.querySelector(config.containerSelector);
+  if (!container) {
+    throw new Error(`未找到容器元素: ${config.containerSelector}`);
+  }
+  
+  // 设置容器属性
+  if (config.containerAttribute) {
+    container.setAttribute(config.containerAttribute, query);
+  }
+  
+  // 设置内部输入框
+  if (config.inputSelector) {
+    const input = container.querySelector(config.inputSelector);
+    if (input) {
+      input.value = query;
+    }
+  }
+  
+  console.log('自适应文本框内容已设置');
+}
+
+// 处理自定义元素
+async function handleCustomElement(config, query) {
+  const element = document.querySelector(config.selector);
+  if (!element) {
+    throw new Error(`未找到元素: ${config.selector}`);
+  }
+  
+  // 执行自定义方法
+  if (config.method === 'setAttribute') {
+    element.setAttribute(config.attribute, query);
+  } else if (config.method === 'setProperty') {
+    element[config.property] = query;
+  } else if (config.method === 'innerHTML') {
+    element.innerHTML = query;
+  } else if (config.method === 'textContent') {
+    element.textContent = query;
+  }
+  
+  console.log('自定义元素内容已设置');
+}
+
+// 处理多元素同步
+async function handleMultiSync(config, query) {
+  const elements = config.elements || [];
+  
+  for (const elementConfig of elements) {
+    const element = document.querySelector(elementConfig.selector);
+    if (element) {
+      if (elementConfig.method === 'value') {
+        element.value = query;
+      } else if (elementConfig.method === 'attribute') {
+        element.setAttribute(elementConfig.attribute, query);
+      } else if (elementConfig.method === 'textContent') {
+        element.textContent = query;
+      }
+    }
+  }
+  
+  console.log('多元素同步完成');
+}
+
+// 兼容旧的特殊处理方式
+async function executeLegacySpecialSetValue(step, query) {
+  if (step.customSetValue === 'wenxin') {
+    const p = document.querySelector('p.yc-editor-paragraph');
+    if (p) {
+      p.innerHTML = '';
+    }
+    const span = document.createElement('span');
+    span.setAttribute('data-lexical-text', 'true');
+    span.textContent = query;
+    p.appendChild(span);
+  } else if (step.customSetValue === 'poe') {
+    const growingTextArea = document.querySelector('.GrowingTextArea_growWrap__im5W3');
+    if (growingTextArea) {
+      growingTextArea.setAttribute('data-replicated-value', query);
+      const textarea = growingTextArea.querySelector('textarea');
+      if (textarea) {
+        textarea.value = query;
+      }
+    }
+  }
 }
 
 // 执行触发事件操作
@@ -244,16 +381,8 @@ async function executeSendKeys(step, query) {
     });
     element.dispatchEvent(enterEvent);
     console.log('发送回车键到元素:', foundSelector);
-  } else if (step.keys === 'Ctrl+V') {
-    const pasteEvent = new KeyboardEvent('keydown', {
-      key: 'v',
-      code: 'KeyV',
-      ctrlKey: true,
-      bubbles: true,
-      cancelable: true
-    });
-    element.dispatchEvent(pasteEvent);
-    console.log('发送 Ctrl+V 到元素:', foundSelector);
+  } else {
+    console.warn('不支持的按键类型:', step.keys);
   }
 }
 
@@ -261,6 +390,57 @@ async function executeSendKeys(step, query) {
 async function executeWait(step) {
   await new Promise(resolve => setTimeout(resolve, step.duration));
   console.log('等待:', step.duration + 'ms');
+}
+
+// 执行粘贴操作
+async function executePaste(step) {
+  try {
+    console.log('🎯 开始执行粘贴操作...');
+    console.log('粘贴步骤配置:', step);
+    
+    // 模拟 Ctrl+V 键盘事件
+    const pasteEvent = new KeyboardEvent('keydown', {
+      key: 'v',
+      code: 'KeyV',
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true
+    });
+    
+    // 向当前聚焦的元素发送粘贴事件
+    const activeElement = document.activeElement;
+    if (activeElement) {
+      activeElement.dispatchEvent(pasteEvent);
+      console.log('已向聚焦元素发送粘贴事件:', activeElement);
+    } else {
+      // 如果没有聚焦元素，向文档发送事件
+      document.dispatchEvent(pasteEvent);
+      console.log('已向文档发送粘贴事件');
+    }
+    
+    // 也尝试直接读取剪切板
+    try {
+      const clipboardData = await navigator.clipboard.read();
+      console.log('剪切板内容:', clipboardData);
+      
+      // 如果有文件，尝试处理
+      for (const item of clipboardData) {
+        if (item.types.includes('Files')) {
+          console.log('检测到文件在剪切板中');
+          // 这里可以添加文件处理逻辑
+        }
+      }
+    } catch (err) {
+      console.log('剪切板访问失败:', err.name, err.message);
+      if (err.name === 'NotAllowedError') {
+        console.log('提示: 需要用户授权剪切板访问权限');
+      }
+    }
+    
+    console.log('粘贴操作执行完成');
+  } catch (error) {
+    console.error('执行粘贴操作失败:', error);
+  }
 }
 
 // 执行自定义操作
@@ -302,23 +482,27 @@ async function executeCustom(step, query) {
   console.log('执行自定义操作:', step.customAction);
 }
 
-// 根据域名获取站点处理器 - 统一处理 E F H 环节
+// 根据域名获取站点处理器
 async function getSiteHandler(domain) {
   try {
-    // E: 从远程配置获取站点列表
+    // 优先从 chrome.storage.local 获取站点列表
     let sites = [];
-    if (window.RemoteConfigManager) {
-      sites = await window.RemoteConfigManager.getCurrentSites('CN');
-    }
-    
-    // F: 检查配置可用性，如果远程配置失败，从本地存储获取
-    if (!sites || sites.length === 0) {
-      console.log('远程配置不可用，尝试从本地存储获取站点配置');
+    try {
       const result = await chrome.storage.local.get('sites');
       sites = result.sites || [];
+    } catch (error) {
+      console.error('从 chrome.storage.local 读取配置失败:', error);
     }
     
-    // H: 使用配置
+    // 如果存储中没有数据，尝试从远程配置获取
+    if (!sites || sites.length === 0) {
+      console.log('chrome.storage.local 中无数据，尝试从远程配置获取...');
+      if (window.RemoteConfigManager) {
+        sites = await window.RemoteConfigManager.getCurrentSites();
+      }
+    }
+    
+    // 使用配置
     if (!sites || sites.length === 0) {
       console.warn('没有找到站点配置，请检查网络连接或重新加载扩展');
       return null;
@@ -341,9 +525,17 @@ async function getSiteHandler(domain) {
       return null;
     }
     
+    console.log(`找到站点配置: ${site.name}`);
+    console.log('站点配置详情:', {
+      name: site.name,
+      hasSearchHandler: !!site.searchHandler,
+      hasFileUploadHandler: !!site.fileUploadHandler
+    });
+    
     return {
       name: site.name,
-      searchHandler: site.searchHandler
+      searchHandler: site.searchHandler,
+      fileUploadHandler: site.fileUploadHandler
     };
   } catch (error) {
     console.error('获取站点处理器失败:', error);
@@ -353,13 +545,17 @@ async function getSiteHandler(domain) {
 
 // 监听来自扩展的消息
 window.addEventListener('message', async function(event) {
-    // 过滤消息：只处理来自 MultiAI 扩展的消息
+    console.log('🎯🎯🎯 inject.js 收到消息:', event.data, '来源:', event.origin);
+    
+    // 过滤消息：只处理来自 AIShortcuts扩展的消息
     if (!event.data || typeof event.data !== 'object') {
+        console.log('消息格式无效，跳过');
         return;
     }
     
-    // 检查是否是 MultiAI 扩展的消息
+    // 检查是否是 AIShortcuts 扩展的消息
     if (!event.data.query && !event.data.type) {
+        console.log('消息缺少必要字段，跳过');
         return;
     }
     
@@ -380,7 +576,7 @@ window.addEventListener('message', async function(event) {
         return;
     }
     
-    // 只处理 MultiAI 扩展的特定消息类型
+    // 只处理 AIShortcuts 扩展的特定消息类型
     const validMultiAITypes = ['TRIGGER_PASTE', 'search'];
     
     if (!validMultiAITypes.includes(event.data.type)) {
@@ -397,10 +593,57 @@ window.addEventListener('message', async function(event) {
 
   // 处理文件粘贴消息
   if (event.data.type === 'TRIGGER_PASTE') {
-    console.log('收到文件粘贴触发消息');
-    await triggerPasteInIframe();
+    console.log('🎯 收到文件粘贴触发消息');
+    console.log('消息详情:', event.data);
+    
+    // 检查是否是全局粘贴
+    if (event.data.global) {
+      console.log('🎯 这是全局文件粘贴操作');
+      if (event.data.fallback) {
+        console.log('🎯 这是降级处理模式');
+      }
+      if (event.data.forced) {
+        console.log('🎯 这是强制处理模式');
+      }
+    } else {
+      console.log('🎯 这是单个 iframe 的文件粘贴操作');
+    }
+    
+    // 使用配置化的文件上传处理器
+    const domain = event.data.domain || window.location.hostname;
+    const siteHandler = await getSiteHandler(domain);
+    
+    if (siteHandler && siteHandler.fileUploadHandler) {
+      console.log(`🎯 使用 ${siteHandler.name} 的文件上传处理器`);
+      console.log('站点处理器配置:', siteHandler.fileUploadHandler);
+      try {
+        await executeSiteHandler(null, siteHandler.fileUploadHandler);
+        console.log('🎯 文件上传处理器执行完成');
+      } catch (error) {
+        console.error(`${siteHandler.name} 文件上传处理失败:`, error);
+        // 降级到默认处理方式
+        console.log('降级到默认处理方式');
+        await executeSiteHandler(null, { 
+          steps: [{ 
+            action: 'paste', 
+            description: '默认粘贴操作' 
+          }] 
+        });
+      }
+    } else {
+      console.log('未找到文件上传处理器，使用默认处理方式');
+      await executeSiteHandler(null, { 
+        steps: [{ 
+          action: 'paste', 
+          description: '默认粘贴操作' 
+        }] 
+      });
+    }
     return;
   }
+
+  // 处理点击处理器消息
+  handleClickHandlerMessage(event);
 
   // 使用新的统一处理逻辑
   const domain = event.data.domain || window.location.hostname;
@@ -438,89 +681,7 @@ function handleLinkClick(e) {
   }
 }
 
-// 在 iframe 中触发粘贴操作
-async function triggerPasteInIframe() {
-  try {
-    console.log('开始触发 iframe 中的粘贴操作');
-    
-    // 查找输入框
-    const inputSelectors = [
-      'input[type="text"]',
-      'textarea',
-      '[contenteditable="true"]',
-      '#prompt-textarea',
-      '.input-area',
-      '[role="textbox"]'
-    ];
-    
-    let inputElement = null;
-    for (const selector of inputSelectors) {
-      inputElement = document.querySelector(selector);
-      if (inputElement) {
-        console.log('找到输入框:', selector);
-        break;
-      }
-    }
-    
-    if (!inputElement) {
-      console.log('未找到输入框，尝试聚焦文档');
-      document.body.focus();
-      window.focus();
-      
-      // 尝试读取剪切板以触发权限请求
-      try {
-        await navigator.clipboard.readText();
-      } catch (err) {
-        console.log('剪切板读取失败:', err.name, err.message);
-        if (err.name === 'NotAllowedError') {
-          showClipboardPermissionTip();
-        }
-      }
-      return;
-    }
-    
-    // 聚焦输入框
-    inputElement.focus();
-    document.body.focus();
-    window.focus();
-    
-    // 等待一小段时间确保聚焦完成
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
-    // 模拟 Ctrl+V 键盘事件
-    const pasteEvent = new KeyboardEvent('keydown', {
-      key: 'v',
-      code: 'KeyV',
-      ctrlKey: true,
-      bubbles: true,
-      cancelable: true
-    });
-    
-    inputElement.dispatchEvent(pasteEvent);
-    
-    // 也尝试直接读取剪切板
-    try {
-      const clipboardData = await navigator.clipboard.read();
-      console.log('剪切板内容:', clipboardData);
-      
-      // 如果有文件，尝试处理
-      for (const item of clipboardData) {
-        if (item.types.includes('Files')) {
-          console.log('检测到文件在剪切板中');
-          // 这里可以添加文件处理逻辑
-        }
-      }
-    } catch (err) {
-      console.log('剪切板访问失败:', err.name, err.message);
-      if (err.name === 'NotAllowedError') {
-        showClipboardPermissionTip();
-      }
-    }
-    
-  } catch (error) {
-    console.error('触发粘贴操作失败:', error);
-  }
-}
+
 
 // 显示剪切板权限提示
 function showClipboardPermissionTip() {
@@ -529,14 +690,14 @@ function showClipboardPermissionTip() {
   console.log('或者点击页面获得焦点后重试');
 }
 
-// 监听来自父窗口的消息
-window.addEventListener('message', (event) => {
+// 处理来自父窗口的点击处理器消息
+function handleClickHandlerMessage(event) {
   if (event.data.type === 'INJECT_CLICK_HANDLER' && !clickHandlerAdded) {
     document.addEventListener('click', handleLinkClick);
     console.log("收到Iframe消息 添加消息处理 ")
     clickHandlerAdded = true;
   }
-});
+}
 
 // 如果还没有添加点击处理器，则添加
 if (!clickHandlerAdded) {

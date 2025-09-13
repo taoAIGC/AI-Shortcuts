@@ -1,3 +1,105 @@
+// 全局文件粘贴检测和处理
+let filePasteHandlerAdded = false;
+
+async function handleGlobalFilePaste(event) {
+  console.log('🎯 全局检测到粘贴事件');
+  
+  try {
+    // 检查剪贴板中是否有文件
+    const clipboardData = await navigator.clipboard.read();
+    console.log('剪贴板内容:', clipboardData);
+    
+    let hasFiles = false;
+    for (const item of clipboardData) {
+      console.log('剪贴板项目类型:', item.types);
+      
+      // 检测文件类型：Files 或常见的文件 MIME 类型
+      const fileTypes = ['Files', 'text/html', 'text/plain', 'application/octet-stream'];
+      const isFile = fileTypes.some(type => item.types.includes(type));
+      
+      if (isFile) {
+        hasFiles = true;
+        console.log('检测到文件在剪贴板中，类型:', item.types);
+        break;
+      }
+    }
+    
+    if (hasFiles) {
+      console.log('🎯 开始向所有 iframe 广播文件粘贴消息');
+      
+      // 获取所有 iframe 元素
+      const iframes = document.querySelectorAll('.ai-iframe');
+      console.log(`找到 ${iframes.length} 个 iframe`);
+      
+      // 向每个 iframe 发送 TRIGGER_PASTE 消息
+      iframes.forEach((iframe, index) => {
+        try {
+          const domain = new URL(iframe.src).hostname;
+          console.log(`🎯 向第 ${index + 1} 个 iframe (${domain}) 发送 TRIGGER_PASTE 消息`);
+          
+          iframe.contentWindow.postMessage({
+            type: 'TRIGGER_PASTE',
+            domain: domain,
+            source: 'iframe-parent',
+            global: true
+          }, '*');
+        } catch (error) {
+          console.error(`向第 ${index + 1} 个 iframe 发送消息失败:`, error);
+        }
+      });
+      
+      console.log('🎯 文件粘贴消息广播完成');
+    } else {
+      console.log('剪贴板中没有检测到文件类型，但可能是其他可上传内容');
+      console.log('🎯 尝试降级处理：发送 TRIGGER_PASTE 消息');
+      
+      // 降级处理：即使没有检测到 Files 类型，也发送消息
+      const iframes = document.querySelectorAll('.ai-iframe');
+      console.log(`找到 ${iframes.length} 个 iframe`);
+      
+      iframes.forEach((iframe, index) => {
+        try {
+          const domain = new URL(iframe.src).hostname;
+          console.log(`🎯 向第 ${index + 1} 个 iframe (${domain}) 发送 TRIGGER_PASTE 消息 (降级处理)`);
+          
+          iframe.contentWindow.postMessage({
+            type: 'TRIGGER_PASTE',
+            domain: domain,
+            source: 'iframe-parent',
+            global: true,
+            fallback: true
+          }, '*');
+        } catch (error) {
+          console.error(`向第 ${index + 1} 个 iframe 发送消息失败:`, error);
+        }
+      });
+      
+      console.log('🎯 降级处理完成');
+    }
+  } catch (error) {
+    console.log('剪贴板访问失败:', error.name, error.message);
+    console.log('提示: 请确保页面已获得焦点并授权剪贴板访问权限');
+    
+    // 即使剪贴板访问失败，也尝试发送消息
+    console.log('🎯 尝试强制发送 TRIGGER_PASTE 消息');
+    const iframes = document.querySelectorAll('.ai-iframe');
+    iframes.forEach((iframe, index) => {
+      try {
+        const domain = new URL(iframe.src).hostname;
+        iframe.contentWindow.postMessage({
+          type: 'TRIGGER_PASTE',
+          domain: domain,
+          source: 'iframe-parent',
+          global: true,
+          forced: true
+        }, '*');
+      } catch (error) {
+        console.error(`强制发送消息失败:`, error);
+      }
+    });
+  }
+}
+
 // 页面加载完成后的初始化
 document.addEventListener('DOMContentLoaded', async function() {
     // 初始化列数选择
@@ -49,6 +151,13 @@ document.addEventListener('DOMContentLoaded', async function() {
         chrome.storage.sync.set({ 'preferredColumns': columns });
         updateColumns(columns);
     });
+
+    // 添加全局文件粘贴检测（类似搜索功能）
+    if (!filePasteHandlerAdded) {
+        document.addEventListener('paste', handleGlobalFilePaste);
+        filePasteHandlerAdded = true;
+        console.log('🎯 全局文件粘贴监听器已添加');
+    }
 
 });
 
@@ -229,6 +338,7 @@ function createSingleIframe(siteName, url, container, query) {
     if (clickHandlerAdded) return; // 如果已经添加过处理器，直接返回
     
     try {
+      // 添加点击事件监听器
       iframe.contentWindow.addEventListener('click', (e) => {
         const link = e.target.closest('a');
         if (link && link.href) {
@@ -237,9 +347,11 @@ function createSingleIframe(siteName, url, container, query) {
            console.log("iframe 内点击事件处理成功")
         }
       });
+
+      
       clickHandlerAdded = true;
     } catch (error) {
-      console.log('无法直接添加点击监听器，将通过 inject.js 处理');
+      console.log('无法直接添加监听器，将通过 inject.js 处理');
       
       // 只在未添加处理器时注入
       if (!clickHandlerAdded) {
@@ -455,15 +567,21 @@ async function getIframeHandler(iframeUrl) {
       return null;
     }
     
-    // 从配置中获取站点信息
+    // 优先从 chrome.storage.local 获取站点信息
     let sites = [];
-    if (window.RemoteConfigManager) {
-      sites = await window.RemoteConfigManager.getCurrentSites('CN');
-    }
-    
-    if (!sites || sites.length === 0) {
+    try {
       const result = await chrome.storage.local.get('sites');
       sites = result.sites || [];
+    } catch (error) {
+      console.error('从 chrome.storage.local 读取配置失败:', error);
+    }
+    
+    // 如果存储中没有数据，尝试从远程配置获取
+    if (!sites || sites.length === 0) {
+      console.log('chrome.storage.local 中无数据，尝试从远程配置获取...');
+      if (window.RemoteConfigManager) {
+        sites = await window.RemoteConfigManager.getCurrentSites();
+      }
     }
     
     if (!sites || sites.length === 0) {

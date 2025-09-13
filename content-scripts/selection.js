@@ -164,6 +164,7 @@ function initializeSiteDropdown() {
   // 创建单站点搜索组
   const singleSearchGroup = document.createElement('div');
   singleSearchGroup.className = 'single-search-group';
+  singleSearchGroup.style.display = 'none'; // 隐藏单站点搜索组
   
   // 将相关元素添加到单站点搜索组
   singleSearchGroup.appendChild(favoriteButton);

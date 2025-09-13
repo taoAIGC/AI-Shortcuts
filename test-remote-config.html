@@ -213,7 +213,7 @@
             try {
                 if (window.RemoteConfigManager) {
                     const handlers = await window.RemoteConfigManager.getCurrentSiteHandlers();
-                    const sites = await window.RemoteConfigManager.getCurrentSites('CN');
+                    const sites = await window.RemoteConfigManager.getCurrentSites();
                     resultDiv.innerHTML = `
                         <div class="success">✅ 当前配置获取成功</div>
                         <h4>站点处理器:</h4>

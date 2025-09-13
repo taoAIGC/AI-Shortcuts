@@ -1,5 +1,5 @@
 {
-  "version": "2.0.0",
+  "version": "2.0.2",
   "lastUpdated": "2024-01-01T00:00:00Z",
   "description": "AI站点处理器配置 - 配置化三步流程处理",
   "author": "AI Shortcuts Team",
@@ -41,6 +41,24 @@
             "selector": "textarea",
             "keys": "Enter",
             "description": "发送回车键"
+          }
+        ]
+      },
+      "fileUploadHandler": {
+        "steps": [
+          {
+            "action": "focus",
+            "selector": "textarea",
+            "description": "聚焦输入框准备文件粘贴"
+          },
+          {
+            "action": "wait",
+            "duration": 200,
+            "description": "等待200ms确保聚焦完成"
+          },
+          {
+            "action": "paste",
+            "description": "执行文件粘贴操作"
           }
         ]
       }
@@ -128,8 +146,8 @@
       "enabled": false,
       "supportUrlQuery": false,
       "region": "China",
-      "hidden": false,
-      "supportIframe": false,
+      "hidden": true,
+      "supportIframe": true,
       "note": "希望有可以给出合理的 steps",
       "searchHandler": {
         "steps": [
@@ -164,6 +182,24 @@
             "maxAttempts": 5,
             "retryInterval": 200,
             "description": "重试点击发送按钮"
+          }
+        ]
+      },
+      "fileUploadHandler": {
+        "steps": [
+          {
+            "action": "focus",
+            "selector": ".yc-editor",
+            "description": "聚焦文心一言编辑器准备文件粘贴"
+          },
+          {
+            "action": "wait",
+            "duration": 200,
+            "description": "等待200ms确保聚焦完成"
+          },
+          {
+            "action": "paste",
+            "description": "执行文件粘贴操作"
           }
         ]
       }
@@ -206,6 +242,24 @@
             "selector": "[contenteditable=\"true\"]",
             "keys": "Enter",
             "description": "发送回车键"
+          }
+        ]
+      },
+      "fileUploadHandler": {
+        "steps": [
+          {
+            "action": "focus",
+            "selector": "[contenteditable=\"true\"]",
+            "description": "聚焦可编辑区域准备文件粘贴"
+          },
+          {
+            "action": "wait",
+            "duration": 200,
+            "description": "等待200ms确保聚焦完成"
+          },
+          {
+            "action": "paste",
+            "description": "执行文件粘贴操作"
           }
         ]
       }
@@ -268,6 +322,24 @@
             "description": "点击发送按钮"
           }
         ]
+      },
+      "fileUploadHandler": {
+        "steps": [
+          {
+            "action": "focus",
+            "selector": "#prompt-textarea",
+            "description": "聚焦ChatGPT输入框准备文件粘贴"
+          },
+          {
+            "action": "wait",
+            "duration": 200,
+            "description": "等待200ms确保聚焦完成"
+          },
+          {
+            "action": "paste",
+            "description": "执行文件粘贴操作"
+          }
+        ]
       }
     },
     {
@@ -314,7 +386,7 @@
       "enabled": false,
       "supportUrlQuery": false,
       "region": "China",
-      "hidden": false,
+      "hidden": true,
       "supportIframe": false,
       "note": "待后续支持",
       "searchHandler": {
@@ -433,7 +505,7 @@
       "enabled": false,
       "supportUrlQuery": false,
       "region": "China",
-      "hidden": false,
+      "hidden": true,
       "supportIframe": true,
       "note": "待后续支持",
       "searchHandler": {
@@ -639,7 +711,7 @@
     {
       "name": "Perplexity",
       "url": "https://www.perplexity.ai/search?q={query}",
-      "enabled": false,
+      "enabled": true,
       "supportUrlQuery": true,
       "region": "US",
       "hidden": false,

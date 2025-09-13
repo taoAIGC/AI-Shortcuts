@@ -137,9 +137,10 @@ async function createSearchToolbar(container, position) {
   }
   initializeSiteDropdown();
 
-   // 创建单站点搜索组
+   // 创建单站点搜索组（隐藏）
    const singleSearchGroup = document.createElement('div');
    singleSearchGroup.className = 'single-search-group';
+   singleSearchGroup.style.display = 'none';  // 隐藏单站点搜索组
    
    // 将相关元素添加到单站点搜索组
    singleSearchGroup.appendChild(favoriteButton);
@@ -215,7 +216,7 @@ async function createSearchToolbar(container, position) {
     const hostname = window.location.hostname;
     if (hostname.includes('google')) {
       toolbar.style.top = `${containerRect.top + 5}px`;
-      toolbar.style.left = `${containerRect.right - 100}px`;
+      toolbar.style.left = `${containerRect.right - 30}px`;  // 向右移动50px
     } else if (hostname.includes('bing')) {
       toolbar.style.top = `${containerRect.top + 5}px`; 
       toolbar.style.left = `${containerRect.right - 100}px`;

@@ -276,8 +276,23 @@ async function getHandlerForUrl(url) {
     const hostname = new URL(url).hostname;
     console.log('当前网站:', hostname);
     
-    // 从远程配置获取站点列表
-    const sites = await self.RemoteConfigManager.getCurrentSites('CN');
+    // 优先从 chrome.storage.local 获取站点列表
+    let sites = [];
+    try {
+      const result = await chrome.storage.local.get('sites');
+      sites = result.sites || [];
+    } catch (error) {
+      console.error('从 chrome.storage.local 读取配置失败:', error);
+    }
+    
+    // 如果存储中没有数据，尝试从远程配置获取
+    if (!sites || sites.length === 0) {
+      console.log('chrome.storage.local 中无数据，尝试从远程配置获取...');
+      if (self.RemoteConfigManager) {
+        sites = await self.RemoteConfigManager.getCurrentSites();
+      }
+    }
+    
     if (!sites || sites.length === 0) {
       console.warn('没有找到站点配置');
       return null;

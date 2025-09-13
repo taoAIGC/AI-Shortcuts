@@ -30,6 +30,70 @@ const externalLinks = {
   feedbackSurvey: 'https://wenjuan.feishu.cn/m/cfm?t=sTFPGe4oetOi-9m3a'
 };
 
+// 版本号比较函数
+function compareVersions(version1, version2) {
+  // 如果版本号相同，返回 0
+  if (version1 === version2) {
+    return 0;
+  }
+  
+  // 处理时间戳格式的版本号
+  if (typeof version1 === 'number' && typeof version2 === 'number') {
+    return version1 > version2 ? 1 : -1;
+  }
+  
+  // 处理语义化版本号 (如 "1.2.3", "2.0.0")
+  const parseVersion = (version) => {
+    if (typeof version === 'string') {
+      // 移除 'v' 前缀
+      const cleanVersion = version.replace(/^v/, '');
+      // 分割版本号
+      const parts = cleanVersion.split('.').map(part => {
+        // 处理预发布版本 (如 "1.0.0-beta")
+        const match = part.match(/^(\d+)(.*)$/);
+        return {
+          number: parseInt(match ? match[1] : part, 10) || 0,
+          suffix: match ? match[2] : ''
+        };
+      });
+      return parts;
+    }
+    // 如果不是字符串，转换为数组格式
+    return [{ number: parseInt(version, 10) || 0, suffix: '' }];
+  };
+  
+  const v1Parts = parseVersion(version1);
+  const v2Parts = parseVersion(version2);
+  
+  // 比较版本号部分
+  const maxLength = Math.max(v1Parts.length, v2Parts.length);
+  
+  for (let i = 0; i < maxLength; i++) {
+    const v1Part = v1Parts[i] || { number: 0, suffix: '' };
+    const v2Part = v2Parts[i] || { number: 0, suffix: '' };
+    
+    // 比较数字部分
+    if (v1Part.number !== v2Part.number) {
+      return v1Part.number > v2Part.number ? 1 : -1;
+    }
+    
+    // 比较后缀部分（如果有）
+    if (v1Part.suffix !== v2Part.suffix) {
+      // 预发布版本 < 正式版本
+      if (v1Part.suffix === '' && v2Part.suffix !== '') {
+        return 1;
+      }
+      if (v1Part.suffix !== '' && v2Part.suffix === '') {
+        return -1;
+      }
+      // 都是预发布版本，按字符串比较
+      return v1Part.suffix > v2Part.suffix ? 1 : -1;
+    }
+  }
+  
+  return 0;
+}
+
 // 远程配置更新功能（仅更新配置数据，不更新代码）
 const RemoteConfigManager = {
   // 远程配置服务器 - 根据环境选择不同的URL
@@ -58,8 +122,12 @@ const RemoteConfigManager = {
       // 获取本地版本
       const localVersion = await this.getLocalVersion();
       
-      if (remoteVersion !== localVersion) {
-        console.log('发现新版本的站点配置，准备更新...');
+      
+      // 使用版本号比较函数
+      const versionComparison = compareVersions(remoteVersion, localVersion);
+      
+      if (versionComparison > 0) {
+        console.log(`发现新版本的站点配置 (${localVersion} -> ${remoteVersion})，准备更新...`);
         
         // 更新本地存储的配置
         await this.updateLocalConfig(remoteConfig);
@@ -67,11 +135,26 @@ const RemoteConfigManager = {
         return {
           hasUpdate: true,
           config: remoteConfig,
+          version: remoteVersion,
+          oldVersion: localVersion,
+          versionComparison: versionComparison
+        };
+      } else if (versionComparison < 0) {
+        console.log(`远程版本 (${remoteVersion}) 比本地版本 (${localVersion}) 旧，跳过更新`);
+        return { 
+          hasUpdate: false, 
+          reason: 'remote_older',
+          remoteVersion: remoteVersion,
+          localVersion: localVersion
+        };
+      } else {
+        console.log(`版本号相同 (${remoteVersion})，无需更新`);
+        return { 
+          hasUpdate: false, 
+          reason: 'same_version',
           version: remoteVersion
         };
       }
-      
-      return { hasUpdate: false };
     } catch (error) {
       console.error('检查配置更新失败:', error);
       return { hasUpdate: false, error: error.message };
@@ -81,8 +164,28 @@ const RemoteConfigManager = {
   // 获取本地版本
   async getLocalVersion() {
     try {
+      // 1. 优先从存储中获取版本
       const result = await chrome.storage.local.get('siteConfigVersion');
-      return result.siteConfigVersion || 0;
+      if (result.siteConfigVersion) {
+        return result.siteConfigVersion;
+      }
+      
+      // 2. 如果存储中没有版本，尝试从本地文件获取
+      console.log('存储中无版本信息，尝试从本地文件获取版本...');
+      try {
+        const response = await fetch(chrome.runtime.getURL('config/siteHandlers.json'));
+        if (response.ok) {
+          const localConfig = await response.json();
+          if (localConfig.version) {
+            console.log('从本地文件获取版本:', localConfig.version);
+            return localConfig.version;
+          }
+        }
+      } catch (error) {
+        console.error('从本地文件获取版本失败:', error);
+      }
+      
+      return 0;
     } catch (error) {
       console.error('获取本地版本失败:', error);
       return 0;
@@ -118,7 +221,7 @@ const RemoteConfigManager = {
   },
   
   // 获取当前站点列表
-  async getCurrentSites(language = 'CN') {
+  async getCurrentSites() {
     try {
       const result = await chrome.storage.local.get('remoteSiteHandlers');
       if (result.remoteSiteHandlers && result.remoteSiteHandlers.sites) {
@@ -147,15 +250,30 @@ if (typeof window === 'undefined') {
   // 动态获取站点配置
   self.getDefaultSites = async function() {
     try {
+      // 1. 优先从 chrome.storage.local 读取（最快，包含用户设置）
+      console.log('尝试从 chrome.storage.local 读取站点配置...');
+      try {
+        const result = await chrome.storage.local.get('sites');
+        if (result.sites && result.sites.length > 0) {
+          console.log('从 chrome.storage.local 加载站点配置成功');
+          return result.sites;
+        }
+      } catch (error) {
+        console.error('从 chrome.storage.local 读取配置失败:', error);
+      }
+      
+      // 2. 如果存储中没有数据，尝试从远程配置获取
+      console.log('chrome.storage.local 中无数据，尝试从远程配置获取...');
       if (self.RemoteConfigManager) {
         const sites = await self.RemoteConfigManager.getCurrentSites();
         if (sites && sites.length > 0) {
+          console.log('从远程配置加载站点配置成功');
           return sites;
         }
       }
       
-      // 如果远程配置不可用，尝试从本地文件加载
-      console.log('远程配置不可用，尝试从本地文件加载');
+      // 3. 如果远程配置不可用，尝试从本地文件加载
+      console.log('远程配置不可用，尝试从本地文件加载...');
       try {
         const response = await fetch(chrome.runtime.getURL('config/siteHandlers.json'));
         if (response.ok) {
@@ -189,10 +307,27 @@ else {
   
   // 动态获取站点配置
   window.getDefaultSites = async function() {
+    // 优先从 chrome.storage.local 获取站点配置
+    try {
+      const result = await chrome.storage.local.get('sites');
+      if (result.sites && result.sites.length > 0) {
+        console.log('从 chrome.storage.local 加载站点配置成功');
+        return result.sites;
+      }
+    } catch (error) {
+      console.error('从 chrome.storage.local 读取配置失败:', error);
+    }
+    
+    // 如果存储中没有数据，尝试从远程配置获取
     if (window.RemoteConfigManager) {
       const lang = language.startsWith('zh') ? 'CN' : 'EN';
-      return await window.RemoteConfigManager.getCurrentSites(lang);
+      const sites = await window.RemoteConfigManager.getCurrentSites();
+      if (sites && sites.length > 0) {
+        console.log('从远程配置加载站点配置成功');
+        return sites;
+      }
     }
+    
     return [];
   };
   
