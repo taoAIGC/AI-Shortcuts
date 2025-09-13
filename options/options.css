@@ -283,3 +283,27 @@ input:checked + .slider:before {
     flex-direction: column;
   }
 }
+
+/* 规则信息区域样式 - 移除所有样式 */
+.rule-info-section {
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  font-size: 14px;
+  color: #666;
+}
+
+.dev-button {
+  background: none;
+  color: #3498db;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: 14px;
+  text-decoration: underline;
+}
+
+.dev-button:hover {
+  color: #2980b9;
+}

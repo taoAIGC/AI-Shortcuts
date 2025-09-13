@@ -60,6 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
   console.log('DOM 加载完成');
   initializeSiteConfigs();
   initializeI18n();
+  initializeRuleInfo();
 });
 
 // 显示消息
@@ -146,22 +147,14 @@ async function initializeButtonConfigs() {
 
 async function initializeSiteConfigs() {
   try {
-    // 1. 从 local storage 获取站点配置
-    const { sites = [] } = await chrome.storage.local.get('sites');
-    console.log('获取到的站点数组:', sites);
+    // 使用 getDefaultSites 函数获取合并后的站点配置
+    const sites = await getDefaultSites();
+    console.log('获取到的合并站点数组:', sites);
 
-    // 2. 过滤非隐藏的站点，并分成两组，按order排序
+    // 过滤非隐藏的站点，并分成两组（已经按order排序了）
     const visibleSites = sites.filter(site => site.hidden === false);
-    const standaloneSites = visibleSites.filter(site => !site.supportIframe).sort((a, b) => {
-      const orderA = a.order !== undefined ? a.order : 999;
-      const orderB = b.order !== undefined ? b.order : 999;
-      return orderA - orderB;
-    });
-    const collectionSites = visibleSites.filter(site => site.supportIframe).sort((a, b) => {
-      const orderA = a.order !== undefined ? a.order : 999;
-      const orderB = b.order !== undefined ? b.order : 999;
-      return orderA - orderB;
-    });
+    const standaloneSites = visibleSites.filter(site => !site.supportIframe);
+    const collectionSites = visibleSites.filter(site => site.supportIframe);
     
 
     // 3. 获取两个容器
@@ -227,22 +220,22 @@ async function initializeSiteConfigs() {
           const siteName = this.closest('.site-config').querySelector('.site-name-display').textContent;
           
           // 获取当前的用户设置
-          const { siteSettings = {} } = await chrome.storage.sync.get('siteSettings');
+          const { siteSettings = {}, sites: userSiteSettings = {} } = await chrome.storage.sync.get(['siteSettings', 'sites']);
           
           // 更新用户设置
           siteSettings[siteName] = this.checked;
           
-          // 保存用户设置到 sync storage
-          await chrome.storage.sync.set({ siteSettings });
-          
-          // 同时更新 local storage 中的站点配置
-          const { sites: currentSites } = await chrome.storage.local.get('sites');
-          if (currentSites && currentSites.length > 0) {
-            const updatedSites = currentSites.map(site => 
-              site.name === siteName ? { ...site, enabled: this.checked } : site
-            );
-            await chrome.storage.local.set({ sites: updatedSites });
+          // 更新用户站点设置
+          if (!userSiteSettings[siteName]) {
+            userSiteSettings[siteName] = {};
           }
+          userSiteSettings[siteName].enabled = this.checked;
+          
+          // 保存用户设置到 sync storage
+          await chrome.storage.sync.set({ 
+            siteSettings,
+            sites: userSiteSettings
+          });
           
           console.log('保存的站点设置:', siteName, this.checked);
 
@@ -431,20 +424,20 @@ async function updateSiteOrder(mode) {
   
   // 更新存储中的站点顺序
   try {
-    const { sites = [] } = await chrome.storage.sync.get('sites');
+    // 从 chrome.storage.sync 读取现有的用户设置
+    const { sites: existingUserSettings = {} } = await chrome.storage.sync.get('sites');
     
     // 更新拖拽后站点的order字段
-    const updatedSites = sites.map(site => {
-      const newIndex = newOrder.indexOf(site.name);
-      if (newIndex !== -1) {
-        // 更新拖拽后站点的order
-        return { ...site, order: newIndex };
+    const updatedUserSettings = { ...existingUserSettings };
+    newOrder.forEach((siteName, index) => {
+      if (!updatedUserSettings[siteName]) {
+        updatedUserSettings[siteName] = {};
       }
-      return site;
+      updatedUserSettings[siteName].order = index;
     });
     
-    // 保存更新后的配置
-    await chrome.storage.sync.set({ sites: updatedSites });
+    // 保存用户设置到 chrome.storage.sync
+    await chrome.storage.sync.set({ sites: updatedUserSettings });
     
     console.log(`${mode}模式站点顺序已更新`);
     
@@ -512,4 +505,87 @@ function updateActiveNavigation() {
       link.classList.add('active');
     }
   });
+}
+
+// 初始化规则信息
+async function initializeRuleInfo() {
+  try {
+    let timeDisplay = '规则远程自动更新时间：';
+    
+    // 获取存储中的版本时间
+    let storageTime = null;
+    const { siteConfigVersion } = await chrome.storage.local.get('siteConfigVersion');
+    if (siteConfigVersion) {
+      try {
+        const timestamp = parseInt(siteConfigVersion);
+        if (!isNaN(timestamp)) {
+          storageTime = new Date(timestamp);
+          console.log('存储中的时间:', storageTime);
+        }
+      } catch (error) {
+        console.error('解析存储时间失败:', error);
+      }
+    }
+    
+    // 获取本地配置文件的时间
+    let localTime = null;
+    try {
+      const response = await fetch(chrome.runtime.getURL('config/siteHandlers.json'));
+      const localConfig = await response.json();
+      if (localConfig.lastUpdated) {
+        localTime = new Date(localConfig.lastUpdated);
+        console.log('本地配置文件时间:', localTime);
+      }
+    } catch (error) {
+      console.error('读取本地配置文件失败:', error);
+    }
+    
+    // 比较两个时间，取较大值
+    let latestTime = null;
+    if (storageTime && localTime) {
+      latestTime = storageTime > localTime ? storageTime : localTime;
+      console.log('取较大时间:', latestTime);
+    } else if (storageTime) {
+      latestTime = storageTime;
+      console.log('使用存储时间:', latestTime);
+    } else if (localTime) {
+      latestTime = localTime;
+      console.log('使用本地时间:', latestTime);
+    }
+    
+    // 格式化显示
+    if (latestTime) {
+      const year = latestTime.getFullYear();
+      const month = String(latestTime.getMonth() + 1).padStart(2, '0');
+      const day = String(latestTime.getDate()).padStart(2, '0');
+      timeDisplay = `规则远程自动更新时间：${year}年${month}月${day}日`;
+    } else {
+      timeDisplay = '规则远程自动更新时间：未获取到';
+    }
+    
+    // 更新显示
+    const timeElement = document.getElementById('ruleUpdateTime');
+    if (timeElement) {
+      timeElement.textContent = timeDisplay;
+    }
+    
+    // 添加参与规则开发按钮的点击事件
+    const devButton = document.getElementById('participateRuleDev');
+    if (devButton) {
+      devButton.addEventListener('click', () => {
+        chrome.tabs.create({
+          url: 'https://github.com/taoAIGC/AI-Shortcuts/blob/main/config/siteHandlers.json'
+        });
+      });
+    }
+    
+  } catch (error) {
+    console.error('初始化规则信息失败:', error);
+    
+    // 显示错误信息
+    const timeElement = document.getElementById('ruleUpdateTime');
+    if (timeElement) {
+      timeElement.textContent = '规则远程自动更新时间：获取失败';
+    }
+  }
 }

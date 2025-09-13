@@ -1,6 +1,4 @@
-// 基础配置管理器
-// 包含远程配置管理器和必要的默认配置
-// 所有站点配置已迁移到 siteHandlers.json
+
 
 // 默认收藏站点数组
 const defaultFavoriteSites = [{
@@ -250,16 +248,49 @@ if (typeof window === 'undefined') {
   // 动态获取站点配置
   self.getDefaultSites = async function() {
     try {
-      // 1. 优先从 chrome.storage.local 读取（最快，包含用户设置）
+      // 1. 优先从 chrome.storage.local 读取基础配置
       console.log('尝试从 chrome.storage.local 读取站点配置...');
+      let baseSites = [];
       try {
         const result = await chrome.storage.local.get('sites');
         if (result.sites && result.sites.length > 0) {
+          baseSites = result.sites;
           console.log('从 chrome.storage.local 加载站点配置成功');
-          return result.sites;
         }
       } catch (error) {
         console.error('从 chrome.storage.local 读取配置失败:', error);
+      }
+      
+      // 2. 从 chrome.storage.sync 读取用户设置（顺序、启用状态等）
+      let userSettings = {};
+      try {
+        const { sites: userSiteSettings = {} } = await chrome.storage.sync.get('sites');
+        userSettings = userSiteSettings;
+        console.log('从 chrome.storage.sync 加载用户设置成功');
+      } catch (error) {
+        console.error('从 chrome.storage.sync 读取用户设置失败:', error);
+      }
+      
+      // 3. 合并配置：基础配置 + 用户设置
+      if (baseSites && baseSites.length > 0) {
+        const mergedSites = baseSites.map(site => {
+          const userSiteData = userSettings[site.name] || {};
+          return {
+            ...site,
+            order: userSiteData.order !== undefined ? userSiteData.order : site.order,
+            enabled: userSiteData.enabled !== undefined ? userSiteData.enabled : site.enabled
+          };
+        });
+        
+        // 按用户设置的顺序排序
+        mergedSites.sort((a, b) => {
+          const orderA = a.order !== undefined ? a.order : 999;
+          const orderB = b.order !== undefined ? b.order : 999;
+          return orderA - orderB;
+        });
+        
+        console.log('合并配置成功，站点数量:', mergedSites.length);
+        return mergedSites;
       }
       
       // 2. 如果存储中没有数据，尝试从远程配置获取
@@ -307,28 +338,66 @@ else {
   
   // 动态获取站点配置
   window.getDefaultSites = async function() {
-    // 优先从 chrome.storage.local 获取站点配置
     try {
-      const result = await chrome.storage.local.get('sites');
-      if (result.sites && result.sites.length > 0) {
-        console.log('从 chrome.storage.local 加载站点配置成功');
-        return result.sites;
+      // 1. 优先从 chrome.storage.local 读取基础配置
+      let baseSites = [];
+      try {
+        const result = await chrome.storage.local.get('sites');
+        if (result.sites && result.sites.length > 0) {
+          baseSites = result.sites;
+          console.log('从 chrome.storage.local 加载站点配置成功');
+        }
+      } catch (error) {
+        console.error('从 chrome.storage.local 读取配置失败:', error);
       }
+      
+      // 2. 从 chrome.storage.sync 读取用户设置（顺序、启用状态等）
+      let userSettings = {};
+      try {
+        const { sites: userSiteSettings = {} } = await chrome.storage.sync.get('sites');
+        userSettings = userSiteSettings;
+        console.log('从 chrome.storage.sync 加载用户设置成功');
+      } catch (error) {
+        console.error('从 chrome.storage.sync 读取用户设置失败:', error);
+      }
+      
+      // 3. 合并配置：基础配置 + 用户设置
+      if (baseSites && baseSites.length > 0) {
+        const mergedSites = baseSites.map(site => {
+          const userSiteData = userSettings[site.name] || {};
+          return {
+            ...site,
+            order: userSiteData.order !== undefined ? userSiteData.order : site.order,
+            enabled: userSiteData.enabled !== undefined ? userSiteData.enabled : site.enabled
+          };
+        });
+        
+        // 按用户设置的顺序排序
+        mergedSites.sort((a, b) => {
+          const orderA = a.order !== undefined ? a.order : 999;
+          const orderB = b.order !== undefined ? b.order : 999;
+          return orderA - orderB;
+        });
+        
+        console.log('合并配置成功，站点数量:', mergedSites.length);
+        return mergedSites;
+      }
+      
+      // 如果存储中没有数据，尝试从远程配置获取
+      if (window.RemoteConfigManager) {
+        const lang = language.startsWith('zh') ? 'CN' : 'EN';
+        const sites = await window.RemoteConfigManager.getCurrentSites();
+        if (sites && sites.length > 0) {
+          console.log('从远程配置加载站点配置成功');
+          return sites;
+        }
+      }
+      
+      return [];
     } catch (error) {
-      console.error('从 chrome.storage.local 读取配置失败:', error);
+      console.error('获取默认站点配置失败:', error);
+      return [];
     }
-    
-    // 如果存储中没有数据，尝试从远程配置获取
-    if (window.RemoteConfigManager) {
-      const lang = language.startsWith('zh') ? 'CN' : 'EN';
-      const sites = await window.RemoteConfigManager.getCurrentSites();
-      if (sites && sites.length > 0) {
-        console.log('从远程配置加载站点配置成功');
-        return sites;
-      }
-    }
-    
-    return [];
   };
   
   window.defaultFavoriteSites = defaultFavoriteSites;

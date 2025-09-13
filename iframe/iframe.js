@@ -121,18 +121,14 @@ document.addEventListener('DOMContentLoaded', async function() {
     // 只有在直接打开（方式1）时才执行初始化 iframes
     if (!hasQueryParam) {
         // 获取站点配置并初始化 iframes
-        chrome.storage.local.get('sites', (result) => {
-            if (result.sites) {
-                // 过滤出启用的且支持 iframe 的站点，并按order排序
-                const availableSites = result.sites.filter(site => 
+        getDefaultSites().then((sites) => {
+            if (sites && sites.length > 0) {
+                // 过滤出启用的且支持 iframe 的站点（已经按order排序了）
+                const availableSites = sites.filter(site => 
                     site.enabled && 
                     site.supportIframe !== false && 
                     !site.hidden
-                ).sort((a, b) => {
-                    const orderA = a.order !== undefined ? a.order : 999;
-                    const orderB = b.order !== undefined ? b.order : 999;
-                    return orderA - orderB;
-                });
+                );
 
                 if (availableSites.length > 0) {
                     console.log('初始化可用站点:', availableSites);
@@ -182,12 +178,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 // 处理 iframe 的创建和加载
 async function createIframes(query, sites) {
-    // 按照 order 字段排序站点
-  const enabledSites = sites.sort((a, b) => {
-    const orderA = a.order !== undefined ? a.order : 999;
-    const orderB = b.order !== undefined ? b.order : 999;
-    return orderA - orderB;
-  });
+    // 站点已经按order排序了，直接使用
+  const enabledSites = sites;
     
   console.log('过滤后的站点:', enabledSites);
     
@@ -567,21 +559,12 @@ async function getIframeHandler(iframeUrl) {
       return null;
     }
     
-    // 优先从 chrome.storage.local 获取站点信息
+    // 使用 getDefaultSites 获取合并后的站点配置
     let sites = [];
     try {
-      const result = await chrome.storage.local.get('sites');
-      sites = result.sites || [];
+      sites = await getDefaultSites();
     } catch (error) {
-      console.error('从 chrome.storage.local 读取配置失败:', error);
-    }
-    
-    // 如果存储中没有数据，尝试从远程配置获取
-    if (!sites || sites.length === 0) {
-      console.log('chrome.storage.local 中无数据，尝试从远程配置获取...');
-      if (window.RemoteConfigManager) {
-        sites = await window.RemoteConfigManager.getCurrentSites();
-      }
+      console.error('获取站点配置失败:', error);
     }
     
     if (!sites || sites.length === 0) {
@@ -719,8 +702,8 @@ async function initializeSiteSettings() {
         .map(iframe => iframe.getAttribute('data-site'));
     
     try {
-        // 从 storage 获取数据
-        const { sites = [] } = await chrome.storage.local.get('sites');
+        // 使用 getDefaultSites 获取合并后的站点配置
+        const sites = await getDefaultSites();
         
         // 过滤支持 iframe 的站点
         const supportedSites = sites.filter(site => 
@@ -1096,9 +1079,9 @@ async function iframeFresh(query) {
         
       // 获取所有 iframe
       const iframes = document.querySelectorAll('iframe');
-          // 从 storage 获取站点配置
+          // 使用 getDefaultSites 获取合并后的站点配置
      
-      const { sites = [] } = await chrome.storage.local.get('sites');
+      const sites = await getDefaultSites();
 
         // 遍历每个 iframe
       iframes.forEach(iframe => {
@@ -1524,22 +1507,26 @@ async function updateSitesOrder(enabledSites, fromIndex, toIndex) {
   const movedSite = enabledSites.splice(fromIndex, 1)[0];
   enabledSites.splice(toIndex, 0, movedSite);
   
-  // 获取所有站点配置
-  const { sites = [] } = await chrome.storage.local.get('sites');
-  
-  // 更新站点配置中的顺序
-  const updatedSites = sites.map(site => {
-    const enabledSite = enabledSites.find(es => es.name === site.name);
-    if (enabledSite) {
-      return { ...site, order: enabledSites.indexOf(enabledSite) };
-    }
-    return site;
-  });
-  
-  // 保存更新后的配置到 local storage
-  await chrome.storage.local.set({ sites: updatedSites });
-  
-  console.log('站点顺序已保存到存储');
+  try {
+    // 从 chrome.storage.sync 读取现有的用户设置
+    const { sites: existingUserSettings = {} } = await chrome.storage.sync.get('sites');
+    
+    // 更新拖拽后站点的order字段
+    const updatedUserSettings = { ...existingUserSettings };
+    enabledSites.forEach((site, index) => {
+      if (!updatedUserSettings[site.name]) {
+        updatedUserSettings[site.name] = {};
+      }
+      updatedUserSettings[site.name].order = index;
+    });
+    
+    // 保存用户设置到 chrome.storage.sync
+    await chrome.storage.sync.set({ sites: updatedUserSettings });
+    
+    console.log('iframe侧边栏站点顺序已保存到 sync 存储');
+  } catch (error) {
+    console.error('保存站点顺序失败:', error);
+  }
 }
 
 // 重新排列iframe
