@@ -510,7 +510,7 @@ function updateActiveNavigation() {
 // 初始化规则信息
 async function initializeRuleInfo() {
   try {
-    let timeDisplay = '规则远程自动更新时间：';
+    let timeDisplay = chrome.i18n.getMessage('ruleUpdateTimePrefix');
     
     // 获取存储中的版本时间
     let storageTime = null;
@@ -558,9 +558,12 @@ async function initializeRuleInfo() {
       const year = latestTime.getFullYear();
       const month = String(latestTime.getMonth() + 1).padStart(2, '0');
       const day = String(latestTime.getDate()).padStart(2, '0');
-      timeDisplay = `规则远程自动更新时间：${year}年${month}月${day}日`;
+      const hours = String(latestTime.getHours()).padStart(2, '0');
+      const minutes = String(latestTime.getMinutes()).padStart(2, '0');
+      const seconds = String(latestTime.getSeconds()).padStart(2, '0');
+      timeDisplay = `${chrome.i18n.getMessage('ruleUpdateTimePrefix')}${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
     } else {
-      timeDisplay = '规则远程自动更新时间：未获取到';
+      timeDisplay = chrome.i18n.getMessage('ruleUpdateTimeNotAvailable');
     }
     
     // 更新显示
@@ -585,7 +588,7 @@ async function initializeRuleInfo() {
     // 显示错误信息
     const timeElement = document.getElementById('ruleUpdateTime');
     if (timeElement) {
-      timeElement.textContent = '规则远程自动更新时间：获取失败';
+      timeElement.textContent = chrome.i18n.getMessage('ruleUpdateTimeError');
     }
   }
 }

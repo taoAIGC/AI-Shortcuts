@@ -29,7 +29,7 @@
     "message": "使用AI任意门搜索"
   },
   "startCompare": {
-    "message": "多AI对比"
+    "message": "对比"
   },
   "openPage": {
     "message": "标签页模式"
@@ -110,5 +110,21 @@
   "favoriteButton": {
     "message": "收藏提示词",
     "description": "收藏按钮的标题"
+  },
+  "ruleUpdateTimePrefix": {
+    "message": "规则远程自动更新时间：",
+    "description": "规则更新时间的前缀文本"
+  },
+  "ruleUpdateTimeNotAvailable": {
+    "message": "规则远程自动更新时间：未获取到",
+    "description": "无法获取规则更新时间时显示的消息"
+  },
+  "ruleUpdateTimeError": {
+    "message": "规则远程自动更新时间：获取失败",
+    "description": "获取规则更新时间失败时显示的消息"
+  },
+  "participateRuleDev": {
+    "message": "参与规则开发",
+    "description": "参与规则开发按钮的文本"
   }
 } 

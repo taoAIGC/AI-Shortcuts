@@ -99,7 +99,8 @@
       "iframe/*",
       "icons/*",
       "config/*",
-      "content-scripts/*"
+      "content-scripts/*",
+      "debug/*"
     ],
     "use_dynamic_url": true,
     "matches": [

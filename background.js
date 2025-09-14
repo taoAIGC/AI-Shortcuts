@@ -39,19 +39,11 @@ chrome.runtime.onInstalled.addListener(async (details) => {
     console.log('获取到的默认站点:', defaultSites);
     
     if (defaultSites && defaultSites.length > 0) {
-      // 将完整的站点配置存储到 local storage
-      await chrome.storage.local.set({ sites: defaultSites });
-      console.log('已保存站点配置到 local storage');
+      console.log('站点配置已加载，数量:', defaultSites.length);
       
       // 处理用户设置（enabled 状态）
       if (siteSettings && Object.keys(siteSettings).length > 0) {
-        // 合并用户设置
-        const mergedSites = defaultSites.map(site => ({
-          ...site,
-          enabled: siteSettings[site.name] !== undefined ? siteSettings[site.name] : site.enabled
-        }));
-        await chrome.storage.local.set({ sites: mergedSites });
-        console.log('已合并用户设置');
+        console.log('已加载用户设置');
       }
     } else {
       console.error('无法获取默认站点配置');
@@ -200,6 +192,30 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     });
     sendResponse({ success: true });
   }
+  else if (message.type === 'TOGGLE_SIDE_PANEL') {
+    // 处理侧边栏切换消息
+    const windowId = sender.tab.windowId;
+    
+    // 先检查实际的侧边栏标签页是否存在
+    chrome.tabs.query({ windowId: windowId }, (tabs) => {
+      const sidePanelTab = tabs.find(tab => tab.url && tab.url.includes('iframe/iframe.html'));
+      const actualIsOpen = !!sidePanelTab;
+      const recordedIsOpen = sidePanelOpenState.get(windowId) || false;
+      
+      console.log('实际侧边栏状态:', actualIsOpen, '记录状态:', recordedIsOpen, 'windowId:', windowId);
+      
+      // 如果状态不同步，以实际状态为准
+      if (actualIsOpen !== recordedIsOpen) {
+        console.log('侧边栏状态不同步，修正为实际状态:', actualIsOpen);
+        sidePanelOpenState.set(windowId, actualIsOpen);
+      }
+      
+      handleSidePanelToggle(windowId, actualIsOpen);
+    });
+    
+    sendResponse({ success: true });
+    return true; // 保持消息通道开放
+  }
 });
 
 // 处理来自 iframe 的消息
@@ -276,18 +292,18 @@ async function getHandlerForUrl(url) {
     const hostname = new URL(url).hostname;
     console.log('当前网站:', hostname);
     
-    // 优先从 chrome.storage.local 获取站点列表
+    // 从 remoteSiteHandlers 获取站点列表
     let sites = [];
     try {
-      const result = await chrome.storage.local.get('sites');
-      sites = result.sites || [];
+      const result = await chrome.storage.local.get('remoteSiteHandlers');
+      sites = result.remoteSiteHandlers?.sites || [];
     } catch (error) {
-      console.error('从 chrome.storage.local 读取配置失败:', error);
+      console.error('从 remoteSiteHandlers 读取配置失败:', error);
     }
     
     // 如果存储中没有数据，尝试从远程配置获取
     if (!sites || sites.length === 0) {
-      console.log('chrome.storage.local 中无数据，尝试从远程配置获取...');
+      console.log('remoteSiteHandlers 中无数据，尝试从远程配置获取...');
       if (self.RemoteConfigManager) {
         sites = await self.RemoteConfigManager.getCurrentSites();
       }
@@ -345,7 +361,7 @@ async function getHandlerForUrl(url) {
 
   try {
     console.log('handleSingleSiteSearch处理单站点搜索:', query, siteName);
-    const { sites } = await chrome.storage.local.get('sites');
+    const sites = await self.getDefaultSites();
     if (!sites || !sites.length) {
       console.error('未找到站点配置');
       return;
@@ -399,7 +415,7 @@ async function getHandlerForUrl(url) {
 // 修改后的 openSearchTabs 函数
 async function openSearchTabs(query, checkedSites = null) {
   console.log('开始执行多AI查询 查询词:', query);
-  const { sites } = await chrome.storage.local.get('sites');
+  const sites = await self.getDefaultSites();
   
   if (!sites || !sites.length) {
     console.error('未找到AI站点配置');
@@ -555,16 +571,7 @@ chrome.action.onClicked.addListener((tab) => {
 });
 
 
-// 添加错误处理
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    try {
-        // 你的消息处理逻辑
-        return true; // 如果使用异步响应
-    } catch (error) {
-        console.error('Service Worker error:', error);
-        return false;
-    }
-});
+// 错误处理监听器已移除，避免干扰其他消息处理
 
 // 添加基本的生命周期处理
 self.addEventListener('install', (event) => {
@@ -637,10 +644,54 @@ chrome.runtime.setUninstallURL(self.externalLinks?.uninstallSurvey || '', () => 
   }
 });
 
-// 监听来自内容脚本的消息
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type === 'TOGGLE_SIDE_PANEL') {
-    chrome.sidePanel.open({ windowId: sender.tab.windowId });
+// 跟踪侧边栏状态
+let sidePanelOpenState = new Map();
+
+// 重置侧边栏状态的函数
+function resetSidePanelState(windowId) {
+  console.log('重置侧边栏状态，windowId:', windowId);
+  sidePanelOpenState.set(windowId, false);
+}
+
+// 处理侧边栏切换逻辑
+function handleSidePanelToggle(windowId, isCurrentlyOpen) {
+  if (isCurrentlyOpen) {
+    // 如果侧边栏已经打开，则关闭它
+    chrome.tabs.query({ windowId: windowId }, (tabs) => {
+      const sidePanelTab = tabs.find(tab => tab.url && tab.url.includes('iframe/iframe.html'));
+      if (sidePanelTab) {
+        chrome.tabs.sendMessage(sidePanelTab.id, { action: 'closeSidePanel' });
+        sidePanelOpenState.set(windowId, false);
+        console.log('已发送关闭侧边栏消息');
+      } else {
+        sidePanelOpenState.set(windowId, false);
+        console.log('侧边栏已关闭');
+      }
+    });
+  } else {
+    // 如果侧边栏未打开，则打开它
+    try {
+      chrome.sidePanel.open({ windowId: windowId }).then(() => {
+        sidePanelOpenState.set(windowId, true);
+        console.log('侧边栏已成功打开');
+      }).catch(error => {
+        console.error('打开侧边栏失败:', error);
+        sidePanelOpenState.set(windowId, false);
+      });
+      // 暂时设置为 true，避免重复点击
+      sidePanelOpenState.set(windowId, true);
+      console.log('正在打开侧边栏...');
+    } catch (error) {
+      console.error('打开侧边栏失败:', error);
+      sidePanelOpenState.set(windowId, false);
+    }
+  }
+}
+
+// 监听窗口关闭事件，清理状态
+chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
+  if (removeInfo.isWindowClosing) {
+    sidePanelOpenState.delete(removeInfo.windowId);
   }
 });
 

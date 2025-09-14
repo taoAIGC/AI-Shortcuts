@@ -23,7 +23,7 @@ function updateFavoriteButton() {
 // 创建工具栏
 async function createToolbar() {
     // 从 storage 获取站点配置
-    const { sites } = await chrome.storage.local.get('sites');
+    const sites = await window.getDefaultSites();
     if (!sites || !sites.length) return;
   
     // 只显示非隐藏的站点
@@ -230,7 +230,11 @@ document.addEventListener('mouseup', (e) => {
     
     const selection = window.getSelection();
     currentSelectedText = selection?.toString().trim() || '';
-    console.log("currentSelectedText", currentSelectedText);
+    
+    // 只在真正选中文本时才打印日志
+    if (currentSelectedText) {
+      console.log("currentSelectedText", currentSelectedText);
+    }
     
     if (currentSelectedText && selection.rangeCount > 0) {
       lastSelectedText = currentSelectedText;

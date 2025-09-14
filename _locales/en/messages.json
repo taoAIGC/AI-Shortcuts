@@ -26,10 +26,10 @@
     "message": "Default Comparison Settings"
   },
   "searchWithMultiAI": {
-    "message": "Search with Multi-AI"
+    "message": "Search with AIShortcuts"
   },
   "startCompare": {
-    "message": "Compare AIs",
+    "message": "Compare",
     "placeholders": {
       "n": {
         "content": "$1"
@@ -115,5 +115,21 @@
   "favoriteButton": {
     "message": "Save Prompt",
     "description": "Title for the favorite button"
+  },
+  "ruleUpdateTimePrefix": {
+    "message": "Rule Remote Auto Update Time: ",
+    "description": "Prefix text for rule update time"
+  },
+  "ruleUpdateTimeNotAvailable": {
+    "message": "Rule Remote Auto Update Time: Not Available",
+    "description": "Message shown when rule update time is not available"
+  },
+  "ruleUpdateTimeError": {
+    "message": "Rule Remote Auto Update Time: Failed to Get",
+    "description": "Message shown when failed to get rule update time"
+  },
+  "participateRuleDev": {
+    "message": "Participate in Rule Development",
+    "description": "Text for the participate in rule development button"
   }
 } 

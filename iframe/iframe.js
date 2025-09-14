@@ -492,8 +492,10 @@ function createSingleIframe(siteName, url, container, query) {
     // 从 storage 获取站点配置，检查是否支持 URL 查询
     console.log("iframe onload 加载完成，准备查询页面内容处理函数")
 
-    chrome.storage.local.get('sites', async (result) => {
-      const site = result.sites.find(s => s.url === url || url.startsWith(s.url));
+    // 使用异步函数处理
+    (async () => {
+      const sites = await window.getDefaultSites();
+      const site = sites.find(s => s.url === url || url.startsWith(s.url));
       if (site && !site.supportUrlQuery) {
         // 使用动态处理函数
         const handler = await getIframeHandler(url);
@@ -504,7 +506,7 @@ function createSingleIframe(siteName, url, container, query) {
           console.log('未找到对应的处理函数', site.name);
         }
       }
-    });
+    })();
   };
 }
 
@@ -796,37 +798,28 @@ async function initializeSiteSettings() {
                 const checkboxes = document.querySelectorAll('.site-checkbox');
                 
                 // 获取当前所有站点配置
-                const { sites: currentSites = [] } = await chrome.storage.local.get('sites');
+                const currentSites = await window.getDefaultSites();
                 
-                // 更新站点启用状态
-                const updatedSites = currentSites.map(site => {
+                // 更新站点启用状态到用户设置中
+                const userSettings = {};
+                currentSites.forEach(site => {
                     // 找到对应的复选框
                     const checkbox = document.querySelector(`#site-${site.name}`);
                     if (checkbox) {
                         // 如果找到复选框，根据复选框状态设置 enabled
-                        return {
-                            ...site,
+                        userSettings[site.name] = {
                             enabled: checkbox.checked
                         };
                     }
-                    // 如果没找到复选框（不支持 iframe 的站点），保持原状态
-                    return site;
                 });
                 
-                // 保存更新后的配置到 local storage
-                await chrome.storage.local.set({ sites: updatedSites });
-                
-                // 同时保存用户设置到 sync storage
-                const siteSettings = {};
-                updatedSites.forEach(site => {
-                    siteSettings[site.name] = site.enabled;
-                });
-                await chrome.storage.sync.set({ siteSettings });
+                // 保存用户设置到 sync storage
+                await chrome.storage.sync.set({ sites: userSettings });
                 
                 // 显示成功提示
                 showToast('设置已保存');
                 
-                console.log('站点设置已更新:', updatedSites);
+                console.log('站点设置已更新:', userSettings);
                 
             } catch (error) {
                 console.error('保存站点设置失败:', error);

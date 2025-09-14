@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Shortcuts 调试页面访问指南</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 30px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .step {
+            background: white;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+        }
+        .step h3 {
+            color: #2980b9;
+            margin-top: 0;
+        }
+        .code {
+            background: #f1f2f6;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-family: 'Consolas', monospace;
+            color: #e74c3c;
+            margin: 10px 0;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+            color: #856404;
+        }
+        .button {
+            display: inline-block;
+            background: #3498db;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px 5px;
+            transition: background 0.3s;
+            border: none;
+            cursor: pointer;
+        }
+        .button:hover {
+            background: #2980b9;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 AI Shortcuts 调试页面访问指南</h1>
+    
+    <div class="warning">
+        <strong>⚠️ 重要提示：</strong> 调试页面必须在 Chrome 扩展环境中运行才能正常工作。直接在浏览器中打开 HTML 文件将无法访问 Chrome Extension API。
+    </div>
+
+    <div class="step">
+        <h3>📋 方法一：通过扩展ID访问</h3>
+        <p>1. 打开 Chrome 扩展管理页面：</p>
+        <div class="code">chrome://extensions/</div>
+        
+        <p>2. 找到 "AI Shortcuts" 扩展，复制扩展ID（类似：abcdefghijklmnop...）</p>
+        
+        <p>3. 在地址栏中输入：</p>
+        <div class="code">chrome-extension://扩展ID/debug/debug-storage.html</div>
+    </div>
+
+    <div class="step">
+        <h3>🔧 方法二：开发者模式（推荐）</h3>
+        <p>1. 确保扩展已在开发者模式下加载</p>
+        <p>2. 右键点击扩展图标 → "检查弹出内容" 或 "选项"</p>
+        <p>3. 在开发者工具的 Console 中执行：</p>
+        <div class="code">window.open(chrome.runtime.getURL('debug/debug-storage.html'))</div>
+    </div>
+
+    <div class="step">
+        <h3>📱 方法三：从扩展内部跳转</h3>
+        <p>1. 打开 AI Shortcuts 的任意页面（如设置页面）</p>
+        <p>2. 在地址栏中将页面名称改为：</p>
+        <div class="code">debug/debug-storage.html</div>
+        <p>例如：将 options/options.html 改为 debug/debug-storage.html</p>
+    </div>
+
+    <div class="step">
+        <h3>🚀 快速访问链接</h3>
+        <p>如果你的扩展ID是已知的，可以直接点击：</p>
+        <button class="button" onclick="openDebugPage()">🔍 打开调试页面</button>
+        <button class="button" onclick="openTestPage()">🧪 打开测试页面</button>
+    </div>
+
+    <script>
+        function openDebugPage() {
+            if (typeof chrome !== 'undefined' && chrome.runtime) {
+                const url = chrome.runtime.getURL('debug/debug-storage.html');
+                window.open(url, '_blank');
+            } else {
+                alert('请在 Chrome 扩展环境中运行此页面');
+            }
+        }
+
+        function openTestPage() {
+            if (typeof chrome !== 'undefined' && chrome.runtime) {
+                const url = chrome.runtime.getURL('test-remote-config.html');
+                window.open(url, '_blank');
+            } else {
+                alert('请在 Chrome 扩展环境中运行此页面');
+            }
+        }
+
+        // 显示当前扩展信息
+        if (typeof chrome !== 'undefined' && chrome.runtime) {
+            const currentUrl = chrome.runtime.getURL('');
+            const extensionId = currentUrl.split('://')[1].split('/')[0];
+            
+            document.body.innerHTML += `
+                <div class="step">
+                    <h3>ℹ️ 当前扩展信息</h3>
+                    <p><strong>扩展ID：</strong> <span class="code">${extensionId}</span></p>
+                    <p><strong>调试页面URL：</strong></p>
+                    <div class="code">chrome-extension://${extensionId}/debug/debug-storage.html</div>
+                    <p><strong>测试页面URL：</strong></p>
+                    <div class="code">chrome-extension://${extensionId}/test-remote-config.html</div>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>

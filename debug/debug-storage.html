@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Shortcuts - 存储状态测试</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #7f8c8d;
+            font-size: 16px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .column {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            overflow: hidden;
+            min-height: 600px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .column-header {
+            padding: 20px;
+            color: white;
+            font-weight: 600;
+            font-size: 18px;
+            text-align: center;
+            position: relative;
+        }
+
+        .column-1 .column-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .column-2 .column-header {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .column-3 .column-header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .column-4 .column-header {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        }
+
+        .refresh-btn {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background 0.3s;
+        }
+
+        .refresh-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .column-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 500;
+            margin-bottom: 15px;
+        }
+
+        .status.loading {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .json-content {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.4;
+            white-space: pre-wrap;
+            word-break: break-word;
+            max-height: 500px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+            border: 1px solid #e9ecef;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #495057;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: #6c757d;
+            margin-top: 2px;
+        }
+
+        .error-message {
+            color: #dc3545;
+            background: #f8d7da;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #f5c6cb;
+            font-size: 14px;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .controls {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .control-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            margin: 0 10px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .control-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+        }
+
+        .control-btn:active {
+            transform: translateY(0);
+        }
+
+        .version-info {
+            background: #e3f2fd;
+            border: 1px solid #bbdefb;
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+
+        .version-info strong {
+            color: #1565c0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔍 AI Shortcuts 存储状态测试</h1>
+        <p>实时查看四种配置来源的状态和内容</p>
+    </div>
+
+    <div class="controls">
+        <button class="control-btn" onclick="refreshAll()">🔄 刷新全部</button>
+        <button class="control-btn" onclick="clearAll()">🗑️ 清空全部</button>
+        <button class="control-btn" onclick="exportAll()">📤 导出数据</button>
+    </div>
+
+    <div class="container">
+        <!-- 第一行：Chrome Storage Local 和 远程配置更新 -->
+        <div class="row">
+            <!-- Chrome Storage Local -->
+            <div class="column column-1">
+                <div class="column-header">
+                    📦 Chrome Storage Local
+                    <button class="refresh-btn" onclick="loadLocalStorage()">刷新</button>
+                </div>
+                <div class="column-content">
+                    <div id="local-status" class="status loading">
+                        <div class="loading-spinner"></div>
+                        正在加载...
+                    </div>
+                    <div id="local-stats" class="stats"></div>
+                    <div id="local-version" class="version-info" style="display: none;"></div>
+                    <div id="local-content" class="json-content"></div>
+                </div>
+            </div>
+
+            <!-- Remote Config -->
+            <div class="column column-4">
+                <div class="column-header">
+                    🌐 远程配置更新
+                    <button class="refresh-btn" onclick="loadRemoteConfig()">刷新</button>
+                </div>
+                <div class="column-content">
+                    <div id="remote-status" class="status loading">
+                        <div class="loading-spinner"></div>
+                        正在加载...
+                    </div>
+                    <div id="remote-stats" class="stats"></div>
+                    <div id="remote-version" class="version-info" style="display: none;"></div>
+                    <div id="remote-content" class="json-content"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 第二行：Chrome Storage Sync 和 本地 siteHandlers.json -->
+        <div class="row">
+            <!-- Chrome Storage Sync -->
+            <div class="column column-2">
+                <div class="column-header">
+                    ☁️ Chrome Storage Sync
+                    <button class="refresh-btn" onclick="loadSyncStorage()">刷新</button>
+                </div>
+                <div class="column-content">
+                    <div id="sync-status" class="status loading">
+                        <div class="loading-spinner"></div>
+                        正在加载...
+                    </div>
+                    <div id="sync-stats" class="stats"></div>
+                    <div id="sync-content" class="json-content"></div>
+                </div>
+            </div>
+
+            <!-- siteHandlers.json -->
+            <div class="column column-3">
+                <div class="column-header">
+                    📄 本地 siteHandlers.json
+                    <button class="refresh-btn" onclick="loadLocalConfig()">刷新</button>
+                </div>
+                <div class="column-content">
+                    <div id="config-status" class="status loading">
+                        <div class="loading-spinner"></div>
+                        正在加载...
+                    </div>
+                    <div id="config-stats" class="stats"></div>
+                    <div id="config-version" class="version-info" style="display: none;"></div>
+                    <div id="config-content" class="json-content"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../config/consoleConfig.js"></script>
+    <script src="../config/baseConfig.js"></script>
+    <script src="debug-storage.js"></script>
+</body>
+</html>

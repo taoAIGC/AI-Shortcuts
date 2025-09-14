@@ -56,14 +56,22 @@ async function createFloatButton() {
   // 将关闭按钮添加到按钮中
   button.appendChild(closeBtn);
 
-  // 按钮的点击事件
-  button.addEventListener('click', () => {
+  // 按钮的点击事件 - 直接打开侧边栏
+  button.addEventListener('click', (e) => {
+    e.stopPropagation(); // 阻止事件冒泡，避免触发页面的选择事件
+    e.preventDefault();  // 阻止默认行为
+    
     if (!hasMoved) {  // 只有在没有拖动的情况下才触发点击事件
-      dialog.classList.toggle('show');
-      if (dialog.classList.contains('show')) {
-        const input = dialog.querySelector('#multiAiInput');
-        if (input) input.focus();
-      }
+      console.log('浮动按钮点击，发送TOGGLE_SIDE_PANEL消息');
+      chrome.runtime.sendMessage({ type: 'TOGGLE_SIDE_PANEL' }, (response) => {
+        if (chrome.runtime.lastError) {
+          console.error('发送消息失败:', chrome.runtime.lastError);
+        } else {
+          console.log('收到响应:', response);
+        }
+      });
+    } else {
+      console.log('按钮被拖拽，不触发点击事件，hasMoved:', hasMoved);
     }
   });
 
@@ -71,7 +79,7 @@ async function createFloatButton() {
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 
   // 设置提示文本
-  const shortcutText = isMac ? '⌘+M' : 'Ctrl+M';
+  const shortcutText = isMac ? '⌘+M 打开侧边栏' : 'Ctrl+M 打开侧边栏';
   // 添加提示框
   button.addEventListener('mouseenter', () => {
     const tooltip = document.createElement('div');
@@ -139,6 +147,14 @@ async function createFloatButton() {
   container.appendChild(button);
   container.appendChild(iconContainer);
 
+  // 阻止容器上的事件冒泡
+  container.addEventListener('mousedown', (e) => {
+    e.stopPropagation();
+  });
+  container.addEventListener('click', (e) => {
+    e.stopPropagation();
+  });
+
   // 添加到页面
   document.body.appendChild(container);
   document.body.appendChild(dialog);
@@ -156,10 +172,12 @@ async function createFloatButton() {
   let startY = 0;
   let startTop = 0;
   let hasMoved = false;
+  const DRAG_THRESHOLD = 10; // 拖动阈值，超过这个距离才算拖动
 
   // 鼠标按下
   button.addEventListener('mousedown', (e) => {
     e.preventDefault();
+    e.stopPropagation(); // 阻止事件冒泡，避免触发页面的选择事件
     isDragging = true;
     hasMoved = false;  // 重置移动标记
     startY = e.clientY;
@@ -172,15 +190,22 @@ async function createFloatButton() {
   document.addEventListener('mousemove', (e) => {
     if (!isDragging) return;
     
-    hasMoved = true;  // 标记发生了移动
     const deltaY = e.clientY - startY;
-    const newTop = startTop + deltaY;
+    const moveDistance = Math.abs(deltaY);
     
-    const maxTop = window.innerHeight - container.offsetHeight;
-    const boundedTop = Math.max(0, Math.min(newTop, maxTop));
+    // 只有拖动距离超过阈值时才标记为移动
+    if (moveDistance > DRAG_THRESHOLD) {
+      hasMoved = true;
+    }
     
-    container.style.top = `${boundedTop}px`;
-    container.style.transform = 'none';
+    // 只有当标记为移动时才更新位置
+    if (hasMoved) {
+      const newTop = startTop + deltaY;
+      const maxTop = window.innerHeight - container.offsetHeight;
+      const boundedTop = Math.max(0, Math.min(newTop, maxTop));
+      container.style.top = `${boundedTop}px`;
+      container.style.transform = 'none';
+    }
   });
 
   // 鼠标松开
@@ -194,16 +219,12 @@ async function createFloatButton() {
   // 防止拖动时选中文本
   button.addEventListener('selectstart', (e) => e.preventDefault());
 
-  // 添加快捷键监听
+  // 添加快捷键监听 - 直接打开侧边栏
   document.addEventListener('keydown', (e) => {
     // 检查是否按下 Ctrl+M (Windows) 或 Command+M (Mac)
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'm') {
       e.preventDefault(); // 阻止默认行为
-      dialog.classList.toggle('show');
-      if (dialog.classList.contains('show')) {
-        const input = dialog.querySelector('#multiAiInput');
-        input.focus();
-      }
+      chrome.runtime.sendMessage({ type: 'TOGGLE_SIDE_PANEL' });
     }
   });
 
@@ -251,7 +272,7 @@ async function createFloatButton() {
 // 加载站点列表
 async function loadSites() {
   console.log('loadSites');
-  const { sites } = await chrome.storage.local.get('sites');
+  const sites = await window.getDefaultSites();
   const visibleSites = sites.filter(site => !site.hidden);
   const siteList = document.querySelector('.multi-ai-dialog .site-list');
   

@@ -198,6 +198,7 @@ const RemoteConfigManager = {
         remoteSiteHandlers: remoteConfig
       });
       console.log('本地配置已更新，最新版本号:', remoteConfig.version || Date.now());
+      console.log('站点数量:', remoteConfig.sites ? remoteConfig.sites.length : 0);
     } catch (error) {
       console.error('更新本地配置失败:', error);
     }
@@ -248,17 +249,17 @@ if (typeof window === 'undefined') {
   // 动态获取站点配置
   self.getDefaultSites = async function() {
     try {
-      // 1. 优先从 chrome.storage.local 读取基础配置
-      console.log('尝试从 chrome.storage.local 读取站点配置...');
+      // 1. 从 remoteSiteHandlers 读取基础配置
+      console.log('尝试从 remoteSiteHandlers 读取站点配置...');
       let baseSites = [];
       try {
-        const result = await chrome.storage.local.get('sites');
-        if (result.sites && result.sites.length > 0) {
-          baseSites = result.sites;
-          console.log('从 chrome.storage.local 加载站点配置成功');
+        const result = await chrome.storage.local.get('remoteSiteHandlers');
+        if (result.remoteSiteHandlers && result.remoteSiteHandlers.sites && result.remoteSiteHandlers.sites.length > 0) {
+          baseSites = result.remoteSiteHandlers.sites;
+          console.log('从 remoteSiteHandlers 加载站点配置成功');
         }
       } catch (error) {
-        console.error('从 chrome.storage.local 读取配置失败:', error);
+        console.error('从 remoteSiteHandlers 读取配置失败:', error);
       }
       
       // 2. 从 chrome.storage.sync 读取用户设置（顺序、启用状态等）
@@ -293,18 +294,8 @@ if (typeof window === 'undefined') {
         return mergedSites;
       }
       
-      // 2. 如果存储中没有数据，尝试从远程配置获取
-      console.log('chrome.storage.local 中无数据，尝试从远程配置获取...');
-      if (self.RemoteConfigManager) {
-        const sites = await self.RemoteConfigManager.getCurrentSites();
-        if (sites && sites.length > 0) {
-          console.log('从远程配置加载站点配置成功');
-          return sites;
-        }
-      }
-      
-      // 3. 如果远程配置不可用，尝试从本地文件加载
-      console.log('远程配置不可用，尝试从本地文件加载...');
+      // 4. 如果远程配置不可用，尝试从本地文件加载
+      console.log('remoteSiteHandlers 中无数据，尝试从本地文件加载...');
       try {
         const response = await fetch(chrome.runtime.getURL('config/siteHandlers.json'));
         if (response.ok) {
@@ -339,16 +330,16 @@ else {
   // 动态获取站点配置
   window.getDefaultSites = async function() {
     try {
-      // 1. 优先从 chrome.storage.local 读取基础配置
+      // 1. 从 remoteSiteHandlers 读取基础配置
       let baseSites = [];
       try {
-        const result = await chrome.storage.local.get('sites');
-        if (result.sites && result.sites.length > 0) {
-          baseSites = result.sites;
-          console.log('从 chrome.storage.local 加载站点配置成功');
+        const result = await chrome.storage.local.get('remoteSiteHandlers');
+        if (result.remoteSiteHandlers && result.remoteSiteHandlers.sites && result.remoteSiteHandlers.sites.length > 0) {
+          baseSites = result.remoteSiteHandlers.sites;
+          console.log('从 remoteSiteHandlers 加载站点配置成功');
         }
       } catch (error) {
-        console.error('从 chrome.storage.local 读取配置失败:', error);
+        console.error('从 remoteSiteHandlers 读取配置失败:', error);
       }
       
       // 2. 从 chrome.storage.sync 读取用户设置（顺序、启用状态等）
@@ -383,14 +374,18 @@ else {
         return mergedSites;
       }
       
-      // 如果存储中没有数据，尝试从远程配置获取
-      if (window.RemoteConfigManager) {
-        const lang = language.startsWith('zh') ? 'CN' : 'EN';
-        const sites = await window.RemoteConfigManager.getCurrentSites();
-        if (sites && sites.length > 0) {
-          console.log('从远程配置加载站点配置成功');
-          return sites;
+      // 4. 如果远程配置不可用，尝试从本地文件加载
+      try {
+        const response = await fetch(chrome.runtime.getURL('config/siteHandlers.json'));
+        if (response.ok) {
+          const localConfig = await response.json();
+          if (localConfig.sites && localConfig.sites.length > 0) {
+            console.log('从本地文件加载站点配置成功');
+            return localConfig.sites;
+          }
         }
+      } catch (error) {
+        console.error('从本地文件加载配置失败:', error);
       }
       
       return [];

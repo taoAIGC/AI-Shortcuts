@@ -41,7 +41,7 @@ function getQueryFromUrl() {
 
 // 创建工具栏
 async function createSearchToolbar(container, position) {
-  const { sites } = await chrome.storage.local.get('sites');
+  const sites = await window.getDefaultSites();
     if (!sites || !sites.length) return;
   
     // 只显示非隐藏的站点

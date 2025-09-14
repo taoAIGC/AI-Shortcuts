@@ -88,8 +88,34 @@ async function executeClick(step) {
     }
   }
 
-  element.click();
-  console.log('点击元素:', foundSelector);
+  // 如果指定了重试机制，则使用重试逻辑
+  if (step.retryOnDisabled) {
+    const maxAttempts = step.maxAttempts || 5;
+    const retryInterval = step.retryInterval || 200;
+    let attempts = 0;
+    
+    const tryClick = () => {
+      if (!element.disabled) {
+        element.click();
+        console.log('点击元素:', foundSelector);
+        return;
+      }
+      
+      attempts++;
+      if (attempts < maxAttempts) {
+        console.log(`按钮被禁用，${retryInterval}ms后重试 (${attempts}/${maxAttempts})`);
+        setTimeout(tryClick, retryInterval);
+      } else {
+        console.error('达到最大尝试次数，按钮仍然被禁用');
+      }
+    };
+    
+    // 延迟100ms开始尝试，给页面一些时间
+    setTimeout(tryClick, 100);
+  } else {
+    element.click();
+    console.log('点击元素:', foundSelector);
+  }
 }
 
 // 执行聚焦操作
@@ -457,22 +483,8 @@ async function executeCustom(step, query) {
   } else if (step.customAction === 'send_message') {
     window.parent.postMessage({ type: 'message_received', originalType: step.messageType }, '*');
   } else if (step.customAction === 'retry_click') {
-    const maxAttempts = step.maxAttempts || 5;
-    let attempts = 0;
-    const tryClick = () => {
-      const sendButton = document.querySelector(step.selector);
-      if (sendButton && !sendButton.disabled) {
-        sendButton.click();
-        return true;
-      }
-      attempts++;
-      if (attempts < maxAttempts) {
-        setTimeout(tryClick, step.retryInterval || 200);
-      } else {
-        console.error('达到最大尝试次数，按钮仍然被禁用');
-      }
-    };
-    setTimeout(tryClick, 100);
+    // 已废弃：retry_click 功能已合并到 click action 中
+    console.warn('retry_click 已废弃，请使用 click action 配合 retryOnDisabled 参数');
   } else if (step.customAction === 'url_query') {
     console.log('站点使用URL查询，无需搜索处理器');
   } else if (step.customAction === 'placeholder') {
@@ -485,13 +497,13 @@ async function executeCustom(step, query) {
 // 根据域名获取站点处理器
 async function getSiteHandler(domain) {
   try {
-    // 优先从 chrome.storage.local 获取站点列表
+    // 从 remoteSiteHandlers 获取站点列表
     let sites = [];
     try {
-      const result = await chrome.storage.local.get('sites');
-      sites = result.sites || [];
+      const result = await chrome.storage.local.get('remoteSiteHandlers');
+      sites = result.remoteSiteHandlers?.sites || [];
     } catch (error) {
-      console.error('从 chrome.storage.local 读取配置失败:', error);
+      console.error('从 remoteSiteHandlers 读取配置失败:', error);
     }
     
     // 如果存储中没有数据，尝试从远程配置获取
