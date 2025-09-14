@@ -367,7 +367,7 @@ function createSingleIframe(siteName, url, container, query) {
   // 修改 sandbox 属性，添加更多必要的权限
   iframe.sandbox = 'allow-same-origin allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation';
   
-  iframe.allow = 'clipboard-write; clipboard-read; microphone; camera; geolocation; autoplay; fullscreen; picture-in-picture; storage-access; web-share';
+  iframe.allow = 'clipboard-read; microphone; camera; geolocation; autoplay; fullscreen; picture-in-picture; storage-access; web-share';
   
   // 记录是否已经处理过点击事件
   let clickHandlerAdded = false;

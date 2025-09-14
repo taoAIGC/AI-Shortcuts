@@ -12,8 +12,7 @@
     "contextMenus",
     "declarativeNetRequest",
     "sidePanel",
-    "clipboardRead",
-    "clipboardWrite"
+    "clipboardRead"
   ],
   "host_permissions": [
     "<all_urls>"
