@@ -250,9 +250,9 @@
     </div>
 
     <div class="controls">
-        <button class="control-btn" onclick="refreshAll()">🔄 刷新全部</button>
-        <button class="control-btn" onclick="clearAll()">🗑️ 清空全部</button>
-        <button class="control-btn" onclick="exportAll()">📤 导出数据</button>
+        <button class="control-btn" data-action="refreshAll">🔄 刷新全部</button>
+        <button class="control-btn" data-action="clearAll">🗑️ 清空全部</button>
+        <button class="control-btn" data-action="exportAll">📤 导出数据</button>
     </div>
 
     <div class="container">
@@ -262,7 +262,7 @@
             <div class="column column-1">
                 <div class="column-header">
                     📦 Chrome Storage Local
-                    <button class="refresh-btn" onclick="loadLocalStorage()">刷新</button>
+                    <button class="refresh-btn" data-action="loadLocalStorage">刷新</button>
                 </div>
                 <div class="column-content">
                     <div id="local-status" class="status loading">
@@ -279,7 +279,7 @@
             <div class="column column-4">
                 <div class="column-header">
                     🌐 远程配置更新
-                    <button class="refresh-btn" onclick="loadRemoteConfig()">刷新</button>
+                    <button class="refresh-btn" data-action="loadRemoteConfig">刷新</button>
                 </div>
                 <div class="column-content">
                     <div id="remote-status" class="status loading">
@@ -299,7 +299,7 @@
             <div class="column column-2">
                 <div class="column-header">
                     ☁️ Chrome Storage Sync
-                    <button class="refresh-btn" onclick="loadSyncStorage()">刷新</button>
+                    <button class="refresh-btn" data-action="loadSyncStorage">刷新</button>
                 </div>
                 <div class="column-content">
                     <div id="sync-status" class="status loading">
@@ -315,7 +315,7 @@
             <div class="column column-3">
                 <div class="column-header">
                     📄 本地 siteHandlers.json
-                    <button class="refresh-btn" onclick="loadLocalConfig()">刷新</button>
+                    <button class="refresh-btn" data-action="loadLocalConfig">刷新</button>
                 </div>
                 <div class="column-content">
                     <div id="config-status" class="status loading">

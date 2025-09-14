@@ -1,31 +1,98 @@
-importScripts('./config/consoleConfig.js');  // 先加载 consoleConfig.js
-importScripts('./config/baseConfig.js');     // 再加载 baseConfig.js
+importScripts('./config/baseConfig.js');     // 加载基础配置（包含开发环境配置）
+
+// 从本地文件初始化配置到 Chrome Storage Local
+async function initializeLocalConfig() {
+  try {
+    console.log('开始从本地文件初始化配置...');
+    
+    // 检查是否已经有 remoteSiteHandlers 数据
+    const existingData = await chrome.storage.local.get('remoteSiteHandlers');
+    if (existingData.remoteSiteHandlers && existingData.remoteSiteHandlers.sites) {
+      console.log('remoteSiteHandlers 已存在，跳过本地初始化');
+      return;
+    }
+    
+    // 从本地文件读取配置
+    const response = await fetch(chrome.runtime.getURL('config/siteHandlers.json'));
+    if (!response.ok) {
+      throw new Error(`无法读取本地配置文件: ${response.status}`);
+    }
+    
+    const localConfig = await response.json();
+    if (!localConfig.sites || localConfig.sites.length === 0) {
+      throw new Error('本地配置文件中没有站点数据');
+    }
+    
+    // 将本地配置存储到 chrome.storage.local
+    await chrome.storage.local.set({
+      siteConfigVersion: localConfig.version || Date.now(),
+      remoteSiteHandlers: localConfig
+    });
+    
+    console.log('本地配置初始化成功，站点数量:', localConfig.sites.length);
+    console.log('配置版本:', localConfig.version || Date.now());
+    
+  } catch (error) {
+    console.error('本地配置初始化失败:', error);
+  }
+}
 
 // 扩展启动时检查配置更新
 chrome.runtime.onStartup.addListener(async () => {
   try {
-    if (window.RemoteConfigManager) {
-      const updateInfo = await window.RemoteConfigManager.autoCheckUpdate();
+    console.log('扩展启动，检查站点配置更新...');
+    if (self.RemoteConfigManager) {
+      const updateInfo = await self.RemoteConfigManager.autoCheckUpdate();
+      console.log('启动时站点配置检查结果:', updateInfo);
       if (updateInfo && updateInfo.hasUpdate) {
-        console.log('发现新版本站点配置');
+        console.log('发现新版本站点配置，自动更新');
         // 自动更新配置
-        await window.RemoteConfigManager.updateLocalConfig(updateInfo.config);
+        await self.RemoteConfigManager.updateLocalConfig(updateInfo.config);
+        console.log('启动时站点配置更新完成');
+      } else {
+        console.log('启动时站点配置无需更新，原因:', updateInfo?.reason || 'unknown');
       }
+    } else {
+      console.error('RemoteConfigManager 未加载');
     }
   } catch (error) {
     console.error('启动时检查更新失败:', error);
   }
 });
 
-// 扩展安装时的统一处理
+// 扩展安装和更新时的统一处理
 chrome.runtime.onInstalled.addListener(async (details) => {
   try {
+    console.log('扩展事件触发:', details.reason, '版本:', details.previousVersion, '->', chrome.runtime.getManifest().version);
+    
     // 检查配置更新
     if (self.RemoteConfigManager) {
+      // 首次安装时，先从本地文件初始化配置
+      if (details.reason === 'install') {
+        console.log('首次安装，从本地文件初始化配置');
+        await initializeLocalConfig();
+      }
+      
+      // 然后检查远程配置更新
+      console.log('开始检查站点配置更新...');
       const updateInfo = await self.RemoteConfigManager.autoCheckUpdate();
+      console.log('站点配置检查结果:', updateInfo);
+      
       if (updateInfo && updateInfo.hasUpdate) {
-        console.log('首次安装，获取最新配置');
+        if (details.reason === 'install') {
+          console.log('首次安装，获取远程最新配置');
+        } else if (details.reason === 'update') {
+          console.log('扩展更新，自动更新站点配置');
+        }
+        console.log('开始更新站点配置...');
         await self.RemoteConfigManager.updateLocalConfig(updateInfo.config);
+        console.log('站点配置更新完成');
+      } else {
+        if (details.reason === 'install') {
+          console.log('首次安装，配置已是最新');
+        } else if (details.reason === 'update') {
+          console.log('扩展更新，配置无需更新，原因:', updateInfo?.reason || 'unknown');
+        }
       }
     }
     
@@ -49,28 +116,42 @@ chrome.runtime.onInstalled.addListener(async (details) => {
       console.error('无法获取默认站点配置');
     }
     
-    // 处理 favoriteSites 数据
-    if (!favoriteSites || !favoriteSites.length) {
-      // 只在没有数据时才初始化 favoriteSites
-      await chrome.storage.sync.set({ 
-        favoriteSites: self.defaultFavoriteSites 
-      });
-      console.log('已初始化 favoriteSites:', self.defaultFavoriteSites);
-    }
+    // 只在首次安装时初始化用户设置
+    if (details.reason === 'install') {
+      console.log('首次安装，初始化用户设置');
+      
+      // 处理 favoriteSites 数据
+      if (!favoriteSites || !favoriteSites.length) {
+        const defaultFavoriteSites = await self.AppConfigManager.getDefaultFavoriteSites();
+        await chrome.storage.sync.set({ 
+          favoriteSites: defaultFavoriteSites 
+        });
+        console.log('已初始化 favoriteSites:', defaultFavoriteSites);
+      }
 
-    // 处理 buttonConfig 数据
-    if (buttonConfig) {
-      // 如果已有配置，合并配置
-      const mergedButtonConfig = {
-        ...self.buttonConfig,  // 使用默认配置作为基础
-        ...buttonConfig       // 覆盖已有的用户配置
-      };
-      await chrome.storage.sync.set({ buttonConfig: mergedButtonConfig });
-      console.log('已合并更新 buttonConfig:', mergedButtonConfig);
-    } else {
-      // 如果没有配置，使用默认配置
-      await chrome.storage.sync.set({ buttonConfig: self.buttonConfig });
-      console.log('已初始化 buttonConfig:', self.buttonConfig);
+      // 处理 buttonConfig 数据
+      if (!buttonConfig) {
+        const defaultButtonConfig = await self.AppConfigManager.getButtonConfig();
+        await chrome.storage.sync.set({ buttonConfig: defaultButtonConfig });
+        console.log('已初始化 buttonConfig:', defaultButtonConfig);
+      }
+    } else if (details.reason === 'update') {
+      console.log('扩展更新，保持用户设置不变');
+      
+      // 扩展更新时，只在必要时合并新配置
+      if (buttonConfig) {
+        const defaultButtonConfig = await self.AppConfigManager.getButtonConfig();
+        // 检查是否有新的配置项需要添加
+        const hasNewConfig = Object.keys(defaultButtonConfig).some(key => !(key in buttonConfig));
+        if (hasNewConfig) {
+          const mergedButtonConfig = {
+            ...defaultButtonConfig,  // 使用默认配置作为基础
+            ...buttonConfig          // 保持用户的现有设置
+          };
+          await chrome.storage.sync.set({ buttonConfig: mergedButtonConfig });
+          console.log('已合并新配置项到 buttonConfig:', mergedButtonConfig);
+        }
+      }
     }
     
     // 创建右键菜单
@@ -439,7 +520,7 @@ async function openSearchTabs(query, checkedSites = null) {
       console.log('找到支持 iframe 的启用站点:', iframeSites);
       
       const newTab = await chrome.tabs.create({
-          url: chrome.runtime.getURL('iframe/iframe.html?query=true'),
+          url: chrome.runtime.getURL(`iframe/iframe.html?query=${encodeURIComponent(query)}`),
           active: true
       });
 

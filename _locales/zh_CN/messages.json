@@ -126,5 +126,44 @@
   "participateRuleDev": {
     "message": "参与规则开发",
     "description": "参与规则开发按钮的文本"
+  },
+  "recentUpdateRecords": {
+    "message": "最近更新记录"
+  },
+  "noUpdateHistory": {
+    "message": "暂无更新历史记录"
+  },
+  "newSitesCount": {
+    "message": "新增 $COUNT$ 个站点",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "updatedSitesCount": {
+    "message": "更新 $COUNT$ 个站点",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "totalSitesCount": {
+    "message": "总计 $COUNT$ 个站点",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "participateAISiteRuleDev": {
+    "message": "参与AI站点规则开发"
+  },
+  "checkUpdates": {
+    "message": "检查更新"
+  },
+  "unknownTime": {
+    "message": "未知时间"
   }
 } 

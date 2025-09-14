@@ -1,31 +1,86 @@
 
+// 避免重复声明的检查
+if (typeof window !== 'undefined' && window.BaseConfigLoaded) {
+  console.log('baseConfig.js 已经加载，跳过重复声明');
+} else {
 
-// 默认收藏站点数组
-const defaultFavoriteSites = [{
-  name: "ChatGPT"
-}];
-
-// 默认模式设置
-const defaultModes = {
-  // 支持iframe 的页面在一个单窗口模式
-  iframe: false
-
+// 开发环境配置
+const DEV_CONFIG = {
+  IS_PRODUCTION: true,  // 开发时设为 false，发布时设为 true
+  REMOTE_CONFIG_URL: 'https://raw.githubusercontent.com/taoAIGC/AIShortcuts_test_siteHandlers/refs/heads/main/siteHandlers.json'  // 开发环境远程配置
 };
 
+// 生产环境 console 重写（仅在 production 模式下）
+if (DEV_CONFIG.IS_PRODUCTION) {
+  console.log = function() { return undefined; };
+  console.warn = function() { return undefined; };
+  console.error = function() { return undefined; };
+  console.info = function() { return undefined; };
+  console.debug = function() { return undefined; };
+}
 
-
-// 默认入口配置
-const buttonConfig = {
-  floatButton: true,
-  selectionSearch: true,
-  contextMenu: true,
-  searchEngine: true
-};
-
-// 外部链接配置
-const externalLinks = {
-  uninstallSurvey: 'https://wenjuan.feishu.cn/m?t=sxcO29Fz913i-1ad4',
-  feedbackSurvey: 'https://wenjuan.feishu.cn/m/cfm?t=sTFPGe4oetOi-9m3a'
+// 应用配置管理器
+const AppConfigManager = {
+  _config: null,
+  
+  // 加载配置文件
+  async loadConfig() {
+    if (this._config) {
+      return this._config;
+    }
+    
+    try {
+      const response = await fetch(chrome.runtime.getURL('config/appConfig.json'));
+      if (response.ok) {
+        this._config = await response.json();
+        console.log('应用配置加载成功');
+        return this._config;
+      }
+    } catch (error) {
+      console.error('加载应用配置失败:', error);
+    }
+    
+    // 如果加载失败，返回默认配置
+    this._config = {
+      defaultFavoriteSites: [{ name: "ChatGPT" }],
+      defaultModes: { iframe: false },
+      buttonConfig: {
+        floatButton: true,
+        selectionSearch: true,
+        contextMenu: true,
+        searchEngine: true
+      },
+      externalLinks: {
+        uninstallSurvey: 'https://wenjuan.feishu.cn/m?t=sxcO29Fz913i-1ad4',
+        feedbackSurvey: 'https://wenjuan.feishu.cn/m/cfm?t=sTFPGe4oetOi-9m3a'
+      }
+    };
+    return this._config;
+  },
+  
+  // 获取默认收藏站点
+  async getDefaultFavoriteSites() {
+    const config = await this.loadConfig();
+    return config.defaultFavoriteSites || [];
+  },
+  
+  // 获取默认模式设置
+  async getDefaultModes() {
+    const config = await this.loadConfig();
+    return config.defaultModes || {};
+  },
+  
+  // 获取按钮配置
+  async getButtonConfig() {
+    const config = await this.loadConfig();
+    return config.buttonConfig || {};
+  },
+  
+  // 获取外部链接配置
+  async getExternalLinks() {
+    const config = await this.loadConfig();
+    return config.externalLinks || {};
+  }
 };
 
 // 版本号比较函数
@@ -96,11 +151,11 @@ function compareVersions(version1, version2) {
 const RemoteConfigManager = {
   // 远程配置服务器 - 根据环境选择不同的URL
   get configUrl() {
-    // 如果 CONFIG 对象存在，使用环境配置
-    if (typeof CONFIG !== 'undefined' && CONFIG.REMOTE_CONFIG_URL) {
-      return CONFIG.IS_PRODUCTION 
+    // 如果 DEV_CONFIG 对象存在，使用环境配置
+    if (typeof DEV_CONFIG !== 'undefined' && DEV_CONFIG.REMOTE_CONFIG_URL) {
+      return DEV_CONFIG.IS_PRODUCTION 
         ? 'https://raw.githubusercontent.com/taoAIGC/AI-Shortcuts/main/config/siteHandlers.json'
-        : CONFIG.REMOTE_CONFIG_URL;
+        : DEV_CONFIG.REMOTE_CONFIG_URL;
     }
     // 否则使用默认的生产环境URL
     return 'https://raw.githubusercontent.com/taoAIGC/AI-Shortcuts/main/config/siteHandlers.json';
@@ -193,12 +248,68 @@ const RemoteConfigManager = {
   // 更新本地配置
   async updateLocalConfig(remoteConfig) {
     try {
+      const currentTime = Date.now();
+      
+      // 获取现有的更新历史
+      const { updateHistory = [], remoteSiteHandlers: oldConfig } = await chrome.storage.local.get(['updateHistory', 'remoteSiteHandlers']);
+      
+      // 计算站点变化
+      let newSites = 0;
+      let updatedSites = 0;
+      
+      if (oldConfig && oldConfig.sites && remoteConfig.sites) {
+        const oldSites = oldConfig.sites;
+        const newSitesList = remoteConfig.sites;
+        
+        // 计算新增站点
+        newSites = newSitesList.filter(newSite => 
+          !oldSites.some(oldSite => oldSite.name === newSite.name)
+        ).length;
+        
+        // 计算更新站点（URL或配置有变化的站点）
+        updatedSites = newSitesList.filter(newSite => {
+          const oldSite = oldSites.find(oldSite => oldSite.name === newSite.name);
+          if (!oldSite) return false;
+          
+          // 比较关键配置字段
+          return oldSite.url !== newSite.url ||
+                 oldSite.supportIframe !== newSite.supportIframe ||
+                 oldSite.supportUrlQuery !== newSite.supportUrlQuery ||
+                 JSON.stringify(oldSite.handler) !== JSON.stringify(newSite.handler);
+        }).length;
+      } else if (remoteConfig.sites) {
+        // 首次安装或没有旧配置
+        newSites = remoteConfig.sites.length;
+      }
+      
+      // 创建更新记录
+      const updateRecord = {
+        timestamp: currentTime,
+        version: remoteConfig.version || currentTime,
+        newSites: newSites,
+        updatedSites: updatedSites,
+        totalSites: remoteConfig.sites ? remoteConfig.sites.length : 0,
+        oldVersion: oldConfig ? (oldConfig.version || 'unknown') : 'unknown'
+      };
+      
+      // 添加到更新历史（保留最近10次更新记录）
+      const newUpdateHistory = [...updateHistory, updateRecord].slice(-10);
+      
       await chrome.storage.local.set({
-        siteConfigVersion: remoteConfig.version || Date.now(),
-        remoteSiteHandlers: remoteConfig
+        siteConfigVersion: remoteConfig.version || currentTime,
+        remoteSiteHandlers: remoteConfig,
+        lastUpdateTime: currentTime,  // 记录更新时间，供 iframe 页面检测
+        updateNotificationShown: false,  // 重置通知显示状态，允许显示新的更新提示
+        updateHistory: newUpdateHistory  // 保存更新历史
       });
-      console.log('本地配置已更新，最新版本号:', remoteConfig.version || Date.now());
+      
+      console.log('本地配置已更新，最新版本号:', remoteConfig.version || currentTime);
       console.log('站点数量:', remoteConfig.sites ? remoteConfig.sites.length : 0);
+      console.log('更新统计:', {
+        新增站点: newSites,
+        更新站点: updatedSites,
+        总站点数: remoteConfig.sites ? remoteConfig.sites.length : 0
+      });
     } catch (error) {
       console.error('更新本地配置失败:', error);
     }
@@ -317,9 +428,7 @@ if (typeof window === 'undefined') {
     }
   };
 
-  self.defaultFavoriteSites = defaultFavoriteSites;
-  self.buttonConfig = buttonConfig;
-  self.externalLinks = externalLinks;
+  self.AppConfigManager = AppConfigManager;
   self.RemoteConfigManager = RemoteConfigManager;
 }
 // 浏览器环境
@@ -395,9 +504,12 @@ else {
     }
   };
   
-  window.defaultFavoriteSites = defaultFavoriteSites;
-  window.buttonConfig = buttonConfig;
-  window.externalLinks = externalLinks;
+  window.AppConfigManager = AppConfigManager;
   window.RemoteConfigManager = RemoteConfigManager;
+  
+  // 标记配置已加载，避免重复声明
+  window.BaseConfigLoaded = true;
 }
+
+} // 结束重复声明检查的 else 块
 

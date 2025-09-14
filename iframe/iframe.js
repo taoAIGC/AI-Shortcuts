@@ -118,12 +118,59 @@ document.addEventListener('DOMContentLoaded', async function() {
     const urlParams = new URLSearchParams(window.location.search);
     const hasQueryParam = urlParams.has('query');
     
-    // 只有在直接打开（方式1）时才执行初始化 iframes
-    if (!hasQueryParam) {
-        // 获取站点配置并初始化 iframes
+    if (hasQueryParam) {
+        // 从 URL 参数中获取查询内容
+        const query = urlParams.get('query');
+        console.log('从 URL 参数获取查询内容:', query);
+        
+        if (query && query !== 'true') {
+            // 将查询内容填入搜索框
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                searchInput.value = query;
+            }
+            
+            // 获取站点配置并创建 iframes
+            getDefaultSites().then((sites) => {
+                if (sites && sites.length > 0) {
+                    const availableSites = sites.filter(site => 
+                        site.enabled && 
+                        site.supportIframe !== false && 
+                        !site.hidden
+                    );
+
+                    if (availableSites.length > 0) {
+                        console.log('使用查询内容创建 iframes:', query, availableSites);
+                        createIframes(query, availableSites);
+                    } else {
+                        console.log('没有可用的站点');
+                    }
+                }
+            });
+        } else {
+            // 如果查询参数是 'true' 或空，按直接打开处理
+            console.log('URL 参数 query=true，按直接打开处理');
+            getDefaultSites().then((sites) => {
+                if (sites && sites.length > 0) {
+                    const availableSites = sites.filter(site => 
+                        site.enabled && 
+                        site.supportIframe !== false && 
+                        !site.hidden
+                    );
+
+                    if (availableSites.length > 0) {
+                        console.log('初始化可用站点:', availableSites);
+                        createIframes('', availableSites);
+                    } else {
+                        console.log('没有可用的站点');
+                    }
+                }
+            });
+        }
+    } else {
+        // 直接打开（方式1）
         getDefaultSites().then((sites) => {
             if (sites && sites.length > 0) {
-                // 过滤出启用的且支持 iframe 的站点（已经按order排序了）
                 const availableSites = sites.filter(site => 
                     site.enabled && 
                     site.supportIframe !== false && 
@@ -132,8 +179,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
                 if (availableSites.length > 0) {
                     console.log('初始化可用站点:', availableSites);
-                    // 使用现有的 createIframes 函数创建 iframe
-                    createIframes('', availableSites); // query 参数传空字符串
+                    createIframes('', availableSites);
                 } else {
                     console.log('没有可用的站点');
                 }
@@ -354,6 +400,28 @@ function createSingleIframe(siteName, url, container, query) {
         clickHandlerAdded = true;
       }
     }
+    
+    // 处理查询内容（如果有的话）
+    if (query) {
+      console.log("iframe onload 加载完成，查询内容:", query);
+      
+      // 使用异步函数处理
+      (async () => {
+        const sites = await window.getDefaultSites();
+        const site = sites.find(s => s.url === url || url.startsWith(s.url));
+        if (site && !site.supportUrlQuery) {
+          // 使用动态处理函数
+          const handler = await getIframeHandler(url);
+          if (handler) {
+            console.log('执行动态 iframe 处理函数:', site.name);
+            await handler(iframe, query);
+          } else {
+            console.log('未找到对应的处理函数', site.name);
+          }
+        }
+      })();
+    }
+    
     // 重新设置输入框焦点
     document.getElementById('searchInput').focus();
   });
@@ -480,34 +548,6 @@ function createSingleIframe(siteName, url, container, query) {
     
   };
 
-  iframe.onload = () => {
-    // 只有当有查询内容时才执行处理
-    if (!query) {
-      console.log("没有查询内容，跳过处理函数");
-      return;
-    }
-
-    console.log("iframe onload 加载完成，查询内容:", query);
-
-    // 从 storage 获取站点配置，检查是否支持 URL 查询
-    console.log("iframe onload 加载完成，准备查询页面内容处理函数")
-
-    // 使用异步函数处理
-    (async () => {
-      const sites = await window.getDefaultSites();
-      const site = sites.find(s => s.url === url || url.startsWith(s.url));
-      if (site && !site.supportUrlQuery) {
-        // 使用动态处理函数
-        const handler = await getIframeHandler(url);
-        if (handler) {
-          console.log('执行动态 iframe 处理函数:', site.name);
-          await handler(iframe, query);
-        } else {
-          console.log('未找到对应的处理函数', site.name);
-        }
-      }
-    })();
-  };
 }
 
 // 导出函数供其他文件使用
@@ -1140,10 +1180,26 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function checkForSiteConfigUpdates() {
   try {
     if (window.RemoteConfigManager) {
+      // 首先检查是否有未显示的更新
+      const { siteConfigVersion, lastUpdateTime, updateNotificationShown } = await chrome.storage.local.get(['siteConfigVersion', 'lastUpdateTime', 'updateNotificationShown']);
+      
+      // 如果有更新记录且还没有显示过通知，则显示提示
+      if (lastUpdateTime && !updateNotificationShown) {
+        console.log('检测到配置更新，显示提示');
+        showUpdateNotification();
+        // 标记已显示通知，避免重复显示
+        await chrome.storage.local.set({ updateNotificationShown: true });
+        return;
+      }
+      
+      // 然后检查是否有新的远程更新
       const updateInfo = await window.RemoteConfigManager.autoCheckUpdate();
       if (updateInfo && updateInfo.hasUpdate) {
-        console.log('发现新版本站点配置');
-        showUpdateNotification(updateInfo);
+        console.log('发现新版本站点配置，自动更新');
+        // 自动更新配置
+        await window.RemoteConfigManager.updateLocalConfig(updateInfo.config);
+        // 显示更新成功提示
+        showUpdateNotification();
       }
     }
   } catch (error) {
@@ -1152,77 +1208,347 @@ async function checkForSiteConfigUpdates() {
 }
 
 // 显示更新通知
-function showUpdateNotification(updateInfo) {
-  const notification = document.createElement('div');
-  notification.style.cssText = `
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    background: #4CAF50;
-    color: white;
-    padding: 15px;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    z-index: 10000;
-    max-width: 300px;
-    font-family: Arial, sans-serif;
-    font-size: 14px;
-    line-height: 1.4;
-  `;
-  
-  notification.innerHTML = `
-    <div style="font-weight: bold; margin-bottom: 8px;">发现新版本站点配置</div>
-    <div>是否更新到最新版本？</div>
-    <div style="margin-top: 10px;">
-      <button onclick="updateSiteConfig()" style="
-        background: white;
-        color: #4CAF50;
-        border: none;
-        padding: 5px 10px;
-        border-radius: 4px;
-        margin-right: 8px;
-        cursor: pointer;
-        font-size: 12px;
-      ">更新</button>
-      <button onclick="this.parentElement.parentElement.remove()" style="
-        background: transparent;
-        color: white;
-        border: 1px solid white;
-        padding: 5px 10px;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 12px;
-      ">稍后</button>
-    </div>
-  `;
-  
-  document.body.appendChild(notification);
-  
-  // 全局更新函数
-  window.updateSiteConfig = async function() {
-    try {
-      const result = await window.RemoteConfigManager.updateLocalConfig(updateInfo.config);
-      if (result.success) {
-        notification.innerHTML = `
-          <div style="font-weight: bold; margin-bottom: 8px;">更新成功</div>
-          <div>站点配置已更新到最新版本</div>
-        `;
-        setTimeout(() => notification.remove(), 3000);
-      } else {
-        console.error('更新失败:', result.error);
+async function showUpdateNotification() {
+  try {
+    // 获取更新信息
+    const { siteConfigVersion, lastUpdateTime, updateHistory } = await chrome.storage.local.get(['siteConfigVersion', 'lastUpdateTime', 'updateHistory']);
+    
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: linear-gradient(135deg, #4CAF50, #45a049);
+      color: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+      z-index: 10000;
+      max-width: 350px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      cursor: pointer;
+      border: 1px solid rgba(255,255,255,0.2);
+      backdrop-filter: blur(10px);
+      animation: slideInRight 0.3s ease-out;
+    `;
+    
+    // 格式化更新时间
+    const formatUpdateTime = (timestamp) => {
+      if (!timestamp) return '刚刚';
+      const now = Date.now();
+      const diff = now - timestamp;
+      const minutes = Math.floor(diff / 60000);
+      const hours = Math.floor(diff / 3600000);
+      const days = Math.floor(diff / 86400000);
+      
+      if (minutes < 1) return '刚刚';
+      if (minutes < 60) return `${minutes}分钟前`;
+      if (hours < 24) return `${hours}小时前`;
+      return `${days}天前`;
+    };
+    
+    // 获取更新历史信息
+    let updateInfo = '';
+    if (updateHistory && updateHistory.length > 0) {
+      const latestUpdate = updateHistory[updateHistory.length - 1];
+      updateInfo = `
+        <div style="font-size: 12px; opacity: 0.9; margin-top: 8px;">
+          <div>V ${latestUpdate.version || siteConfigVersion || '未知'}</div>
+          <div>${formatUpdateTime(latestUpdate.timestamp || lastUpdateTime)}</div>
+          ${latestUpdate.newSites ? `<div>新增站点: ${latestUpdate.newSites}个</div>` : ''}
+          ${latestUpdate.updatedSites ? `<div>更新站点: ${latestUpdate.updatedSites}个</div>` : ''}
+        </div>
+      `;
+    } else {
+      updateInfo = `
+        <div style="font-size: 12px; opacity: 0.9; margin-top: 8px;">
+          <div>V ${siteConfigVersion || '未知'}</div>
+          <div>${formatUpdateTime(lastUpdateTime)}</div>
+        </div>
+      `;
+    }
+    
+    notification.innerHTML = `
+     
+      <div style="font-size: 13px; opacity: 0.95; margin-bottom: 8px;">
+        🆕AI站点处理规则已自动更新到最新版本
+      </div>
+      ${updateInfo}
+      <div style="font-size: 11px; opacity: 0.8; margin-top: 12px; text-align: center; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 8px;">
+        🔎
+      </div>
+    `;
+    
+    // 添加CSS动画
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes slideInRight {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
       }
-    } catch (error) {
-      console.error('更新失败:', error);
-    }
-  };
-  
-  // 10秒后自动消失
-  setTimeout(() => {
-    if (notification.parentElement) {
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+      }
+    `;
+    document.head.appendChild(style);
+    
+    // 点击通知显示详细更新信息
+    notification.addEventListener('click', () => {
+      showDetailedUpdateInfo();
       notification.remove();
-    }
-  }, 10000);
+      style.remove();
+    });
+    
+    // 添加悬停效果
+    notification.addEventListener('mouseenter', () => {
+      notification.style.transform = 'translateY(-2px)';
+      notification.style.boxShadow = '0 8px 25px rgba(0,0,0,0.4)';
+    });
+    
+    notification.addEventListener('mouseleave', () => {
+      notification.style.transform = 'translateY(0)';
+      notification.style.boxShadow = '0 6px 20px rgba(0,0,0,0.3)';
+    });
+    
+    document.body.appendChild(notification);
+    
+    // 10秒后自动消失
+    setTimeout(() => {
+      if (notification.parentElement) {
+        notification.style.animation = 'slideInRight 0.3s ease-out reverse';
+        setTimeout(() => {
+          if (notification.parentElement) {
+            notification.remove();
+            style.remove();
+          }
+        }, 300);
+      }
+    }, 10000);
+    
+  } catch (error) {
+    console.error('显示更新通知失败:', error);
+    // 显示简单的 toast 提示
+    showToast('配置已更新，但无法显示详细信息');
+  }
 }
+
+// 显示详细更新信息
+async function showDetailedUpdateInfo() {
+  try {
+    const { updateHistory, siteConfigVersion, lastUpdateTime } = await chrome.storage.local.get(['updateHistory', 'siteConfigVersion', 'lastUpdateTime']);
+    
+    // 创建模态框背景
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 20000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.3s ease-out;
+    `;
+    
+    // 创建模态框内容
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      max-width: 500px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      animation: slideInUp 0.3s ease-out;
+    `;
+    
+    // 格式化时间
+    const formatTime = (timestamp) => {
+      if (!timestamp) return chrome.i18n.getMessage('unknownTime');
+      const date = new Date(timestamp);
+      return date.toLocaleString(chrome.i18n.getUILanguage(), {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    };
+    
+    // 生成更新历史内容
+    let historyContent = '';
+    if (updateHistory && updateHistory.length > 0) {
+      // 去重：只显示历史记录，不重复显示当前更新信息
+      const uniqueHistory = updateHistory.filter((update, index, arr) => {
+        // 如果是最后一个记录且与当前版本相同，则跳过（避免重复显示）
+        if (index === arr.length - 1 && update.version === siteConfigVersion) {
+          return false;
+        }
+        return true;
+      });
+      
+      historyContent = uniqueHistory.slice(-5).reverse().map((update, index) => `
+        <div style="padding: 12px; border-left: 3px solid #4CAF50; margin-bottom: 12px; background: #f8f9fa; border-radius: 0 8px 8px 0;">
+          <div style="font-weight: 600; color: #333; margin-bottom: 4px;">
+            V${update.version} - ${formatTime(update.timestamp)}
+          </div>
+          <div style="font-size: 13px; color: #666;">
+            ${(() => {
+              const parts = [];
+              if (update.newSites > 0) {
+                parts.push(chrome.i18n.getMessage('newSitesCount', [update.newSites]));
+              }
+              if (update.updatedSites > 0) {
+                parts.push(chrome.i18n.getMessage('updatedSitesCount', [update.updatedSites]));
+              }
+              if (update.totalSites > 0) {
+                parts.push(chrome.i18n.getMessage('totalSitesCount', [update.totalSites]));
+              }
+              return parts.join('，');
+            })()}
+          </div>
+        </div>
+      `).join('');
+      
+      // 如果没有历史记录可显示，显示空状态
+      if (historyContent === '') {
+        historyContent = `
+          <div style="padding: 20px; text-align: center; color: #666;">
+            <div style="font-size: 48px; margin-bottom: 16px;">📋</div>
+            <div>${chrome.i18n.getMessage('noUpdateHistory')}</div>
+          </div>
+        `;
+      }
+    } else {
+      historyContent = `
+        <div style="padding: 20px; text-align: center; color: #666;">
+          <div style="font-size: 48px; margin-bottom: 16px;">📋</div>
+          <div>${chrome.i18n.getMessage('noUpdateHistory')}</div>
+        </div>
+      `;
+    }
+    
+    modal.innerHTML = `
+      <div style="margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <h3 style="margin: 0; color: #333; font-size: 16px; font-weight: 600;">📈 ${chrome.i18n.getMessage('recentUpdateRecords')}</h3>
+          <button id="closeModal" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #999; padding: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: all 0.2s;">
+            ×
+          </button>
+        </div>
+        <div style="max-height: 300px; overflow-y: auto;">
+          ${historyContent}
+        </div>
+      </div>
+      
+      <div style="display: flex; gap: 12px; justify-content: flex-end;">
+        <button id="viewGitHub" style="background: #f5f5f5; border: 1px solid #ddd; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 14px; color: #333; transition: all 0.2s;">
+          📖 ${chrome.i18n.getMessage('participateAISiteRuleDev')}
+        </button>
+        <button id="refreshConfig" style="background: #f5f5f5; border: 1px solid #ddd; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 14px; color: #333; transition: all 0.2s;">
+          🔄 ${chrome.i18n.getMessage('checkUpdates')}
+        </button>
+      </div>
+    `;
+    
+    // 添加CSS动画
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+      @keyframes slideInUp {
+        from { transform: translateY(30px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+      }
+    `;
+    document.head.appendChild(style);
+    
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+    
+    // 事件处理
+    const closeModal = () => {
+      overlay.style.animation = 'fadeIn 0.3s ease-out reverse';
+      setTimeout(() => {
+        if (overlay.parentElement) {
+          overlay.remove();
+          style.remove();
+        }
+      }, 300);
+    };
+    
+    // 关闭按钮
+    modal.querySelector('#closeModal').addEventListener('click', closeModal);
+    
+    // 点击背景关闭
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        closeModal();
+      }
+    });
+    
+    // 查看GitHub
+    modal.querySelector('#viewGitHub').addEventListener('click', () => {
+      window.open('https://github.com/taoAIGC/AI-Shortcuts/blob/main/config/siteHandlers.json', '_blank');
+    });
+    
+    // 检查更新
+    modal.querySelector('#refreshConfig').addEventListener('click', async () => {
+      const button = modal.querySelector('#refreshConfig');
+      const originalText = button.textContent;
+      button.textContent = '🔄 检查中...';
+      button.disabled = true;
+      
+      try {
+        if (window.RemoteConfigManager) {
+          const updateInfo = await window.RemoteConfigManager.autoCheckUpdate();
+          if (updateInfo && updateInfo.hasUpdate) {
+            await window.RemoteConfigManager.updateLocalConfig(updateInfo.config);
+            showToast('配置已更新到最新版本！');
+            closeModal();
+            // 显示新的更新通知
+            setTimeout(() => showUpdateNotification(), 500);
+          } else {
+            showToast('已是最新版本');
+          }
+        } else {
+          showToast('更新检查功能不可用');
+        }
+      } catch (error) {
+        console.error('检查更新失败:', error);
+        showToast('检查更新失败');
+      } finally {
+        button.textContent = originalText;
+        button.disabled = false;
+      }
+    });
+    
+    // ESC键关闭
+    const handleEsc = (e) => {
+      if (e.key === 'Escape') {
+        closeModal();
+        document.removeEventListener('keydown', handleEsc);
+      }
+    };
+    document.addEventListener('keydown', handleEsc);
+    
+  } catch (error) {
+    console.error('显示详细更新信息失败:', error);
+    showToast('显示更新信息失败');
+  }
+}
+
 
 // 收藏功能实现
 let favoritePrompts = [];

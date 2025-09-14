@@ -429,10 +429,39 @@ if (typeof chrome !== 'undefined' && chrome.storage) {
 
 // 添加按钮事件监听器
 document.addEventListener('DOMContentLoaded', () => {
-    // 绑定刷新按钮
+    // 绑定所有按钮的点击事件
     document.addEventListener('click', (e) => {
-        if (e.target.onclick) return; // 跳过已有onclick的元素
+        const action = e.target.getAttribute('data-action');
         
+        if (action) {
+            e.preventDefault(); // 阻止默认行为
+            
+            switch(action) {
+                case 'refreshAll':
+                    refreshAll();
+                    break;
+                case 'clearAll':
+                    clearAll();
+                    break;
+                case 'exportAll':
+                    exportAll();
+                    break;
+                case 'loadLocalStorage':
+                    loadLocalStorage();
+                    break;
+                case 'loadSyncStorage':
+                    loadSyncStorage();
+                    break;
+                case 'loadLocalConfig':
+                    loadLocalConfig();
+                    break;
+                case 'loadRemoteConfig':
+                    loadRemoteConfig();
+                    break;
+            }
+        }
+        
+        // 保留原有的刷新按钮逻辑（兼容）
         if (e.target.textContent === '刷新' || e.target.classList.contains('refresh-btn')) {
             const columnClass = e.target.closest('.column').classList[1];
             switch(columnClass) {

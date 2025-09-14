@@ -1,8 +1,8 @@
 {
-  "version": "2.0.2",
-  "lastUpdated": "2025-09-13T00:00:00Z",
+  "version": "1.0.0",
+  "lastUpdated": "2025-09-14T12:00:00Z",
   "description": "AI站点处理器配置 - 配置化三步流程处理",
-  "author": "AI Shortcuts Team",
+  "author": "AIShortcuts",
   "sites": [
     {
       "name": "ChatGPT",
@@ -288,6 +288,11 @@
             "selector": "textarea[data-testid=\"chat_input_input\"]",
             "events": ["input", "change", "blur", "focus", "keydown", "keyup", "keypress"],
             "description": "触发多种输入事件"
+          },
+          {
+            "action": "click",
+            "selector": "#flow-end-msg-send",
+            "description": "点击豆包发送按钮"
           }
         ]
       }
@@ -295,7 +300,7 @@
     {
       "name": "问小白",
       "url": "https://www.wenxiaobai.com/",
-      "enabled": true,
+      "enabled": false,
       "supportUrlQuery": false,
       "region": "China",
       "hidden": false,

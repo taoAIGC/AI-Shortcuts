@@ -497,21 +497,18 @@ async function executeCustom(step, query) {
 // 根据域名获取站点处理器
 async function getSiteHandler(domain) {
   try {
-    // 从 remoteSiteHandlers 获取站点列表
+    // 使用 getDefaultSites 获取站点列表（已包含完整的降级逻辑）
     let sites = [];
     try {
-      const result = await chrome.storage.local.get('remoteSiteHandlers');
-      sites = result.remoteSiteHandlers?.sites || [];
-    } catch (error) {
-      console.error('从 remoteSiteHandlers 读取配置失败:', error);
-    }
-    
-    // 如果存储中没有数据，尝试从远程配置获取
-    if (!sites || sites.length === 0) {
-      console.log('chrome.storage.local 中无数据，尝试从远程配置获取...');
-      if (window.RemoteConfigManager) {
-        sites = await window.RemoteConfigManager.getCurrentSites();
+      if (!window.getDefaultSites) {
+        console.error('window.getDefaultSites 不可用，请检查 baseConfig.js 是否正确加载');
+        return null;
       }
+      
+      sites = await window.getDefaultSites();
+      console.log('从 getDefaultSites 获取站点配置成功，数量:', sites.length);
+    } catch (error) {
+      console.error('获取站点配置失败:', error);
     }
     
     // 使用配置

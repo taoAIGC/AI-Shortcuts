@@ -131,5 +131,44 @@
   "participateRuleDev": {
     "message": "Participate in Rule Development",
     "description": "Text for the participate in rule development button"
+  },
+  "recentUpdateRecords": {
+    "message": "Recent Update Records"
+  },
+  "noUpdateHistory": {
+    "message": "No update history available"
+  },
+  "newSitesCount": {
+    "message": "Added $COUNT$ new sites",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "updatedSitesCount": {
+    "message": "Updated $COUNT$ sites",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "totalSitesCount": {
+    "message": "Total $COUNT$ sites",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "participateAISiteRuleDev": {
+    "message": "Participate in AI Site Rule Development"
+  },
+  "checkUpdates": {
+    "message": "Check Updates"
+  },
+  "unknownTime": {
+    "message": "Unknown time"
   }
 } 

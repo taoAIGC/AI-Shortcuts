@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "__MSG_appName__",
-  "version": "1.27",
+  "version": "2.0.7",
   "description": "__MSG_extDescription__",
   "permissions": [
     "storage",
@@ -63,20 +63,26 @@
         "https://www.wenxiaobai.com/*"
 
       ],
-      "js": ["iframe/inject.js"],
+      "js": [
+        "config/baseConfig.js",
+        "iframe/inject.js"
+      ],
       "run_at": "document_start",
       "all_frames": true
     },
     {
       "matches": ["<all_urls>"],
-      "js": ["content-scripts/selection.js"],
+      "js": [
+        "config/baseConfig.js",
+        "content-scripts/selection.js"
+      ],
       "css": ["content-scripts/selection.css"]
     },
     {
       "matches": ["<all_urls>"],
       "css": ["content-scripts/float-button.css"],
       "js": [
-        "config/consoleConfig.js",
+        "config/baseConfig.js",
         "content-scripts/float-button.js"
       ],
       "run_at": "document_end"
@@ -89,6 +95,7 @@
         "https://cn.bing.com/*"
       ],
       "js": [
+        "config/baseConfig.js",
         "content-scripts/search-engines.js"
       ]
     }
