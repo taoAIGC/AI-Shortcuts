@@ -3,12 +3,16 @@ console.log('🎯 inject.js 脚本已加载');
 
 // 通用的配置化站点处理器 - 基于流程的标准化处理
 async function executeSiteHandler(query, handlerConfig) {
+  console.log('🚀 executeSiteHandler 开始执行');
+  console.log('🔍 调试信息 - 查询内容:', query);
+  console.log('🔍 调试信息 - 处理器配置:', handlerConfig);
+  
   if (!handlerConfig || !handlerConfig.steps) {
-    console.error('无效的处理器配置');
+    console.error('❌ 无效的处理器配置');
     return;
   }
 
-  console.log('开始执行配置化处理器，步骤数:', handlerConfig.steps.length);
+  console.log('✅ 开始执行配置化处理器，步骤数:', handlerConfig.steps.length);
 
   for (let i = 0; i < handlerConfig.steps.length; i++) {
     const step = handlerConfig.steps[i];
@@ -30,6 +34,9 @@ async function executeSiteHandler(query, handlerConfig) {
           break;
         case 'sendKeys':
           await executeSendKeys(step, query);
+          break;
+        case 'replace':
+          await executeReplace(step, query);
           break;
         case 'wait':
           await executeWait(step);
@@ -412,6 +419,101 @@ async function executeSendKeys(step, query) {
   }
 }
 
+// 执行元素替换操作
+async function executeReplace(step, query) {
+  console.log('🔧 executeReplace 开始执行');
+  console.log('🔧 步骤配置:', step);
+  console.log('🔧 查询内容:', query);
+  
+  let element = null;
+  let foundSelector = null;
+  
+  // 支持多个选择器
+  const selectors = Array.isArray(step.selector) ? step.selector : [step.selector];
+  console.log('🔧 尝试的选择器:', selectors);
+  
+  for (const selector of selectors) {
+    element = document.querySelector(selector);
+    console.log(`🔧 选择器 ${selector} 结果:`, element);
+    if (element) {
+      foundSelector = selector;
+      break;
+    }
+  }
+  
+  if (!element) {
+    throw new Error(`未找到任何元素，尝试的选择器: ${selectors.join(', ')}`);
+  }
+
+  console.log('🔧 找到元素:', element);
+  console.log('🔧 元素当前HTML:', element.innerHTML);
+  
+  // 清空容器内容
+  element.innerHTML = '';
+  console.log('🔧 清空后HTML:', element.innerHTML);
+  
+  // 创建并插入新元素
+  if (step.write && Array.isArray(step.write)) {
+    console.log('🔧 开始创建元素，配置数量:', step.write.length);
+    for (const elementConfig of step.write) {
+      console.log('🔧 创建元素配置:', elementConfig);
+      const newElement = createElementFromConfig(elementConfig, query);
+      console.log('🔧 创建的元素:', newElement);
+      console.log('🔧 创建的元素HTML:', newElement.outerHTML);
+      element.appendChild(newElement);
+    }
+  }
+  
+  console.log('🔧 最终元素HTML:', element.innerHTML);
+  console.log('✅ 元素替换完成:', foundSelector, '内容:', query);
+}
+
+// 根据配置创建DOM元素
+function createElementFromConfig(config, query) {
+  console.log('🔧 createElementFromConfig 开始，配置:', config, '查询:', query);
+  
+  const element = document.createElement(config.tag);
+  console.log('🔧 创建元素:', config.tag, element);
+  
+  // 设置属性
+  if (config.attributes) {
+    console.log('🔧 设置属性:', config.attributes);
+    Object.entries(config.attributes).forEach(([key, value]) => {
+      element.setAttribute(key, value);
+      console.log(`🔧 设置属性 ${key} = ${value}`);
+    });
+  }
+  
+  // 设置文本内容
+  if (config.text) {
+    // 替换 $query 为实际查询内容
+    const text = config.text.replace(/\$query/g, query);
+    console.log('🔧 设置文本内容:', text);
+    element.textContent = text;
+  }
+  
+  // 设置HTML内容
+  if (config.html) {
+    // 替换 $query 为实际查询内容
+    const html = config.html.replace(/\$query/g, query);
+    console.log('🔧 设置HTML内容:', html);
+    element.innerHTML = html;
+  }
+  
+  // 递归创建子元素
+  if (config.children && Array.isArray(config.children)) {
+    console.log('🔧 创建子元素，数量:', config.children.length);
+    config.children.forEach((childConfig, index) => {
+      console.log(`🔧 创建子元素 ${index}:`, childConfig);
+      const childElement = createElementFromConfig(childConfig, query);
+      element.appendChild(childElement);
+    });
+  }
+  
+  console.log('🔧 最终创建的元素:', element.outerHTML);
+  return element;
+}
+
 // 执行等待操作
 async function executeWait(step) {
   await new Promise(resolve => setTimeout(resolve, step.duration));
@@ -656,21 +758,30 @@ window.addEventListener('message', async function(event) {
 
   // 使用新的统一处理逻辑
   const domain = event.data.domain || window.location.hostname;
+  console.log('🔍 调试信息 - 域名:', domain, '当前hostname:', window.location.hostname);
+  
   const siteHandler = await getSiteHandler(domain);
+  console.log('🔍 调试信息 - 站点处理器:', siteHandler);
   
   if (siteHandler && siteHandler.searchHandler && event.data.query) {
-    console.log(`使用 ${siteHandler.name} 配置化处理器处理消息`);
+    console.log(`✅ 使用 ${siteHandler.name} 配置化处理器处理消息`);
+    console.log('🔍 调试信息 - 搜索处理器配置:', siteHandler.searchHandler);
     try {
       // 使用配置化处理器执行
       await executeSiteHandler(event.data.query, siteHandler.searchHandler);
+      console.log(`✅ ${siteHandler.name} 处理完成`);
     } catch (error) {
-      console.error(`${siteHandler.name} 处理失败:`, error);
+      console.error(`❌ ${siteHandler.name} 处理失败:`, error);
     }
     return;
   }
 
   // 如果没有找到对应的处理器，记录警告
-  console.warn('未找到对应的站点处理器，消息类型:', event.data.type);
+  console.warn('❌ 未找到对应的站点处理器');
+  console.warn('🔍 调试信息 - 域名:', domain);
+  console.warn('🔍 调试信息 - 站点处理器:', siteHandler);
+  console.warn('🔍 调试信息 - 消息类型:', event.data.type);
+  console.warn('🔍 调试信息 - 查询内容:', event.data.query);
 }); 
 
 // 标记是否已经添加了点击处理器

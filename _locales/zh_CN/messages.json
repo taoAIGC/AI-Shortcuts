@@ -80,7 +80,7 @@
     "description": "入口配置标题"
   },
   "floatButton": {
-    "message": "悬浮按钮",
+    "message": "悬浮球",
     "description": "悬浮按钮的名称"
   },
   "selectionSearch": {
@@ -165,5 +165,17 @@
   },
   "unknownTime": {
     "message": "未知时间"
+  },
+  "disabledSitesTitle": {
+    "message": "悬浮球禁用网站"
+  },
+  "disabledSitesDescription": {
+    "message": "管理悬浮球被禁用的网站，您可以在这里重新启用悬浮球"
+  },
+  "searchProviderName": {
+    "message": "AIShortcuts"
+  },
+  "searchProviderDescription": {
+    "message": "使用AI快捷键进行多站点搜索"
   }
 } 

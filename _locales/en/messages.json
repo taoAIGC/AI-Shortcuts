@@ -1,9 +1,9 @@
 {
   "appName": {
-    "message": "AI Shortcuts - for ChatGPT, Gemini, DeepSeek and more."
+    "message": "AI Shortcuts - OneClick to compare ChatGPT, Gemini, DeepSeek and more."
   },
   "extDescription": {
-    "message": "AI Shortcuts for ChatGPT, Gemini, DeepSeek and more."
+    "message": "Access multiple AI platforms simultaneously. Compare responses from ChatGPT, Claude, Gemini, DeepSeek and more in one click."
   },
   "configTitle": {
     "message": " AI Sites"
@@ -85,7 +85,7 @@
     "description": "Title for shortcut entry configuration"
   },
   "floatButton": {
-    "message": "Float Button",
+    "message": "Float Ball",
     "description": "The name for the float button"
   },
   "selectionSearch": {
@@ -170,5 +170,17 @@
   },
   "unknownTime": {
     "message": "Unknown time"
+  },
+  "disabledSitesTitle": {
+    "message": "Float Button Disabled Sites"
+  },
+  "disabledSitesDescription": {
+    "message": "Manage websites where the floating button is disabled. You can re-enable the floating button here."
+  },
+  "searchProviderName": {
+    "message": "AIShortcuts"
+  },
+  "searchProviderDescription": {
+    "message": "Search across multiple AI sites with AI shortcuts"
   }
 } 

@@ -9,11 +9,12 @@
     "tabs",
     "contextMenus",
     "scripting",
-    "contextMenus",
     "declarativeNetRequest",
     "sidePanel",
-    "clipboardRead"
+    "clipboardRead",
+    "omnibox"
   ],
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA4MwVAikHCt7SOYrYA8hdGNnkCttxO28GdAkoIvWcY2SRb44TiL2suESDQ7K4WPR+vDBTx8lgUFl4bOWZgFaNBGEiUkjvOIr8cxRgKxYonWPZiibjVy2nxSSfqTMEHooWj0IbfTzXOhpAqFhQ7ZF1QdmuI8s1BH+91fuXnlSm8WVA/OUrEqgbobIwEG0319rOOkyiktGoGjIqG2JLM1ydmo5c88S/5MEV9kiHDg5X+qlHNcVgGeWrkwZxAA9PfCOn3U97gk++BOWbDKDpbROm/q6VNfdqR3AlbgM2zOsjX1NtSLT1FDUr7SBeHEcDsy+5dohrymM6qH6s5mIEkGtHWwIDAQAB",
   "host_permissions": [
     "<all_urls>"
   ],
@@ -41,27 +42,7 @@
 
   "content_scripts": [
     {
-      "matches": [
-        "https://chatglm.cn/*",
-        "https://kimi.moonshot.cn/*",
-        "https://chatgpt.com/*",
-        "https://nanoai.live/*",
-        "https://tongyi.com/*",
-        "https://www.doubao.com/*",
-        "https://doubao.com/*",
-        "https://yiyan.baidu.com/*",
-        "https://chat.deepseek.com/*",
-        "https://metaso.cn/*",
-        "https://claude.ai/*",
-        "https://gemini.google.com/*",
-        "https://poe.com/*",
-        "https://copilot.microsoft.com/*",
-        "https://zhida.zhihu.com/*",
-        "https://grok.com/*",
-        "https://yuanbao.tencent.com/*",
-        "https://www.wenxiaobai.com/*"
-
-      ],
+      "matches": ["<all_urls>"],
       "js": [
         "config/baseConfig.js",
         "iframe/inject.js"
@@ -133,7 +114,12 @@
     }]
   },
 
+
   "side_panel": {
     "default_path": "iframe/iframe.html"
+  },
+
+  "omnibox": {
+    "keyword": "ai"
   }
 } 

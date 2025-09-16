@@ -1176,6 +1176,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   checkForSiteConfigUpdates();
 });
 
+
 // 检查站点配置更新
 async function checkForSiteConfigUpdates() {
   try {
@@ -1213,22 +1214,22 @@ async function showUpdateNotification() {
     // 获取更新信息
     const { siteConfigVersion, lastUpdateTime, updateHistory } = await chrome.storage.local.get(['siteConfigVersion', 'lastUpdateTime', 'updateHistory']);
     
-    const notification = document.createElement('div');
-    notification.style.cssText = `
-      position: fixed;
-      top: 20px;
-      right: 20px;
+  const notification = document.createElement('div');
+  notification.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
       background: linear-gradient(135deg, #4CAF50, #45a049);
-      color: white;
+    color: white;
       padding: 20px;
       border-radius: 12px;
       box-shadow: 0 6px 20px rgba(0,0,0,0.3);
-      z-index: 10000;
+    z-index: 10000;
       max-width: 350px;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      font-size: 14px;
+    font-size: 14px;
       line-height: 1.5;
-      cursor: pointer;
+    cursor: pointer;
       border: 1px solid rgba(255,255,255,0.2);
       backdrop-filter: blur(10px);
       animation: slideInRight 0.3s ease-out;
@@ -1269,8 +1270,8 @@ async function showUpdateNotification() {
         </div>
       `;
     }
-    
-    notification.innerHTML = `
+  
+  notification.innerHTML = `
      
       <div style="font-size: 13px; opacity: 0.95; margin-bottom: 8px;">
         🆕AI站点处理规则已自动更新到最新版本
@@ -1296,9 +1297,9 @@ async function showUpdateNotification() {
     document.head.appendChild(style);
     
     // 点击通知显示详细更新信息
-    notification.addEventListener('click', () => {
+  notification.addEventListener('click', () => {
       showDetailedUpdateInfo();
-      notification.remove();
+    notification.remove();
       style.remove();
     });
     
@@ -1311,17 +1312,17 @@ async function showUpdateNotification() {
     notification.addEventListener('mouseleave', () => {
       notification.style.transform = 'translateY(0)';
       notification.style.boxShadow = '0 6px 20px rgba(0,0,0,0.3)';
-    });
-    
-    document.body.appendChild(notification);
-    
+  });
+  
+  document.body.appendChild(notification);
+  
     // 10秒后自动消失
     setTimeout(() => {
       if (notification.parentElement) {
         notification.style.animation = 'slideInRight 0.3s ease-out reverse';
-        setTimeout(() => {
-          if (notification.parentElement) {
-            notification.remove();
+  setTimeout(() => {
+    if (notification.parentElement) {
+      notification.remove();
             style.remove();
           }
         }, 300);

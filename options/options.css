@@ -307,3 +307,50 @@ input:checked + .slider:before {
 .dev-button:hover {
   color: #2980b9;
 }
+
+/* 禁用网站管理样式 */
+.disabled-sites-section {
+  max-width: 600px;
+}
+
+.disabled-sites-list {
+  margin-top: 20px;
+}
+
+.disabled-site-item {
+  transition: all 0.2s ease;
+}
+
+.disabled-site-item:hover {
+  background-color: #f8f9fa;
+  border-color: #d0d0d0;
+}
+
+.site-info {
+  flex: 1;
+}
+
+.site-domain {
+  display: block;
+  margin-bottom: 2px;
+}
+
+.site-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.enable-btn:hover {
+  background: #45a049 !important;
+}
+
+.empty-state, .error-state {
+  border: 2px dashed #e0e0e0;
+  border-radius: 8px;
+  background: #fafafa;
+}
+
+.error-state {
+  border-color: #ffcdd2;
+  background: #ffebee;
+}

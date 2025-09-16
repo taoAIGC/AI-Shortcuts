@@ -264,6 +264,7 @@ document.addEventListener('DOMContentLoaded', function() {
   initializeI18n();
   loadConfig();
   initializeNavigation();
+  initializeDisabledSites();
 });
 
 // 拖拽功能实现
@@ -590,5 +591,75 @@ async function initializeRuleInfo() {
     if (timeElement) {
       timeElement.textContent = chrome.i18n.getMessage('ruleUpdateTimeError');
     }
+  }
+}
+
+// 初始化禁用网站管理
+async function initializeDisabledSites() {
+  const container = document.getElementById('disabledSitesList');
+  if (!container) return;
+
+  try {
+    const { disabledSites = [] } = await chrome.storage.sync.get('disabledSites');
+    
+    if (disabledSites.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state" style="text-align: center; color: #999; padding: 40px;">
+          <p>暂无禁用的网站</p>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = disabledSites.map(site => `
+      <div class="disabled-site-item" style="display: flex; justify-content: space-between; align-items: center; padding: 12px; border: 1px solid #e0e0e0; border-radius: 6px; margin-bottom: 8px;">
+        <div class="site-info">
+          <span class="site-domain" style="font-weight: 500; color: #333;">${site}</span>
+          <span class="site-note" style="color: #666; font-size: 12px; margin-left: 8px;">悬浮球已禁用</span>
+        </div>
+        <div class="site-actions">
+          <button class="enable-btn" data-domain="${site}" style="padding: 6px 12px; background: #4caf50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
+            重新启用
+          </button>
+        </div>
+      </div>
+    `).join('');
+
+    // 添加事件监听器
+    container.addEventListener('click', handleDisabledSiteAction);
+    
+  } catch (error) {
+    console.error('加载禁用网站列表失败:', error);
+    container.innerHTML = `
+      <div class="error-state" style="text-align: center; color: #f44336; padding: 40px;">
+        <p>加载失败，请刷新页面重试</p>
+      </div>
+    `;
+  }
+}
+
+// 处理禁用网站操作
+async function handleDisabledSiteAction(event) {
+  const target = event.target;
+  if (!target.matches('.enable-btn')) return;
+  
+  const domain = target.getAttribute('data-domain');
+  if (!domain) return;
+
+  try {
+    const { disabledSites = [] } = await chrome.storage.sync.get('disabledSites');
+    
+    // 重新启用网站 - 从禁用列表中移除
+    const updatedSites = disabledSites.filter(site => site !== domain);
+    await chrome.storage.sync.set({ disabledSites: updatedSites });
+    
+    showToast(`已重新启用 ${domain} 的悬浮球`);
+
+    // 重新加载列表
+    initializeDisabledSites();
+    
+  } catch (error) {
+    console.error('操作失败:', error);
+    showToast('操作失败，请重试');
   }
 }

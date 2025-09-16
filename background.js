@@ -1,5 +1,28 @@
 importScripts('./config/baseConfig.js');     // 加载基础配置（包含开发环境配置）
 
+// 开发环境：输出当前扩展ID供search_url使用
+function logExtensionIdForDevelopment() {
+  const extensionId = chrome.runtime.id;
+  console.log('='.repeat(60));
+  console.log('🔧 开发调试信息');
+  console.log('当前扩展ID:', extensionId);
+  console.log('search_url应该设置为:');
+  console.log(`chrome-extension://${extensionId}/iframe/iframe.html?query={searchTerms}`);
+  console.log('='.repeat(60));
+  
+  // 可选：将正确的URL复制到剪贴板（需要clipboardWrite权限）
+  try {
+    const searchUrl = `chrome-extension://${extensionId}/iframe/iframe.html?query={searchTerms}`;
+    // 存储到local storage供手动获取
+    chrome.storage.local.set({ 
+      developmentSearchUrl: searchUrl,
+      currentExtensionId: extensionId 
+    });
+  } catch (error) {
+    console.log('无法自动复制URL，请手动复制上面的search_url');
+  }
+}
+
 // 从本地文件初始化配置到 Chrome Storage Local
 async function initializeLocalConfig() {
   try {
@@ -40,6 +63,9 @@ async function initializeLocalConfig() {
 // 扩展启动时检查配置更新
 chrome.runtime.onStartup.addListener(async () => {
   try {
+    // 开发环境调试：显示当前扩展ID
+    logExtensionIdForDevelopment();
+    
     console.log('扩展启动，检查站点配置更新...');
     if (self.RemoteConfigManager) {
       const updateInfo = await self.RemoteConfigManager.autoCheckUpdate();
@@ -64,6 +90,9 @@ chrome.runtime.onStartup.addListener(async () => {
 chrome.runtime.onInstalled.addListener(async (details) => {
   try {
     console.log('扩展事件触发:', details.reason, '版本:', details.previousVersion, '->', chrome.runtime.getManifest().version);
+    
+    // 开发环境调试：显示当前扩展ID
+    logExtensionIdForDevelopment();
     
     // 检查配置更新
     if (self.RemoteConfigManager) {
@@ -773,6 +802,50 @@ function handleSidePanelToggle(windowId, isCurrentlyOpen) {
 chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
   if (removeInfo.isWindowClosing) {
     sidePanelOpenState.delete(removeInfo.windowId);
+  }
+});
+
+// Omnibox 事件处理
+chrome.omnibox.onInputChanged.addListener((text, suggest) => {
+  console.log('Omnibox 输入变化:', text);
+  
+  // 提供搜索建议
+  const suggestions = [
+    {
+      content: `ai ${text}`,
+      description: `🔍 使用AI快捷键搜索: ${text}`
+    }
+  ];
+  
+  suggest(suggestions);
+});
+
+chrome.omnibox.onInputEntered.addListener((text, disposition) => {
+  console.log('Omnibox 输入确认:', text, disposition);
+  
+  // 解析输入文本
+  const query = text.replace(/^ai\s+/, '').trim();
+  
+  if (query) {
+    // 打开AI快捷键搜索页面
+    const searchUrl = chrome.runtime.getURL(`iframe/iframe.html?query=${encodeURIComponent(query)}`);
+    
+    if (disposition === 'currentTab') {
+      // 在当前标签页打开
+      chrome.tabs.update({ url: searchUrl });
+    } else {
+      // 在新标签页打开
+      chrome.tabs.create({ url: searchUrl });
+    }
+  } else {
+    // 如果没有查询内容，直接打开AI快捷键页面
+    const defaultUrl = chrome.runtime.getURL('iframe/iframe.html');
+    
+    if (disposition === 'currentTab') {
+      chrome.tabs.update({ url: defaultUrl });
+    } else {
+      chrome.tabs.create({ url: defaultUrl });
+    }
   }
 });
 

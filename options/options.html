@@ -23,6 +23,11 @@
             <span data-i18n="configTitle">AI站点设置</span>
           </a>
         </li>
+        <li class="nav-item">
+          <a href="#disabled-sites" class="nav-link" data-section="disabled-sites">
+            <span data-i18n="disabledSitesTitle">禁用网站</span>
+          </a>
+        </li>
       </ul>
     </nav>
 
@@ -57,6 +62,18 @@
           <div class="site-section">
             <h2 data-i18n="collectionModeTitle">合集模式</h2>
             <div id="collectionSiteConfigs" class="site-configs"></div>
+          </div>
+        </section>
+
+        <!-- 禁用网站管理 -->
+        <section id="disabled-sites" class="settings-section">
+          <h1 data-i18n="disabledSitesTitle">悬浮球禁用网站</h1>
+          <p data-i18n="disabledSitesDescription" style="color: #666; margin-bottom: 20px;">管理悬浮球被禁用的网站，您可以在这里重新启用悬浮球</p>
+          
+          <div class="disabled-sites-section">
+            <div id="disabledSitesList" class="disabled-sites-list">
+              <!-- 禁用网站列表将在这里动态生成 -->
+            </div>
           </div>
         </section>
         

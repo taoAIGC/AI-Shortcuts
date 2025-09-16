@@ -49,7 +49,7 @@ async function createFloatButton() {
   closeBtn.addEventListener('click', (e) => {
     e.stopPropagation();  // 阻止事件冒泡
     e.preventDefault();   // 阻止默认行为
-    container.remove();   // 移除整个容器
+    showCloseOptionsDialog(container, e);
     return false;        // 确保事件不会继续传播
   });
 
@@ -327,13 +327,210 @@ function getSelectedSites() {
     .map(cb => cb.id.replace('site_', ''));
 }
 
+// 显示关闭选项对话框
+function showCloseOptionsDialog(container, event) {
+  // 检查是否已存在对话框，如果存在则移除
+  const existingDialog = document.querySelector('.close-options-dialog');
+  if (existingDialog) {
+    existingDialog.remove();
+  }
+
+  // 获取鼠标位置
+  const mouseX = event ? event.clientX : window.innerWidth / 2;
+  const mouseY = event ? event.clientY : window.innerHeight / 2;
+
+  // 创建遮罩层
+  const overlay = document.createElement('div');
+  overlay.className = 'close-options-overlay';
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 2147483646;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  `;
+
+  // 创建对话框
+  const dialog = document.createElement('div');
+  dialog.className = 'close-options-dialog';
+  
+  // 计算对话框位置 - 在鼠标左侧偏移一些距离
+  const dialogWidth = 350; // 预估对话框宽度
+  const dialogHeight = 220; // 预估对话框高度
+  const offsetX = -40; // 向左偏移40px
+  const offsetY = -dialogHeight / 2; // 垂直居中
+  
+  // 计算最终位置，确保不会超出屏幕边界
+  let finalLeft = mouseX + offsetX - dialogWidth;
+  let finalTop = mouseY + offsetY;
+  
+  // 边界检查
+  finalLeft = Math.max(20, Math.min(finalLeft, window.innerWidth - dialogWidth - 20));
+  finalTop = Math.max(20, Math.min(finalTop, window.innerHeight - dialogHeight - 20));
+  
+  dialog.style.cssText = `
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    padding: 24px;
+    min-width: 300px;
+    max-width: 400px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    animation: closeDialogSlideIn 0.3s ease-out;
+    position: fixed;
+    left: ${finalLeft}px;
+    top: ${finalTop}px;
+    z-index: 2147483647;
+  `;
+
+  // 移除原来overlay的flex布局，因为我们现在使用绝对定位
+  overlay.style.justifyContent = 'unset';
+  overlay.style.alignItems = 'unset';
+
+  dialog.innerHTML = `
+    <style>
+      @keyframes closeDialogSlideIn {
+        from {
+          opacity: 0;
+          transform: scale(0.9) translateY(-20px);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1) translateY(0);
+        }
+      }
+    </style>
+    <div class="dialog-header" style="margin-bottom: 20px;">
+      <h3 style="margin: 0; font-size: 18px; font-weight: 600; color: #333;">关闭悬浮球</h3>
+      <div style="position: absolute; top: 16px; right: 16px; cursor: pointer; font-size: 24px; color: #999; line-height: 1;" onclick="this.closest('.close-options-overlay').remove()">×</div>
+    </div>
+    <div class="dialog-options" style="margin-bottom: 24px;">
+      <label class="option-item" style="display: block; margin-bottom: 16px; cursor: pointer;">
+        <input type="radio" name="closeOption" value="temporary" checked style="margin-right: 12px;">
+        <span style="color: #333; font-size: 14px;">本次关闭直到下次访问</span>
+      </label>
+      <label class="option-item" style="display: block; margin-bottom: 16px; cursor: pointer;">
+        <input type="radio" name="closeOption" value="currentSite" style="margin-right: 12px;">
+        <span style="color: #333; font-size: 14px;">当前网站禁用</span>
+        <span style="color: #999; font-size: 12px; margin-left: 24px;">(可在设置页开启)</span>
+      </label>
+      <label class="option-item" style="display: block; margin-bottom: 0; cursor: pointer;">
+        <input type="radio" name="closeOption" value="permanent" style="margin-right: 12px;">
+        <span style="color: #333; font-size: 14px;">永久禁用</span>
+        <span style="color: #999; font-size: 12px; margin-left: 24px;">(可在设置页开启)</span>
+      </label>
+    </div>
+    <div class="dialog-buttons" style="display: flex; justify-content: flex-end; gap: 12px;">
+      <button class="cancel-btn" style="padding: 8px 16px; background: transparent; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; font-size: 14px; color: #666;">取消</button>
+      <button class="confirm-btn" style="padding: 8px 16px; background: #e91e63; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;">确定</button>
+    </div>
+  `;
+
+  overlay.appendChild(dialog);
+  document.body.appendChild(overlay);
+
+  // 添加事件处理
+  const cancelBtn = dialog.querySelector('.cancel-btn');
+  const confirmBtn = dialog.querySelector('.confirm-btn');
+
+  // 取消按钮
+  cancelBtn.addEventListener('click', () => {
+    overlay.remove();
+  });
+
+  // 确定按钮
+  confirmBtn.addEventListener('click', () => {
+    const selectedOption = dialog.querySelector('input[name="closeOption"]:checked').value;
+    handleCloseOption(selectedOption, container);
+    overlay.remove();
+  });
+
+  // 点击遮罩层关闭
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) {
+      overlay.remove();
+    }
+  });
+
+  // ESC 键关闭
+  document.addEventListener('keydown', function escHandler(e) {
+    if (e.key === 'Escape') {
+      overlay.remove();
+      document.removeEventListener('keydown', escHandler);
+    }
+  });
+}
+
+// 处理关闭选项
+function handleCloseOption(option, container) {
+  const currentDomain = window.location.hostname;
+  
+  switch (option) {
+    case 'temporary':
+      // 临时关闭 - 直接移除容器
+      container.remove();
+      console.log('悬浮球已临时关闭');
+      break;
+      
+    case 'currentSite':
+      // 当前网站禁用 - 保存到存储并移除容器
+      chrome.storage.sync.get(['disabledSites'], (result) => {
+        const disabledSites = result.disabledSites || [];
+        if (!disabledSites.includes(currentDomain)) {
+          disabledSites.push(currentDomain);
+          chrome.storage.sync.set({ disabledSites }, () => {
+            console.log(`已禁用 ${currentDomain} 的悬浮球`);
+            container.remove();
+          });
+        } else {
+          container.remove();
+        }
+      });
+      break;
+      
+    case 'permanent':
+      // 永久禁用 - 只更新悬浮球配置，不影响其他快捷入口
+      chrome.storage.sync.get(['buttonConfig'], (result) => {
+        const currentButtonConfig = result.buttonConfig || {};
+        const updatedButtonConfig = {
+          ...currentButtonConfig,
+          floatButton: false
+        };
+        
+        chrome.storage.sync.set({ 
+          buttonConfig: updatedButtonConfig 
+        }, () => {
+          console.log('悬浮球已永久禁用，其他快捷入口不受影响');
+          container.remove();
+        });
+      });
+      break;
+  }
+}
+
 // 初始化
 // 获取按钮配置
-chrome.storage.sync.get(['buttonConfig'], function(result) {
+chrome.storage.sync.get(['buttonConfig', 'disabledSites'], function(result) {
   const buttonConfig = result.buttonConfig || { floatButton: true };
-  if (buttonConfig.floatButton) {
-    createFloatButton();
-  } else {
-    console.log('浮动按钮已禁用');
+  const disabledSites = result.disabledSites || [];
+  const currentDomain = window.location.hostname;
+  
+  // 检查是否全局禁用或当前网站被禁用
+  if (!buttonConfig.floatButton) {
+    console.log('浮动按钮已全局禁用');
+    return;
   }
+  
+  if (disabledSites.includes(currentDomain)) {
+    console.log(`当前网站 ${currentDomain} 的悬浮球已被禁用`);
+    return;
+  }
+  
+  // 创建浮动按钮
+  createFloatButton();
 });
