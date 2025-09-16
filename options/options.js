@@ -61,6 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initializeSiteConfigs();
   initializeI18n();
   initializeRuleInfo();
+  initializePromptTemplates();
 });
 
 // 显示消息
@@ -662,4 +663,362 @@ async function handleDisabledSiteAction(event) {
     console.error('操作失败:', error);
     showToast('操作失败，请重试');
   }
+}
+
+// ============================
+// 提示词模板管理功能
+// ============================
+
+// 默认提示词模板
+const DEFAULT_PROMPT_TEMPLATES = [
+  {
+    id: 'risk_analysis',
+    name: '风险分析',
+    query: '导致失败的原因:「{query}」',
+    order: 1,
+    isDefault: true
+  },
+  {
+    id: 'solution',
+    name: '解决方案',
+    query: '如何解决问题:「{query}」',
+    order: 2,
+    isDefault: true
+  },
+  {
+    id: 'knowledge',
+    name: '相关知识',
+    query: '相关知识点:「{query}」',
+    order: 3,
+    isDefault: true
+  },
+  {
+    id: 'best_practice',
+    name: '最佳实践',
+    query: '写一份这件事做成功的回顾报告:「{query}」',
+    order: 4,
+    isDefault: true
+  }
+];
+
+// 当前编辑的模板ID
+let currentEditingTemplateId = null;
+
+// 初始化提示词模板管理
+async function initializePromptTemplates() {
+  try {
+    // 确保有默认模板
+    await ensureDefaultTemplates();
+    
+    // 加载并显示模板列表
+    await loadTemplatesList();
+    
+    // 绑定事件监听器
+    bindTemplateEvents();
+    
+    console.log('提示词模板管理初始化完成');
+  } catch (error) {
+    console.error('初始化提示词模板失败:', error);
+  }
+}
+
+// 确保存在默认模板
+async function ensureDefaultTemplates() {
+  try {
+    const { promptTemplates = [] } = await chrome.storage.sync.get('promptTemplates');
+    
+    // 如果没有模板，使用默认模板
+    if (promptTemplates.length === 0) {
+      await chrome.storage.sync.set({ promptTemplates: DEFAULT_PROMPT_TEMPLATES });
+      console.log('已设置默认提示词模板');
+    }
+  } catch (error) {
+    console.error('设置默认模板失败:', error);
+  }
+}
+
+// 加载模板列表
+async function loadTemplatesList() {
+  try {
+    const { promptTemplates = [] } = await chrome.storage.sync.get('promptTemplates');
+    const container = document.getElementById('templatesList');
+    
+    if (!container) return;
+    
+    // 按order排序
+    const sortedTemplates = promptTemplates.sort((a, b) => (a.order || 0) - (b.order || 0));
+    
+    if (sortedTemplates.length === 0) {
+      container.innerHTML = `
+        <div style="text-align: center; color: #666; padding: 40px;">
+          <p>暂无提示词模板</p>
+          <p style="font-size: 14px;">点击上方"添加新模板"按钮开始创建</p>
+        </div>
+      `;
+      return;
+    }
+    
+    container.innerHTML = sortedTemplates.map(template => `
+      <div class="template-item" data-template-id="${template.id}" style="
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 12px;
+        transition: box-shadow 0.2s ease;
+      ">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+          <div style="flex: 1;">
+            <h4 style="margin: 0 0 4px 0; font-size: 16px; color: #333;">${template.name}</h4>
+            <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #666;">
+              <span>顺序: ${template.order}</span>
+              ${template.isDefault ? '<span style="background: #e8f5e8; color: #4caf50; padding: 2px 6px; border-radius: 3px;">默认</span>' : ''}
+            </div>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="edit-template-btn" data-template-id="${template.id}" style="
+              background: #f5f5f5;
+              border: 1px solid #ddd;
+              border-radius: 4px;
+              padding: 6px 12px;
+              cursor: pointer;
+              font-size: 12px;
+              color: #666;
+            " data-i18n="editButton">编辑</button>
+            ${!template.isDefault ? `<button class="delete-template-btn" data-template-id="${template.id}" style="
+              background: #ffebee;
+              border: 1px solid #ffcdd2;
+              border-radius: 4px;
+              padding: 6px 12px;
+              cursor: pointer;
+              font-size: 12px;
+              color: #d32f2f;
+            " data-i18n="deleteButton">删除</button>` : ''}
+          </div>
+        </div>
+        <div style="
+          background: #f8f9fa;
+          border: 1px solid #e9ecef;
+          border-radius: 4px;
+          padding: 12px;
+          font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+          font-size: 13px;
+          color: #495057;
+          word-break: break-word;
+        ">${template.query}</div>
+      </div>
+    `).join('');
+    
+    // 添加hover效果
+    container.querySelectorAll('.template-item').forEach(item => {
+      item.addEventListener('mouseenter', () => {
+        item.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+      });
+      item.addEventListener('mouseleave', () => {
+        item.style.boxShadow = 'none';
+      });
+    });
+    
+  } catch (error) {
+    console.error('加载模板列表失败:', error);
+  }
+}
+
+// 绑定模板相关事件
+function bindTemplateEvents() {
+  // 添加模板按钮
+  const addBtn = document.getElementById('addTemplateBtn');
+  if (addBtn) {
+    addBtn.addEventListener('click', () => {
+      currentEditingTemplateId = null;
+      showTemplateDialog();
+    });
+  }
+  
+  // 对话框关闭按钮
+  const dialogClose = document.getElementById('dialogClose');
+  const cancelBtn = document.getElementById('cancelTemplate');
+  const overlay = document.getElementById('dialogOverlay');
+  
+  [dialogClose, cancelBtn, overlay].forEach(el => {
+    if (el) {
+      el.addEventListener('click', hideTemplateDialog);
+    }
+  });
+  
+  // 保存按钮
+  const saveBtn = document.getElementById('saveTemplate');
+  if (saveBtn) {
+    saveBtn.addEventListener('click', saveTemplate);
+  }
+  
+  // 模板列表事件委托
+  const templatesList = document.getElementById('templatesList');
+  if (templatesList) {
+    templatesList.addEventListener('click', handleTemplateListClick);
+  }
+}
+
+// 处理模板列表点击事件
+async function handleTemplateListClick(event) {
+  const target = event.target;
+  const templateId = target.getAttribute('data-template-id');
+  
+  if (!templateId) return;
+  
+  if (target.classList.contains('edit-template-btn')) {
+    await editTemplate(templateId);
+  } else if (target.classList.contains('delete-template-btn')) {
+    await deleteTemplate(templateId);
+  }
+}
+
+// 显示模板对话框
+function showTemplateDialog(template = null) {
+  const dialog = document.getElementById('templateDialog');
+  const title = document.getElementById('dialogTitle');
+  const nameInput = document.getElementById('templateName');
+  const queryInput = document.getElementById('templateQuery');
+  const orderInput = document.getElementById('templateOrder');
+  
+  if (!dialog) return;
+  
+  if (template) {
+    // 编辑模式
+    title.textContent = chrome.i18n.getMessage('editTemplateTitle');
+    nameInput.value = template.name;
+    queryInput.value = template.query;
+    orderInput.value = template.order || 1;
+  } else {
+    // 添加模式
+    title.textContent = chrome.i18n.getMessage('addTemplateTitle');
+    nameInput.value = '';
+    queryInput.value = '';
+    orderInput.value = getNextOrder();
+  }
+  
+  dialog.style.display = 'block';
+  nameInput.focus();
+}
+
+// 隐藏模板对话框
+function hideTemplateDialog() {
+  const dialog = document.getElementById('templateDialog');
+  if (dialog) {
+    dialog.style.display = 'none';
+  }
+  currentEditingTemplateId = null;
+}
+
+// 获取下一个排序值
+async function getNextOrder() {
+  try {
+    const { promptTemplates = [] } = await chrome.storage.sync.get('promptTemplates');
+    const maxOrder = promptTemplates.reduce((max, template) => 
+      Math.max(max, template.order || 0), 0);
+    return maxOrder + 1;
+  } catch (error) {
+    return 1;
+  }
+}
+
+// 保存模板
+async function saveTemplate() {
+  const nameInput = document.getElementById('templateName');
+  const queryInput = document.getElementById('templateQuery');
+  const orderInput = document.getElementById('templateOrder');
+  
+  const name = nameInput.value.trim();
+  const query = queryInput.value.trim();
+  const order = parseInt(orderInput.value) || 1;
+  
+  // 验证
+  if (!name) {
+    showToast(chrome.i18n.getMessage('templateNameRequired'));
+    nameInput.focus();
+    return;
+  }
+  
+  if (!query) {
+    showToast(chrome.i18n.getMessage('templateQueryRequired'));
+    queryInput.focus();
+    return;
+  }
+  
+  try {
+    const { promptTemplates = [] } = await chrome.storage.sync.get('promptTemplates');
+    
+    if (currentEditingTemplateId) {
+      // 编辑现有模板
+      const index = promptTemplates.findIndex(t => t.id === currentEditingTemplateId);
+      if (index !== -1) {
+        promptTemplates[index] = {
+          ...promptTemplates[index],
+          name,
+          query,
+          order
+        };
+      }
+    } else {
+      // 添加新模板
+      const newTemplate = {
+        id: generateTemplateId(),
+        name,
+        query,
+        order,
+        isDefault: false
+      };
+      promptTemplates.push(newTemplate);
+    }
+    
+    await chrome.storage.sync.set({ promptTemplates });
+    hideTemplateDialog();
+    await loadTemplatesList();
+    showToast(chrome.i18n.getMessage('templateSavedSuccess'));
+    
+  } catch (error) {
+    console.error('保存模板失败:', error);
+    showToast('保存失败，请重试');
+  }
+}
+
+// 编辑模板
+async function editTemplate(templateId) {
+  try {
+    const { promptTemplates = [] } = await chrome.storage.sync.get('promptTemplates');
+    const template = promptTemplates.find(t => t.id === templateId);
+    
+    if (template) {
+      currentEditingTemplateId = templateId;
+      showTemplateDialog(template);
+    }
+  } catch (error) {
+    console.error('编辑模板失败:', error);
+  }
+}
+
+// 删除模板
+async function deleteTemplate(templateId) {
+  const confirmMessage = chrome.i18n.getMessage('confirmDeleteTemplate');
+  if (!confirm(confirmMessage)) {
+    return;
+  }
+  
+  try {
+    const { promptTemplates = [] } = await chrome.storage.sync.get('promptTemplates');
+    const filteredTemplates = promptTemplates.filter(t => t.id !== templateId);
+    
+    await chrome.storage.sync.set({ promptTemplates: filteredTemplates });
+    await loadTemplatesList();
+    showToast(chrome.i18n.getMessage('templateDeletedSuccess'));
+    
+  } catch (error) {
+    console.error('删除模板失败:', error);
+    showToast('删除失败，请重试');
+  }
+}
+
+// 生成唯一模板ID
+function generateTemplateId() {
+  return 'template_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 }

@@ -60,6 +60,54 @@ async function initializeLocalConfig() {
   }
 }
 
+// 初始化默认提示词模板
+async function initializeDefaultPromptTemplates() {
+  try {
+    const { promptTemplates } = await chrome.storage.sync.get('promptTemplates');
+    
+    // 如果还没有提示词模板，设置默认模板
+    if (!promptTemplates || promptTemplates.length === 0) {
+      const defaultTemplates = [
+        {
+          id: 'risk_analysis',
+          name: '风险分析',
+          query: '导致失败的原因:「{query}」',
+          order: 1,
+          isDefault: true
+        },
+        {
+          id: 'solution',
+          name: '解决方案',
+          query: '如何解决问题:「{query}」',
+          order: 2,
+          isDefault: true
+        },
+        {
+          id: 'knowledge',
+          name: '相关知识',
+          query: '相关知识点:「{query}」',
+          order: 3,
+          isDefault: true
+        },
+        {
+          id: 'best_practice',
+          name: '最佳实践',
+          query: '写一份这件事做成功的回顾报告:「{query}」',
+          order: 4,
+          isDefault: true
+        }
+      ];
+      
+      await chrome.storage.sync.set({ promptTemplates: defaultTemplates });
+      console.log('已初始化默认提示词模板');
+    } else {
+      console.log('提示词模板已存在，跳过初始化');
+    }
+  } catch (error) {
+    console.error('初始化默认提示词模板失败:', error);
+  }
+}
+
 // 扩展启动时检查配置更新
 chrome.runtime.onStartup.addListener(async () => {
   try {
@@ -93,6 +141,9 @@ chrome.runtime.onInstalled.addListener(async (details) => {
     
     // 开发环境调试：显示当前扩展ID
     logExtensionIdForDevelopment();
+    
+    // 初始化默认提示词模板
+    await initializeDefaultPromptTemplates();
     
     // 检查配置更新
     if (self.RemoteConfigManager) {

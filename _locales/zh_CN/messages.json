@@ -177,5 +177,65 @@
   },
   "searchProviderDescription": {
     "message": "使用AI快捷键进行多站点搜索"
+  },
+  "promptTemplatesTitle": {
+    "message": "提示词模板管理"
+  },
+  "promptTemplatesDescription": {
+    "message": "自定义搜索建议按钮的提示词模板"
+  },
+  "addTemplateButton": {
+    "message": "添加新模板"
+  },
+  "addTemplateTitle": {
+    "message": "添加提示词模板"
+  },
+  "editTemplateTitle": {
+    "message": "编辑提示词模板"
+  },
+  "templateNameLabel": {
+    "message": "模板名称"
+  },
+  "templateNameHelp": {
+    "message": "显示在按钮上的文字"
+  },
+  "templateQueryLabel": {
+    "message": "查询模板"
+  },
+  "templateQueryHelp": {
+    "message": "使用 {query} 作为用户输入的占位符"
+  },
+  "templateOrderLabel": {
+    "message": "显示顺序"
+  },
+  "templateOrderHelp": {
+    "message": "数字越小越靠前显示"
+  },
+  "cancelButton": {
+    "message": "取消"
+  },
+  "saveButton": {
+    "message": "保存"
+  },
+  "editButton": {
+    "message": "编辑"
+  },
+  "deleteButton": {
+    "message": "删除"
+  },
+  "confirmDeleteTemplate": {
+    "message": "确定要删除这个模板吗？"
+  },
+  "templateSavedSuccess": {
+    "message": "模板保存成功"
+  },
+  "templateDeletedSuccess": {
+    "message": "模板删除成功"
+  },
+  "templateNameRequired": {
+    "message": "请输入模板名称"
+  },
+  "templateQueryRequired": {
+    "message": "请输入查询模板"
   }
 } 

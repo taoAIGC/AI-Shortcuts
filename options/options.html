@@ -28,6 +28,11 @@
             <span data-i18n="disabledSitesTitle">禁用网站</span>
           </a>
         </li>
+        <li class="nav-item">
+          <a href="#prompt-templates" class="nav-link" data-section="prompt-templates">
+            <span data-i18n="promptTemplatesTitle">提示词模板</span>
+          </a>
+        </li>
       </ul>
     </nav>
 
@@ -73,6 +78,179 @@
           <div class="disabled-sites-section">
             <div id="disabledSitesList" class="disabled-sites-list">
               <!-- 禁用网站列表将在这里动态生成 -->
+            </div>
+          </div>
+        </section>
+
+        <!-- 提示词模板管理 -->
+        <section id="prompt-templates" class="settings-section">
+          <h1 data-i18n="promptTemplatesTitle">提示词模板管理</h1>
+          <p data-i18n="promptTemplatesDescription" style="color: #666; margin-bottom: 20px;">自定义搜索建议按钮的提示词模板</p>
+          
+          <div class="prompt-templates-section">
+            <!-- 添加新模板按钮 -->
+            <div class="template-header" style="margin-bottom: 20px;">
+              <button id="addTemplateBtn" class="add-template-btn" style="
+                background: #4CAF50;
+                color: white;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 14px;
+                display: flex;
+                align-items: center;
+                gap: 5px;
+              ">
+                <span>+ </span><span data-i18n="addTemplateButton">添加新模板</span>
+              </button>
+            </div>
+
+            <!-- 模板列表 -->
+            <div id="templatesList" class="templates-list">
+              <!-- 模板项将动态生成 -->
+            </div>
+
+            <!-- 添加/编辑模板对话框 -->
+            <div id="templateDialog" class="template-dialog" style="display: none;">
+              <div class="dialog-overlay" id="dialogOverlay" style="
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 1000;
+              "></div>
+              <div class="dialog-content" style="
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: white;
+                border-radius: 12px;
+                padding: 0;
+                max-width: 500px;
+                width: 90%;
+                z-index: 1001;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+              ">
+                <div class="dialog-header" style="
+                  padding: 20px 24px 16px;
+                  border-bottom: 1px solid #eee;
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                ">
+                  <h3 id="dialogTitle" data-i18n="addTemplateTitle" style="margin: 0; font-size: 18px;">添加提示词模板</h3>
+                  <button class="dialog-close" id="dialogClose" style="
+                    background: none;
+                    border: none;
+                    font-size: 20px;
+                    cursor: pointer;
+                    color: #999;
+                    width: 24px;
+                    height: 24px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                  ">×</button>
+                </div>
+                <div class="dialog-body" style="padding: 20px 24px;">
+                  <div class="form-group" style="margin-bottom: 16px;">
+                    <label for="templateName" data-i18n="templateNameLabel" style="
+                      display: block;
+                      margin-bottom: 8px;
+                      font-weight: 500;
+                      color: #333;
+                    ">模板名称:</label>
+                    <input type="text" id="templateName" placeholder="例如：风险分析" maxlength="20" style="
+                      width: 100%;
+                      padding: 8px 12px;
+                      border: 1px solid #ddd;
+                      border-radius: 4px;
+                      font-size: 14px;
+                      box-sizing: border-box;
+                    ">
+                    <div class="help-text" data-i18n="templateNameHelp" style="
+                      font-size: 12px;
+                      color: #666;
+                      margin-top: 4px;
+                    ">显示在按钮上的文字</div>
+                  </div>
+                  
+                  <div class="form-group" style="margin-bottom: 16px;">
+                    <label for="templateQuery" data-i18n="templateQueryLabel" style="
+                      display: block;
+                      margin-bottom: 8px;
+                      font-weight: 500;
+                      color: #333;
+                    ">查询模板:</label>
+                    <textarea id="templateQuery" placeholder="例如：导致失败的原因:「{query}」" rows="3" style="
+                      width: 100%;
+                      padding: 8px 12px;
+                      border: 1px solid #ddd;
+                      border-radius: 4px;
+                      font-size: 14px;
+                      box-sizing: border-box;
+                      resize: vertical;
+                      font-family: inherit;
+                    "></textarea>
+                    <div class="help-text" data-i18n="templateQueryHelp" style="
+                      font-size: 12px;
+                      color: #666;
+                      margin-top: 4px;
+                    ">使用 {query} 作为用户输入的占位符</div>
+                  </div>
+
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label for="templateOrder" data-i18n="templateOrderLabel" style="
+                      display: block;
+                      margin-bottom: 8px;
+                      font-weight: 500;
+                      color: #333;
+                    ">显示顺序:</label>
+                    <input type="number" id="templateOrder" min="1" max="99" value="1" style="
+                      width: 100px;
+                      padding: 8px 12px;
+                      border: 1px solid #ddd;
+                      border-radius: 4px;
+                      font-size: 14px;
+                    ">
+                    <div class="help-text" data-i18n="templateOrderHelp" style="
+                      font-size: 12px;
+                      color: #666;
+                      margin-top: 4px;
+                    ">数字越小越靠前显示</div>
+                  </div>
+                </div>
+                <div class="dialog-footer" style="
+                  padding: 16px 24px 20px;
+                  border-top: 1px solid #eee;
+                  display: flex;
+                  justify-content: flex-end;
+                  gap: 12px;
+                ">
+                  <button id="cancelTemplate" class="btn-secondary" data-i18n="cancelButton" style="
+                    background: #f5f5f5;
+                    color: #666;
+                    border: 1px solid #ddd;
+                    padding: 8px 16px;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-size: 14px;
+                  ">取消</button>
+                  <button id="saveTemplate" class="btn-primary" data-i18n="saveButton" style="
+                    background: #4CAF50;
+                    color: white;
+                    border: none;
+                    padding: 8px 16px;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-size: 14px;
+                  ">保存</button>
+                </div>
+              </div>
             </div>
           </div>
         </section>

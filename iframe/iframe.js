@@ -940,49 +940,68 @@ function initializeI18n() {
 
 
 async function generateRecommendedQuery(query) {
-  //return;
-
   console.log('生成推荐查询语句', query);
-    // 定义推荐查询语句列表
-    const recommendedQueries = [
-
-      {
-        name: '风险分析',
-        query: '导致失败的原因:「' + query + '」'
-      },
-      {
-        name: '解决方案', 
-        query: '如何解决问题:「' + query + '」'
-      },
-      {
-        name: '相关知识',
-        query: '相关知识点:「' + query + '」'
-      },
-      {
-        name: '最佳实践',
-        query: '写一份这件事做成功的回顾报告:「' + query + '」'
-      }
-    ];
-   
   
-  const queryList = document.getElementById('queryList');
-  queryList.innerHTML = ''; // 清空之前的内容
+  try {
+    // 从存储中获取提示词模板
+    const { promptTemplates = [] } = await chrome.storage.sync.get('promptTemplates');
+    
+    // 按order排序并过滤出有效的模板
+    const sortedTemplates = promptTemplates
+      .filter(template => template.name && template.query)
+      .sort((a, b) => (a.order || 0) - (b.order || 0));
 
-  recommendedQueries.forEach(recommendedQuery => {
-      const queryItem = document.createElement('div');
-      queryItem.textContent = recommendedQuery.name; // 使用 name 作为文案
-      queryItem.classList.add('query-item'); // 添加样式类
-      queryItem.addEventListener('click', () => {
-          document.getElementById('searchInput').value = recommendedQuery.query;
-          queryList.style.display = 'none'; // 隐藏查询列表
-      });
-      queryList.appendChild(queryItem);
-  });
+    // 如果没有模板，使用默认的内置模板
+    const recommendedQueries = sortedTemplates.length > 0 ? 
+      sortedTemplates.map(template => ({
+        name: template.name,
+        query: template.query.replace('{query}', query)
+      })) : 
+      [
+        {
+          name: '风险分析',
+          query: '导致失败的原因:「' + query + '」'
+        },
+        {
+          name: '解决方案', 
+          query: '如何解决问题:「' + query + '」'
+        },
+        {
+          name: '相关知识',
+          query: '相关知识点:「' + query + '」'
+        },
+        {
+          name: '最佳实践',
+          query: '写一份这件事做成功的回顾报告:「' + query + '」'
+        }
+      ];
   
+    const queryList = document.getElementById('queryList');
+    queryList.innerHTML = ''; // 清空之前的内容
+
+    recommendedQueries.forEach(recommendedQuery => {
+        const queryItem = document.createElement('div');
+        queryItem.textContent = recommendedQuery.name; // 使用 name 作为文案
+        queryItem.classList.add('query-item'); // 添加样式类
+        queryItem.addEventListener('click', () => {
+            document.getElementById('searchInput').value = recommendedQuery.query;
+            queryList.style.display = 'none'; // 隐藏查询列表
+        });
+        queryList.appendChild(queryItem);
+    });
+    
+  } catch (error) {
+    console.error('加载提示词模板失败:', error);
+    // 如果加载失败，清空列表
+    const queryList = document.getElementById('queryList');
+    if (queryList) {
+      queryList.innerHTML = '';
+    }
+  }
 }
 
 // 显示查询建议
-function showQuerySuggestions(query) {
+async function showQuerySuggestions(query) {
   const querySuggestions = document.getElementById('querySuggestions');
   
   if (!query || query.trim() === '') {
@@ -990,43 +1009,63 @@ function showQuerySuggestions(query) {
     return;
   }
 
-  // 定义推荐查询语句列表
-  const recommendedQueries = [
-    {
-      name: '风险分析',
-      query: '导致失败的原因:「' + query + '」'
-    },
-    {
-      name: '解决方案', 
-      query: '如何解决问题:「' + query + '」'
-    },
-    {
-      name: '相关知识',
-      query: '相关知识点:「' + query + '」'
-    },
-    {
-      name: '最佳实践',
-      query: '写一份这件事做成功的回顾报告:「' + query + '」'
-    }
-  ];
+  try {
+    // 从存储中获取提示词模板
+    const { promptTemplates = [] } = await chrome.storage.sync.get('promptTemplates');
+    
+    // 按order排序并过滤出有效的模板
+    const sortedTemplates = promptTemplates
+      .filter(template => template.name && template.query)
+      .sort((a, b) => (a.order || 0) - (b.order || 0));
 
-  // 清空之前的内容
-  querySuggestions.innerHTML = '';
+    // 如果没有模板，使用默认的内置模板
+    const recommendedQueries = sortedTemplates.length > 0 ? 
+      sortedTemplates.map(template => ({
+        name: template.name,
+        query: template.query.replace('{query}', query)
+      })) : 
+      [
+        {
+          name: '风险分析',
+          query: '导致失败的原因:「' + query + '」'
+        },
+        {
+          name: '解决方案', 
+          query: '如何解决问题:「' + query + '」'
+        },
+        {
+          name: '相关知识',
+          query: '相关知识点:「' + query + '」'
+        },
+        {
+          name: '最佳实践',
+          query: '写一份这件事做成功的回顾报告:「' + query + '」'
+        }
+      ];
 
-  // 创建建议项
-  recommendedQueries.forEach(recommendedQuery => {
-    const suggestionItem = document.createElement('div');
-    suggestionItem.textContent = recommendedQuery.name;
-    suggestionItem.classList.add('query-suggestion-item');
-    suggestionItem.addEventListener('click', () => {
-      document.getElementById('searchInput').value = recommendedQuery.query;
-      querySuggestions.style.display = 'none';
+    // 清空之前的内容
+    querySuggestions.innerHTML = '';
+
+    // 创建建议项
+    recommendedQueries.forEach(recommendedQuery => {
+      const suggestionItem = document.createElement('div');
+      suggestionItem.textContent = recommendedQuery.name;
+      suggestionItem.classList.add('query-suggestion-item');
+      suggestionItem.addEventListener('click', () => {
+        document.getElementById('searchInput').value = recommendedQuery.query;
+        querySuggestions.style.display = 'none';
+      });
+      querySuggestions.appendChild(suggestionItem);
     });
-    querySuggestions.appendChild(suggestionItem);
-  });
 
-  // 显示建议
-  querySuggestions.style.display = 'flex';
+    // 显示建议
+    querySuggestions.style.display = 'flex';
+    
+  } catch (error) {
+    console.error('加载提示词模板失败:', error);
+    // 如果加载失败，隐藏建议
+    querySuggestions.style.display = 'none';
+  }
 }
 
 

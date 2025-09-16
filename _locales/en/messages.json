@@ -182,5 +182,65 @@
   },
   "searchProviderDescription": {
     "message": "Search across multiple AI sites with AI shortcuts"
+  },
+  "promptTemplatesTitle": {
+    "message": "Prompt Templates"
+  },
+  "promptTemplatesDescription": {
+    "message": "Customize prompt templates for search suggestion buttons"
+  },
+  "addTemplateButton": {
+    "message": "Add New Template"
+  },
+  "addTemplateTitle": {
+    "message": "Add Prompt Template"
+  },
+  "editTemplateTitle": {
+    "message": "Edit Prompt Template"
+  },
+  "templateNameLabel": {
+    "message": "Template Name"
+  },
+  "templateNameHelp": {
+    "message": "Text shown on the button"
+  },
+  "templateQueryLabel": {
+    "message": "Query Template"
+  },
+  "templateQueryHelp": {
+    "message": "Use {query} as placeholder for user input"
+  },
+  "templateOrderLabel": {
+    "message": "Display Order"
+  },
+  "templateOrderHelp": {
+    "message": "Lower numbers appear first"
+  },
+  "cancelButton": {
+    "message": "Cancel"
+  },
+  "saveButton": {
+    "message": "Save"
+  },
+  "editButton": {
+    "message": "Edit"
+  },
+  "deleteButton": {
+    "message": "Delete"
+  },
+  "confirmDeleteTemplate": {
+    "message": "Are you sure you want to delete this template?"
+  },
+  "templateSavedSuccess": {
+    "message": "Template saved successfully"
+  },
+  "templateDeletedSuccess": {
+    "message": "Template deleted successfully"
+  },
+  "templateNameRequired": {
+    "message": "Please enter template name"
+  },
+  "templateQueryRequired": {
+    "message": "Please enter query template"
   }
 } 
