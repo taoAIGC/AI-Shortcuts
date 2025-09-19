@@ -203,31 +203,9 @@ async function handleUnifiedFilePaste(event) {
       
       console.log('🎯 文件粘贴消息广播完成');
     } else {
-      console.log('剪贴板中没有检测到文件类型，但可能是其他可上传内容');
-      console.log('🎯 尝试降级处理：发送 TRIGGER_PASTE 消息');
+      console.log('剪贴板中没有检测到文件类型，跳过文件粘贴处理');
+      // 纯文本粘贴不需要发送 TRIGGER_PASTE 消息
       
-      // 降级处理：即使没有检测到 Files 类型，也发送消息
-      const iframes = document.querySelectorAll('.ai-iframe');
-      console.log(`找到 ${iframes.length} 个 iframe`);
-      
-      iframes.forEach((iframe, index) => {
-        try {
-          const domain = new URL(iframe.src).hostname;
-          console.log(`🎯 向第 ${index + 1} 个 iframe (${domain}) 发送 TRIGGER_PASTE 消息 (降级处理)`);
-          
-          iframe.contentWindow.postMessage({
-            type: 'TRIGGER_PASTE',
-            domain: domain,
-            source: 'iframe-parent',
-            global: true,
-            fallback: true
-          }, '*');
-        } catch (error) {
-          console.error(`向第 ${index + 1} 个 iframe 发送消息失败:`, error);
-        }
-      });
-      
-      console.log('🎯 降级处理完成');
     }
   } catch (error) {
     console.log('剪贴板访问失败:', error.name, error.message);
@@ -989,66 +967,6 @@ function initializeI18n() {
 }
 
 
-async function generateRecommendedQuery(query) {
-  console.log('生成推荐查询语句', query);
-  
-  try {
-    // 从存储中获取提示词模板
-    const { promptTemplates = [] } = await chrome.storage.sync.get('promptTemplates');
-    
-    // 按order排序并过滤出有效的模板
-    const sortedTemplates = promptTemplates
-      .filter(template => template.name && template.query)
-      .sort((a, b) => (a.order || 0) - (b.order || 0));
-
-    // 如果没有模板，使用默认的内置模板
-    const recommendedQueries = sortedTemplates.length > 0 ? 
-      sortedTemplates.map(template => ({
-        name: template.name,
-        query: template.query.replace('{query}', query)
-      })) : 
-      [
-        {
-          name: '风险分析',
-          query: '导致失败的原因:「' + query + '」'
-        },
-        {
-          name: '解决方案', 
-          query: '如何解决问题:「' + query + '」'
-        },
-        {
-          name: '相关知识',
-          query: '相关知识点:「' + query + '」'
-        },
-        {
-          name: '最佳实践',
-          query: '写一份这件事做成功的回顾报告:「' + query + '」'
-        }
-      ];
-  
-    const queryList = document.getElementById('queryList');
-    queryList.innerHTML = ''; // 清空之前的内容
-
-    recommendedQueries.forEach(recommendedQuery => {
-        const queryItem = document.createElement('div');
-        queryItem.textContent = recommendedQuery.name; // 使用 name 作为文案
-        queryItem.classList.add('query-item'); // 添加样式类
-        queryItem.addEventListener('click', () => {
-            document.getElementById('searchInput').value = recommendedQuery.query;
-            queryList.style.display = 'none'; // 隐藏查询列表
-        });
-        queryList.appendChild(queryItem);
-    });
-    
-  } catch (error) {
-    console.error('加载提示词模板失败:', error);
-    // 如果加载失败，清空列表
-    const queryList = document.getElementById('queryList');
-    if (queryList) {
-      queryList.innerHTML = '';
-    }
-  }
-}
 
 // 显示查询建议
 async function showQuerySuggestions(query) {
@@ -1068,30 +986,12 @@ async function showQuerySuggestions(query) {
       .filter(template => template.name && template.query)
       .sort((a, b) => (a.order || 0) - (b.order || 0));
 
-    // 如果没有模板，使用默认的内置模板
-    const recommendedQueries = sortedTemplates.length > 0 ? 
-      sortedTemplates.map(template => ({
-        name: template.name,
-        query: template.query.replace('{query}', query)
-      })) : 
-      [
-        {
-          name: '风险分析',
-          query: '导致失败的原因:「' + query + '」'
-        },
-        {
-          name: '解决方案', 
-          query: '如何解决问题:「' + query + '」'
-        },
-        {
-          name: '相关知识',
-          query: '相关知识点:「' + query + '」'
-        },
-        {
-          name: '最佳实践',
-          query: '写一份这件事做成功的回顾报告:「' + query + '」'
-        }
-      ];
+
+    // 使用用户自定义模板生成建议
+    const recommendedQueries = sortedTemplates.map(template => ({
+      name: template.name,
+      query: template.query.replace('{query}', query)
+    }));
 
     // 清空之前的内容
     querySuggestions.innerHTML = '';
@@ -1107,6 +1007,27 @@ async function showQuerySuggestions(query) {
       });
       querySuggestions.appendChild(suggestionItem);
     });
+    // 添加设置图标到 querySuggestions 区域
+    const settingsIcon = document.createElement('img');
+    settingsIcon.src = '../icons/edit.png';
+    settingsIcon.alt = '设置模板';
+    settingsIcon.title = '编辑提示词模板';
+    settingsIcon.classList.add('query-suggestion-settings-icon');
+    settingsIcon.style.cursor = 'pointer';
+    settingsIcon.style.width = '20px';
+    settingsIcon.style.height = '20px';
+    settingsIcon.style.marginLeft = '8px';
+    settingsIcon.style.verticalAlign = 'middle';
+
+    // 点击后在新标签页打开设置页面并跳转到模板编辑区域
+    settingsIcon.addEventListener('click', (e) => {
+      e.stopPropagation();
+      // 跳转到 options.html 的提示词模板设置区域
+      window.open(chrome.runtime.getURL('options/options.html#prompt-templates'), '_blank');
+    });
+
+    // 将设置图标添加到 querySuggestions 区域
+    querySuggestions.appendChild(settingsIcon);
 
     // 显示建议
     querySuggestions.style.display = 'flex';

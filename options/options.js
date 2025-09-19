@@ -669,38 +669,6 @@ async function handleDisabledSiteAction(event) {
 // 提示词模板管理功能
 // ============================
 
-// 默认提示词模板
-const DEFAULT_PROMPT_TEMPLATES = [
-  {
-    id: 'risk_analysis',
-    name: '风险分析',
-    query: '导致失败的原因:「{query}」',
-    order: 1,
-    isDefault: true
-  },
-  {
-    id: 'solution',
-    name: '解决方案',
-    query: '如何解决问题:「{query}」',
-    order: 2,
-    isDefault: true
-  },
-  {
-    id: 'knowledge',
-    name: '相关知识',
-    query: '相关知识点:「{query}」',
-    order: 3,
-    isDefault: true
-  },
-  {
-    id: 'best_practice',
-    name: '最佳实践',
-    query: '写一份这件事做成功的回顾报告:「{query}」',
-    order: 4,
-    isDefault: true
-  }
-];
-
 // 当前编辑的模板ID
 let currentEditingTemplateId = null;
 
@@ -727,13 +695,19 @@ async function ensureDefaultTemplates() {
   try {
     const { promptTemplates = [] } = await chrome.storage.sync.get('promptTemplates');
     
-    // 如果没有模板，使用默认模板
+    // 如果没有模板，提醒用户模板将由系统自动初始化
     if (promptTemplates.length === 0) {
-      await chrome.storage.sync.set({ promptTemplates: DEFAULT_PROMPT_TEMPLATES });
-      console.log('已设置默认提示词模板');
+      console.log('提示词模板为空，将依赖系统自动初始化');
+      
+      // 触发 background.js 的初始化（如果还没有运行）
+      try {
+        await chrome.runtime.sendMessage({ action: 'initializeDefaultTemplates' });
+      } catch (error) {
+        console.log('无法发送初始化消息，background 可能已处理:', error);
+      }
     }
   } catch (error) {
-    console.error('设置默认模板失败:', error);
+    console.error('检查默认模板失败:', error);
   }
 }
 
@@ -1022,3 +996,78 @@ async function deleteTemplate(templateId) {
 function generateTemplateId() {
   return 'template_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 }
+
+// 处理锚点跳转
+function handleHashNavigation() {
+  const hash = window.location.hash;
+  if (hash) {
+    // 移除 # 号
+    const targetId = hash.substring(1);
+    const targetElement = document.getElementById(targetId);
+    
+    if (targetElement) {
+      // 延迟滚动，确保页面完全加载
+      setTimeout(() => {
+        targetElement.scrollIntoView({ behavior: 'smooth' });
+        
+        // 更新导航状态
+        updateNavigationState(targetId);
+      }, 100);
+    }
+  }
+}
+
+// 更新导航状态
+function updateNavigationState(activeSection) {
+  // 移除所有导航项的 active 类
+  document.querySelectorAll('.nav-link').forEach(link => {
+    link.classList.remove('active');
+  });
+  
+  // 添加 active 类到当前导航项
+  const activeLink = document.querySelector(`[data-section="${activeSection}"]`);
+  if (activeLink) {
+    activeLink.classList.add('active');
+  }
+}
+
+// 初始化导航事件
+function initializeNavigation() {
+  // 处理导航链接点击
+  document.querySelectorAll('.nav-link').forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      const section = link.getAttribute('data-section');
+      if (section) {
+        const targetElement = document.getElementById(section);
+        if (targetElement) {
+          targetElement.scrollIntoView({ behavior: 'smooth' });
+          updateNavigationState(section);
+          
+          // 更新 URL hash
+          window.history.pushState(null, null, `#${section}`);
+        }
+      }
+    });
+  });
+}
+
+// 页面初始化
+document.addEventListener('DOMContentLoaded', () => {
+  console.log('Options page loaded');
+  
+  // 初始化国际化
+  initializeI18n();
+  
+  // 加载配置
+  loadConfig();
+  
+  // 初始化导航
+  initializeNavigation();
+  
+  // 处理锚点跳转
+  handleHashNavigation();
+  
+  // 监听 hash 变化
+  window.addEventListener('hashchange', handleHashNavigation);
+});

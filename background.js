@@ -69,30 +69,30 @@ async function initializeDefaultPromptTemplates() {
     if (!promptTemplates || promptTemplates.length === 0) {
       const defaultTemplates = [
         {
-          id: 'risk_analysis',
+          id: 'risk_analysis_cn',
           name: '风险分析',
           query: '导致失败的原因:「{query}」',
           order: 1,
           isDefault: true
         },
         {
-          id: 'solution',
-          name: '解决方案',
-          query: '如何解决问题:「{query}」',
+          id: 'risk_analysis',
+          name: 'RiskAnalysis',
+          query: 'Root cause of the failure:「{query}」',
           order: 2,
           isDefault: true
         },
         {
-          id: 'knowledge',
-          name: '相关知识',
-          query: '相关知识点:「{query}」',
+          id: 'best_practice_cn',
+          name: '最佳实践',
+          query: '写一份这件事做成功的回顾报告:「{query}」',
           order: 3,
           isDefault: true
         },
         {
           id: 'best_practice',
-          name: '最佳实践',
-          query: '写一份这件事做成功的回顾报告:「{query}」',
+          name: 'BestPractice',
+          query: 'Write a success retrospective report on this project:「{query}」',
           order: 4,
           isDefault: true
         }
@@ -352,6 +352,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       url: chrome.runtime.getURL('options/options.html')
     });
     sendResponse({ success: true });
+  }
+  else if (message.action === 'initializeDefaultTemplates') {
+    // 手动触发默认提示词模板初始化
+    initializeDefaultPromptTemplates().then(() => {
+      sendResponse({ success: true });
+    }).catch(error => {
+      console.error('手动初始化默认模板失败:', error);
+      sendResponse({ success: false, error: error.message });
+    });
+    return true; // 保持消息通道开放
   }
   else if (message.type === 'TOGGLE_SIDE_PANEL') {
     // 处理侧边栏切换消息
