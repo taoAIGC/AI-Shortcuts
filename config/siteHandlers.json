@@ -1,7 +1,7 @@
 {
-  "version": "1.0.1",
-  "lastUpdated": "2025-09-14T12:00:00Z",
-  "description": "AI站点处理器配置 - 配置化三步流程处理",
+  "version": "1.0.2",
+  "lastUpdated": "2025-09-19T12:00:00Z",
+  "description": "支持粘贴功能",
   "author": "AIShortcuts",
   "sites": [
     {
@@ -103,6 +103,24 @@
             "description": "发送回车键"
           }
         ]
+      },
+      "fileUploadHandler": {
+        "steps": [
+          {
+            "action": "focus",
+            "selector": "[contenteditable=\"true\"]",
+            "description": "聚焦Gemini输入框准备文件粘贴"
+          },
+          {
+            "action": "wait",
+            "duration": 200,
+            "description": "等待200ms确保聚焦完成"
+          },
+          {
+            "action": "paste",
+            "description": "执行文件粘贴操作"
+          }
+        ]
       }
     },
     {
@@ -149,6 +167,24 @@
             "selector": "textarea",
             "keys": "Enter",
             "description": "发送回车键"
+          }
+        ]
+      },
+      "fileUploadHandler": {
+        "steps": [
+          {
+            "action": "focus",
+            "selector": "textarea",
+            "description": "聚焦Grok输入框准备文件粘贴"
+          },
+          {
+            "action": "wait",
+            "duration": 200,
+            "description": "等待200ms确保聚焦完成"
+          },
+          {
+            "action": "paste",
+            "description": "执行文件粘贴操作"
           }
         ]
       }
@@ -199,6 +235,24 @@
             "maxAttempts": 5,
             "retryInterval": 200,
             "description": "点击Claude发送按钮（支持重试）"
+          }
+        ]
+      },
+      "fileUploadHandler": {
+        "steps": [
+          {
+            "action": "focus",
+            "selector": "[contenteditable=\"true\"]",
+            "description": "聚焦Claude输入框准备文件粘贴"
+          },
+          {
+            "action": "wait",
+            "duration": 200,
+            "description": "等待200ms确保聚焦完成"
+          },
+          {
+            "action": "paste",
+            "description": "执行文件粘贴操作"
           }
         ]
       }
@@ -295,6 +349,24 @@
             "description": "点击豆包发送按钮"
           }
         ]
+      },
+      "fileUploadHandler": {
+        "steps": [
+          {
+            "action": "focus",
+            "selector": "textarea[data-testid=\"chat_input_input\"]",
+            "description": "聚焦豆包输入框准备文件粘贴"
+          },
+          {
+            "action": "wait",
+            "duration": 200,
+            "description": "等待200ms确保聚焦完成"
+          },
+          {
+            "action": "paste",
+            "description": "执行文件粘贴操作"
+          }
+        ]
       }
     },
     {
@@ -370,6 +442,24 @@
             "selector": ".search-consult-textarea",
             "keys": "Enter",
             "description": "发送回车键"
+          }
+        ]
+      },
+      "fileUploadHandler": {
+        "steps": [
+          {
+            "action": "focus",
+            "selector": ".search-consult-textarea",
+            "description": "聚焦秘塔AI输入框准备文件粘贴"
+          },
+          {
+            "action": "wait",
+            "duration": 200,
+            "description": "等待200ms确保聚焦完成"
+          },
+          {
+            "action": "paste",
+            "description": "执行文件粘贴操作"
           }
         ]
       }
@@ -596,6 +686,24 @@
             "description": "发送回车键"
           }
         ]
+      },
+      "fileUploadHandler": {
+        "steps": [
+          {
+            "action": "focus",
+            "selector": "[contenteditable=\"true\"]",
+            "description": "聚焦Kimi输入框准备文件粘贴"
+          },
+          {
+            "action": "wait",
+            "duration": 200,
+            "description": "等待200ms确保聚焦完成"
+          },
+          {
+            "action": "paste",
+            "description": "执行文件粘贴操作"
+          }
+        ]
       }
     },
     
@@ -642,6 +750,24 @@
             "customAction": "send_message",
             "messageType": "tongyi",
             "description": "发送消息给父窗口"
+          }
+        ]
+      },
+      "fileUploadHandler": {
+        "steps": [
+          {
+            "action": "focus",
+            "selector": "textarea",
+            "description": "聚焦通义千问输入框准备文件粘贴"
+          },
+          {
+            "action": "wait",
+            "duration": 200,
+            "description": "等待200ms确保聚焦完成"
+          },
+          {
+            "action": "paste",
+            "description": "执行文件粘贴操作"
           }
         ]
       }
@@ -765,6 +891,24 @@
             "description": "点击提交按钮"
           }
         ]
+      },
+      "fileUploadHandler": {
+        "steps": [
+          {
+            "action": "focus",
+            "selector": "textarea#userInput",
+            "description": "聚焦Copilot输入框准备文件粘贴"
+          },
+          {
+            "action": "wait",
+            "duration": 200,
+            "description": "等待200ms确保聚焦完成"
+          },
+          {
+            "action": "paste",
+            "description": "执行文件粘贴操作"
+          }
+        ]
       }
     },
     {
@@ -820,6 +964,24 @@
             "action": "click",
             "selector": "button[data-button-send=\"true\"]",
             "description": "点击POE发送按钮"
+          }
+        ]
+      },
+      "fileUploadHandler": {
+        "steps": [
+          {
+            "action": "focus",
+            "selector": ".GrowingTextArea_growWrap__im5W3 textarea",
+            "description": "聚焦POE输入框准备文件粘贴"
+          },
+          {
+            "action": "wait",
+            "duration": 200,
+            "description": "等待200ms确保聚焦完成"
+          },
+          {
+            "action": "paste",
+            "description": "执行文件粘贴操作"
           }
         ]
       }

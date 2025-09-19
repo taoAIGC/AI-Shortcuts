@@ -1,102 +1,45 @@
 // 全局文件粘贴检测和处理
 let filePasteHandlerAdded = false;
 
-async function handleGlobalFilePaste(event) {
-  console.log('🎯 全局检测到粘贴事件');
-  
+// 请求剪贴板权限的函数
+async function requestClipboardPermission() {
   try {
-    // 检查剪贴板中是否有文件
-    const clipboardData = await navigator.clipboard.read();
-    console.log('剪贴板内容:', clipboardData);
+    console.log('🔍 开始请求剪贴板权限...');
     
-    let hasFiles = false;
-    for (const item of clipboardData) {
-      console.log('剪贴板项目类型:', item.types);
+    // 检查权限状态
+    const permissionStatus = await navigator.permissions.query({ name: 'clipboard-read' });
+    console.log('当前剪贴板权限状态:', permissionStatus.state);
+    console.log('权限对象详情:', permissionStatus);
+    
+    if (permissionStatus.state === 'granted') {
+      console.log('✅ 剪贴板权限已授予');
+      return true;
+    } else if (permissionStatus.state === 'prompt') {
+      console.log('🔄 需要用户授权剪贴板权限');
+      console.log('📋 尝试读取剪贴板来触发权限请求...');
       
-      // 检测文件类型：Files 或常见的文件 MIME 类型
-      const fileTypes = ['Files', 'text/html', 'text/plain', 'application/octet-stream'];
-      const isFile = fileTypes.some(type => item.types.includes(type));
-      
-      if (isFile) {
-        hasFiles = true;
-        console.log('检测到文件在剪贴板中，类型:', item.types);
-        break;
+      // 尝试读取剪贴板来触发权限请求
+      try {
+        const clipboardData = await navigator.clipboard.read();
+        console.log('✅ 剪贴板权限请求成功');
+        console.log('剪贴板内容:', clipboardData);
+        return true;
+      } catch (error) {
+        console.log('❌ 剪贴板权限请求失败:', error);
+        console.log('错误名称:', error.name);
+        console.log('错误消息:', error.message);
+        console.log('错误堆栈:', error.stack);
+        return false;
       }
-    }
-    
-    if (hasFiles) {
-      console.log('🎯 开始向所有 iframe 广播文件粘贴消息');
-      
-      // 获取所有 iframe 元素
-      const iframes = document.querySelectorAll('.ai-iframe');
-      console.log(`找到 ${iframes.length} 个 iframe`);
-      
-      // 向每个 iframe 发送 TRIGGER_PASTE 消息
-      iframes.forEach((iframe, index) => {
-        try {
-          const domain = new URL(iframe.src).hostname;
-          console.log(`🎯 向第 ${index + 1} 个 iframe (${domain}) 发送 TRIGGER_PASTE 消息`);
-          
-          iframe.contentWindow.postMessage({
-            type: 'TRIGGER_PASTE',
-            domain: domain,
-            source: 'iframe-parent',
-            global: true
-          }, '*');
-        } catch (error) {
-          console.error(`向第 ${index + 1} 个 iframe 发送消息失败:`, error);
-        }
-      });
-      
-      console.log('🎯 文件粘贴消息广播完成');
     } else {
-      console.log('剪贴板中没有检测到文件类型，但可能是其他可上传内容');
-      console.log('🎯 尝试降级处理：发送 TRIGGER_PASTE 消息');
-      
-      // 降级处理：即使没有检测到 Files 类型，也发送消息
-      const iframes = document.querySelectorAll('.ai-iframe');
-      console.log(`找到 ${iframes.length} 个 iframe`);
-      
-      iframes.forEach((iframe, index) => {
-        try {
-          const domain = new URL(iframe.src).hostname;
-          console.log(`🎯 向第 ${index + 1} 个 iframe (${domain}) 发送 TRIGGER_PASTE 消息 (降级处理)`);
-          
-          iframe.contentWindow.postMessage({
-            type: 'TRIGGER_PASTE',
-            domain: domain,
-            source: 'iframe-parent',
-            global: true,
-            fallback: true
-          }, '*');
-        } catch (error) {
-          console.error(`向第 ${index + 1} 个 iframe 发送消息失败:`, error);
-        }
-      });
-      
-      console.log('🎯 降级处理完成');
+      console.log('❌ 剪贴板权限被拒绝');
+      console.log('💡 建议: 请检查浏览器设置中的剪贴板权限');
+      return false;
     }
   } catch (error) {
-    console.log('剪贴板访问失败:', error.name, error.message);
-    console.log('提示: 请确保页面已获得焦点并授权剪贴板访问权限');
-    
-    // 即使剪贴板访问失败，也尝试发送消息
-    console.log('🎯 尝试强制发送 TRIGGER_PASTE 消息');
-    const iframes = document.querySelectorAll('.ai-iframe');
-    iframes.forEach((iframe, index) => {
-      try {
-        const domain = new URL(iframe.src).hostname;
-        iframe.contentWindow.postMessage({
-          type: 'TRIGGER_PASTE',
-          domain: domain,
-          source: 'iframe-parent',
-          global: true,
-          forced: true
-        }, '*');
-      } catch (error) {
-        console.error(`强制发送消息失败:`, error);
-      }
-    });
+    console.log('❌ 检查剪贴板权限失败:', error);
+    console.log('错误详情:', error);
+    return false;
   }
 }
 
@@ -194,14 +137,121 @@ document.addEventListener('DOMContentLoaded', async function() {
         updateColumns(columns);
     });
 
-    // 添加全局文件粘贴检测（类似搜索功能）
+    // 统一的文件粘贴处理 - 只添加一次监听器
     if (!filePasteHandlerAdded) {
-        document.addEventListener('paste', handleGlobalFilePaste);
+        document.addEventListener('paste', handleUnifiedFilePaste);
         filePasteHandlerAdded = true;
-        console.log('🎯 全局文件粘贴监听器已添加');
+        console.log('🎯 统一文件粘贴监听器已添加');
     }
 
 });
+
+// 统一的文件粘贴处理函数
+async function handleUnifiedFilePaste(event) {
+  console.log('🎯 检测到粘贴事件，开始统一处理');
+  
+  try {
+    // 1. 首先请求剪贴板权限
+    const hasPermission = await requestClipboardPermission();
+    if (!hasPermission) {
+      console.log('❌ 无法访问剪贴板，权限不足');
+      return;
+    }
+    
+    // 2. 检查剪贴板中是否有文件
+    const clipboardData = await navigator.clipboard.read();
+    console.log('剪贴板内容:', clipboardData);
+    
+    let hasFiles = false;
+    for (const item of clipboardData) {
+      console.log('剪贴板项目类型:', item.types);
+      
+      // 检测文件类型：Files 或常见的文件 MIME 类型
+      const fileTypes = ['Files', 'image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/svg+xml', 'application/octet-stream'];
+      const isFile = fileTypes.some(type => item.types.includes(type));
+      
+      if (isFile) {
+        hasFiles = true;
+        console.log('检测到文件在剪贴板中，类型:', item.types);
+        break;
+      }
+    }
+    
+    if (hasFiles) {
+      console.log('🎯 开始向所有 iframe 广播文件粘贴消息');
+      
+      // 获取所有 iframe 元素
+      const iframes = document.querySelectorAll('.ai-iframe');
+      console.log(`找到 ${iframes.length} 个 iframe`);
+      
+      // 向每个 iframe 发送 TRIGGER_PASTE 消息
+      iframes.forEach((iframe, index) => {
+        try {
+          const domain = new URL(iframe.src).hostname;
+          console.log(`🎯 向第 ${index + 1} 个 iframe (${domain}) 发送 TRIGGER_PASTE 消息`);
+          
+          iframe.contentWindow.postMessage({
+            type: 'TRIGGER_PASTE',
+            domain: domain,
+            source: 'iframe-parent',
+            global: true
+          }, '*');
+        } catch (error) {
+          console.error(`向第 ${index + 1} 个 iframe 发送消息失败:`, error);
+        }
+      });
+      
+      console.log('🎯 文件粘贴消息广播完成');
+    } else {
+      console.log('剪贴板中没有检测到文件类型，但可能是其他可上传内容');
+      console.log('🎯 尝试降级处理：发送 TRIGGER_PASTE 消息');
+      
+      // 降级处理：即使没有检测到 Files 类型，也发送消息
+      const iframes = document.querySelectorAll('.ai-iframe');
+      console.log(`找到 ${iframes.length} 个 iframe`);
+      
+      iframes.forEach((iframe, index) => {
+        try {
+          const domain = new URL(iframe.src).hostname;
+          console.log(`🎯 向第 ${index + 1} 个 iframe (${domain}) 发送 TRIGGER_PASTE 消息 (降级处理)`);
+          
+          iframe.contentWindow.postMessage({
+            type: 'TRIGGER_PASTE',
+            domain: domain,
+            source: 'iframe-parent',
+            global: true,
+            fallback: true
+          }, '*');
+        } catch (error) {
+          console.error(`向第 ${index + 1} 个 iframe 发送消息失败:`, error);
+        }
+      });
+      
+      console.log('🎯 降级处理完成');
+    }
+  } catch (error) {
+    console.log('剪贴板访问失败:', error.name, error.message);
+    console.log('提示: 请确保页面已获得焦点并授权剪贴板访问权限');
+    
+    // 即使剪贴板访问失败，也尝试发送消息
+    console.log('🎯 尝试强制发送 TRIGGER_PASTE 消息');
+    const iframes = document.querySelectorAll('.ai-iframe');
+    iframes.forEach((iframe, index) => {
+      try {
+        const domain = new URL(iframe.src).hostname;
+        iframe.contentWindow.postMessage({
+          type: 'TRIGGER_PASTE',
+          domain: domain,
+          source: 'iframe-parent',
+          global: true,
+          forced: true
+        }, '*');
+      } catch (error) {
+        console.error(`强制发送消息失败:`, error);
+      }
+    });
+  }
+}
 
 // 更新列数的辅助函数
 function updateColumns(columns) {
@@ -1213,7 +1263,82 @@ document.addEventListener('DOMContentLoaded', async () => {
   initializeI18n();
   await initializeFavorites();
   checkForSiteConfigUpdates();
+  
+  // 检查剪贴板权限状态
+  checkClipboardPermissionStatus();
+  
+  // 注意：粘贴事件监听器已在主 DOMContentLoaded 中统一处理，无需重复添加
 });
+
+
+// 检查剪贴板权限状态
+async function checkClipboardPermissionStatus() {
+  try {
+    // 检查是否支持剪贴板API
+    if (!navigator.clipboard) {
+      console.log('❌ 浏览器不支持剪贴板API');
+      return;
+    }
+    
+    const permissionStatus = await navigator.permissions.query({ name: 'clipboard-read' });
+    console.log('剪贴板权限状态:', permissionStatus.state);
+    
+    // 只在权限被拒绝时显示提示，避免在页面加载时打扰用户
+    if (permissionStatus.state === 'denied') {
+      console.log('❌ 剪贴板权限被拒绝，文件粘贴功能将不可用');
+      // 延迟显示提示，避免在页面加载时立即弹出
+      setTimeout(() => {
+        showClipboardDeniedMessage();
+      }, 3000);
+    } else if (permissionStatus.state === 'granted') {
+      console.log('✅ 剪贴板权限已授予');
+    } else {
+      console.log('🔄 剪贴板权限状态: prompt，将在用户粘贴时请求');
+    }
+  } catch (error) {
+    console.log('❌ 检查剪贴板权限失败:', error);
+  }
+}
+
+// 显示剪贴板权限被拒绝的消息
+function showClipboardDeniedMessage() {
+  const message = document.createElement('div');
+  message.style.cssText = `
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #f44336;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    z-index: 10000;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 14px;
+    max-width: 400px;
+    text-align: center;
+  `;
+  
+  message.innerHTML = `
+    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+      <span>🚫</span>
+      <span style="font-weight: 600;">剪贴板权限被拒绝</span>
+    </div>
+    <div style="font-size: 12px; opacity: 0.9;">
+      请在浏览器设置中允许剪贴板访问权限，或点击地址栏左侧的锁图标进行设置
+    </div>
+  `;
+  
+  document.body.appendChild(message);
+  
+  // 5秒后自动关闭
+  setTimeout(() => {
+    if (message.parentNode) {
+      message.remove();
+    }
+  }, 5000);
+}
 
 
 // 检查站点配置更新

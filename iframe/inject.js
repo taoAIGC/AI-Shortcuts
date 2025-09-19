@@ -1,6 +1,66 @@
 
 console.log('🎯 inject.js 脚本已加载');
 
+// 动态检查是否在 AI 站点中运行
+async function isAISite() {
+  try {
+    // 使用 getDefaultSites 函数获取站点列表
+    if (!window.getDefaultSites) {
+      console.log('🎯 getDefaultSites 函数不可用，跳过处理');
+      return false;
+    }
+    
+    const sites = await window.getDefaultSites();
+    
+    if (!sites || !Array.isArray(sites)) {
+      console.log('🎯 获取站点列表失败，跳过处理');
+      return false;
+    }
+    
+    const currentHostname = window.location.hostname;
+    
+    // 检查当前站点是否在配置中
+    const matchedSite = sites.find(site => {
+      if (!site.url || site.hidden) return false;
+      
+      try {
+        const siteUrl = new URL(site.url);
+        const siteHostname = siteUrl.hostname;
+        
+        // 检查域名匹配
+        return currentHostname === siteHostname || 
+               currentHostname.includes(siteHostname) || 
+               siteHostname.includes(currentHostname);
+      } catch (urlError) {
+        return false;
+      }
+    });
+    
+    if (matchedSite) {
+      console.log('🎯 匹配到 AI 站点:', matchedSite.name);
+      return true;
+    } else {
+      console.log('🎯 当前站点不在 AI 站点配置中，跳过处理');
+      return false;
+    }
+  } catch (error) {
+    console.log('🎯 检查 AI 站点配置失败:', error);
+    return false;
+  }
+}
+
+// 等待页面加载完成后检查
+let isAISiteChecked = false;
+let isAISiteResult = false;
+
+async function checkAISite() {
+  if (!isAISiteChecked) {
+    isAISiteResult = await isAISite();
+    isAISiteChecked = true;
+  }
+  return isAISiteResult;
+}
+
 // 通用的配置化站点处理器 - 基于流程的标准化处理
 async function executeSiteHandler(query, handlerConfig) {
   console.log('🚀 executeSiteHandler 开始执行');
@@ -64,6 +124,223 @@ async function executeSiteHandler(query, handlerConfig) {
   }
 
   console.log('配置化处理器执行完成');
+}
+
+// 执行粘贴操作
+async function executePaste(step) {
+  console.log('🎯 执行粘贴操作');
+  console.log('粘贴步骤配置:', step);
+  
+  try {
+    // 检查剪贴板权限
+    const permissionStatus = await navigator.permissions.query({ name: 'clipboard-read' });
+    console.log('剪贴板权限状态:', permissionStatus.state);
+    console.log('权限详情:', permissionStatus);
+    
+    if (permissionStatus.state === 'denied') {
+      console.log('❌ 剪贴板权限被拒绝，无法执行粘贴操作');
+      throw new Error('剪贴板权限被拒绝');
+    }
+    
+    if (permissionStatus.state === 'prompt') {
+      console.log('🔄 剪贴板权限需要用户授权，尝试请求权限...');
+    }
+    
+    // 确保文档获得焦点（解决多iframe环境下的焦点问题）
+    console.log('🔍 检查文档焦点状态...');
+    if (!document.hasFocus()) {
+      console.log('⚠️ 文档没有焦点，尝试获取焦点...');
+      window.focus();
+      // 等待一小段时间让焦点生效
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    // 检查当前聚焦的元素
+    const activeElement = document.activeElement;
+    console.log('当前聚焦元素:', activeElement);
+    
+    // 读取剪贴板内容
+    console.log('📋 尝试读取剪贴板内容...');
+    let clipboardData;
+    try {
+      clipboardData = await navigator.clipboard.read();
+    } catch (clipboardError) {
+      console.log('❌ 剪贴板读取失败:', clipboardError.message);
+      
+      // 如果是焦点问题，尝试通过用户交互触发
+      if (clipboardError.name === 'NotAllowedError' && clipboardError.message.includes('not focused')) {
+        console.log('🔄 检测到焦点问题，尝试通过模拟用户交互解决...');
+        
+        // 创建一个临时的用户交互事件
+        const tempButton = document.createElement('button');
+        tempButton.style.position = 'fixed';
+        tempButton.style.top = '-1000px';
+        tempButton.style.left = '-1000px';
+        tempButton.style.opacity = '0';
+        tempButton.style.pointerEvents = 'none';
+        document.body.appendChild(tempButton);
+        
+        // 模拟点击事件来获取用户交互上下文
+        tempButton.focus();
+        tempButton.click();
+        
+        // 再次尝试读取剪贴板
+        try {
+          clipboardData = await navigator.clipboard.read();
+          console.log('✅ 通过用户交互成功读取剪贴板');
+        } catch (retryError) {
+          console.log('❌ 重试仍然失败:', retryError.message);
+          throw retryError;
+        } finally {
+          // 清理临时按钮
+          document.body.removeChild(tempButton);
+        }
+      } else {
+        throw clipboardError;
+      }
+    }
+    console.log('剪切板内容:', clipboardData);
+    console.log('剪贴板项目数量:', clipboardData.length);
+    
+    if (clipboardData.length === 0) {
+      console.log('❌ 剪贴板为空');
+      throw new Error('剪贴板为空');
+    }
+    
+    // 处理剪贴板中的文件
+    for (const item of clipboardData) {
+      console.log('剪贴板项目类型:', item.types);
+      
+      // 检查是否是文件类型（包括图片）
+      const fileTypes = ['Files', 'image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/svg+xml'];
+      const isFile = fileTypes.some(type => item.types.includes(type));
+      
+      if (isFile) {
+        console.log('🎯 检测到文件在剪贴板中，类型:', item.types);
+        
+        // 尝试获取文件数据
+        let file = null;
+        let fileType = null;
+        
+        // 首先尝试获取 Files 类型
+        if (item.types.includes('Files')) {
+          file = await item.getType('Files');
+          fileType = 'Files';
+        } else {
+          // 如果没有 Files 类型，尝试获取图片类型
+          for (const type of fileTypes) {
+            if (item.types.includes(type)) {
+              file = await item.getType(type);
+              fileType = type;
+              break;
+            }
+          }
+        }
+        
+        console.log('文件对象:', file);
+        console.log('文件类型:', fileType);
+        
+        // 创建 DataTransfer 对象
+        const dataTransfer = new DataTransfer();
+        if (file) {
+          // 如果获取到的是 Blob，需要转换为 File 对象
+          let fileToAdd = file;
+          if (file instanceof Blob && !(file instanceof File)) {
+            // 从 Blob 创建 File 对象
+            const fileName = `clipboard-${Date.now()}.${fileType.split('/')[1] || 'bin'}`;
+            fileToAdd = new File([file], fileName, { type: fileType });
+            console.log('将 Blob 转换为 File:', fileToAdd);
+          }
+          dataTransfer.items.add(fileToAdd);
+        }
+        
+        // 创建文件粘贴事件
+        const pasteEvent = new ClipboardEvent('paste', {
+          clipboardData: dataTransfer,
+          bubbles: true,
+          cancelable: true
+        });
+        
+        // 触发粘贴事件到当前聚焦的元素
+        const activeElement = document.activeElement;
+        if (activeElement) {
+          console.log('已向聚焦元素发送粘贴事件:', activeElement);
+          activeElement.dispatchEvent(pasteEvent);
+        } else {
+          console.log('没有聚焦的元素，向 document 发送粘贴事件');
+          document.dispatchEvent(pasteEvent);
+        }
+        
+        console.log('✅ 文件粘贴事件已触发');
+        
+      } else if (item.types.includes('text/html')) {
+        console.log('🎯 检测到HTML内容在剪贴板中');
+        
+        // 获取HTML内容
+        const htmlContent = await item.getType('text/html');
+        console.log('HTML内容:', htmlContent);
+        
+        // 创建 DataTransfer 对象
+        const dataTransfer = new DataTransfer();
+        dataTransfer.setData('text/html', htmlContent);
+        
+        // 创建HTML粘贴事件
+        const pasteEvent = new ClipboardEvent('paste', {
+          clipboardData: dataTransfer,
+          bubbles: true,
+          cancelable: true
+        });
+        
+        // 触发粘贴事件
+        const activeElement = document.activeElement;
+        if (activeElement) {
+          console.log('已向聚焦元素发送HTML粘贴事件:', activeElement);
+          activeElement.dispatchEvent(pasteEvent);
+        } else {
+          console.log('没有聚焦的元素，向 document 发送HTML粘贴事件');
+          document.dispatchEvent(pasteEvent);
+        }
+        
+        console.log('✅ HTML粘贴事件已触发');
+        
+      } else if (item.types.includes('text/plain')) {
+        console.log('🎯 检测到文本在剪贴板中');
+        
+        // 获取文本内容
+        const textContent = await item.getType('text/plain');
+        console.log('文本内容:', textContent);
+        
+        // 创建 DataTransfer 对象
+        const dataTransfer = new DataTransfer();
+        dataTransfer.setData('text/plain', textContent);
+        
+        // 创建文本粘贴事件
+        const pasteEvent = new ClipboardEvent('paste', {
+          clipboardData: dataTransfer,
+          bubbles: true,
+          cancelable: true
+        });
+        
+        // 触发粘贴事件
+        const activeElement = document.activeElement;
+        if (activeElement) {
+          console.log('已向聚焦元素发送文本粘贴事件:', activeElement);
+          activeElement.dispatchEvent(pasteEvent);
+        } else {
+          console.log('没有聚焦的元素，向 document 发送文本粘贴事件');
+          document.dispatchEvent(pasteEvent);
+        }
+        
+        console.log('✅ 文本粘贴事件已触发');
+      }
+    }
+    
+    console.log('✅ 粘贴操作执行完成');
+    
+  } catch (error) {
+    console.error('❌ 粘贴操作失败:', error);
+    throw error;
+  }
 }
 
 // 执行点击操作
@@ -520,57 +797,6 @@ async function executeWait(step) {
   console.log('等待:', step.duration + 'ms');
 }
 
-// 执行粘贴操作
-async function executePaste(step) {
-  try {
-    console.log('🎯 开始执行粘贴操作...');
-    console.log('粘贴步骤配置:', step);
-    
-    // 模拟 Ctrl+V 键盘事件
-    const pasteEvent = new KeyboardEvent('keydown', {
-      key: 'v',
-      code: 'KeyV',
-      ctrlKey: true,
-      bubbles: true,
-      cancelable: true
-    });
-    
-    // 向当前聚焦的元素发送粘贴事件
-    const activeElement = document.activeElement;
-    if (activeElement) {
-      activeElement.dispatchEvent(pasteEvent);
-      console.log('已向聚焦元素发送粘贴事件:', activeElement);
-    } else {
-      // 如果没有聚焦元素，向文档发送事件
-      document.dispatchEvent(pasteEvent);
-      console.log('已向文档发送粘贴事件');
-    }
-    
-    // 也尝试直接读取剪切板
-    try {
-      const clipboardData = await navigator.clipboard.read();
-      console.log('剪切板内容:', clipboardData);
-      
-      // 如果有文件，尝试处理
-      for (const item of clipboardData) {
-        if (item.types.includes('Files')) {
-          console.log('检测到文件在剪切板中');
-          // 这里可以添加文件处理逻辑
-        }
-      }
-    } catch (err) {
-      console.log('剪切板访问失败:', err.name, err.message);
-      if (err.name === 'NotAllowedError') {
-        console.log('提示: 需要用户授权剪切板访问权限');
-      }
-    }
-    
-    console.log('粘贴操作执行完成');
-  } catch (error) {
-    console.error('执行粘贴操作失败:', error);
-  }
-}
-
 // 执行自定义操作
 async function executeCustom(step, query) {
   if (step.customAction === 'metaso_recommend') {
@@ -656,19 +882,31 @@ async function getSiteHandler(domain) {
 
 // 监听来自扩展的消息
 window.addEventListener('message', async function(event) {
-    console.log('🎯🎯🎯 inject.js 收到消息:', event.data, '来源:', event.origin);
+    // 首先检查是否在 AI 站点中运行
+    const isAI = await checkAISite();
+    if (!isAI) {
+        return; // 不在 AI 站点中，跳过所有处理
+    }
     
     // 过滤消息：只处理来自 AIShortcuts扩展的消息
     if (!event.data || typeof event.data !== 'object') {
-        console.log('消息格式无效，跳过');
-        return;
+        return; // 静默跳过非对象消息
     }
     
     // 检查是否是 AIShortcuts 扩展的消息
     if (!event.data.query && !event.data.type) {
-        console.log('消息缺少必要字段，跳过');
-        return;
+        return; // 静默跳过缺少必要字段的消息
     }
+    
+    // 过滤掉来自 AI 站点的内部消息
+    if (event.data.action || event.data.payload || event.data._stripeJsV3 || 
+        event.data.sourceFrameId || event.data.targetFrameId || 
+        event.data.controllerAppFrameId) {
+        return; // 静默跳过 AI 站点的内部消息
+    }
+    
+    // 只记录有效的 AIShortcuts 消息
+    console.log('🎯🎯🎯 inject.js 收到 AIShortcuts 消息:', event.data, '来源:', event.origin);
     
     // 过滤掉其他扩展的消息（如广告拦截器等）
     if (event.data.type && (
@@ -753,8 +991,6 @@ window.addEventListener('message', async function(event) {
     return;
   }
 
-  // 处理点击处理器消息
-  handleClickHandlerMessage(event);
 
   // 使用新的统一处理逻辑
   const domain = event.data.domain || window.location.hostname;
@@ -784,44 +1020,9 @@ window.addEventListener('message', async function(event) {
   console.warn('🔍 调试信息 - 查询内容:', event.data.query);
 }); 
 
-// 标记是否已经添加了点击处理器
-let clickHandlerAdded = false;
-
-// 统一的点击处理函数
-function handleLinkClick(e) {
-  console.log("handleLinkClick 触发")
-  const link = e.target.closest('a');
-  if (link && link.href) {
-    e.preventDefault();
-    e.stopPropagation(); // 阻止事件冒泡
-    window.parent.postMessage({
-      type: 'LINK_CLICK',
-      href: link.href
-    }, '*');
-  }
-}
-
-
-
 // 显示剪切板权限提示
 function showClipboardPermissionTip() {
   console.log('提示: 需要用户授权剪切板访问权限');
   console.log('解决方法: 请重新加载扩展以应用新的权限设置');
   console.log('或者点击页面获得焦点后重试');
-}
-
-// 处理来自父窗口的点击处理器消息
-function handleClickHandlerMessage(event) {
-  if (event.data.type === 'INJECT_CLICK_HANDLER' && !clickHandlerAdded) {
-    document.addEventListener('click', handleLinkClick);
-    console.log("收到Iframe消息 添加消息处理 ")
-    clickHandlerAdded = true;
-  }
-}
-
-// 如果还没有添加点击处理器，则添加
-if (!clickHandlerAdded) {
-  document.addEventListener('click', handleLinkClick);
-  console.log("document.addEventListener('click', handleLinkClick); 触发")
-  clickHandlerAdded = true;
 }

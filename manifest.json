@@ -1,20 +1,18 @@
 {
   "manifest_version": 3,
   "name": "__MSG_appName__",
-  "version": "2.0.7",
+  "version": "2.0.12",
   "description": "__MSG_extDescription__",
   "permissions": [
     "storage",
     "activeTab",
     "tabs",
     "contextMenus",
-    "scripting",
     "declarativeNetRequest",
     "sidePanel",
     "clipboardRead",
     "omnibox"
   ],
-  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA4MwVAikHCt7SOYrYA8hdGNnkCttxO28GdAkoIvWcY2SRb44TiL2suESDQ7K4WPR+vDBTx8lgUFl4bOWZgFaNBGEiUkjvOIr8cxRgKxYonWPZiibjVy2nxSSfqTMEHooWj0IbfTzXOhpAqFhQ7ZF1QdmuI8s1BH+91fuXnlSm8WVA/OUrEqgbobIwEG0319rOOkyiktGoGjIqG2JLM1ydmo5c88S/5MEV9kiHDg5X+qlHNcVgGeWrkwZxAA9PfCOn3U97gk++BOWbDKDpbROm/q6VNfdqR3AlbgM2zOsjX1NtSLT1FDUr7SBeHEcDsy+5dohrymM6qH6s5mIEkGtHWwIDAQAB",
   "host_permissions": [
     "<all_urls>"
   ],
