@@ -66,18 +66,95 @@ const AppConfigManager = {
           },
           images: {
             name: "图片格式",
-            types: ["image/png", "image/jpeg", "image/gif", "image/webp", "image/svg+xml"]
+            types: ["image/png", "image/jpeg", "image/gif", "image/webp", "image/svg+xml", "image/bmp", "image/tiff", "image/ico", "image/avif"]
+          },
+          documents: {
+            name: "文档格式",
+            types: [
+              "application/pdf",
+              "application/msword",
+              "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              "application/vnd.ms-excel", 
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+              "application/vnd.ms-powerpoint",
+              "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+              "application/vnd.oasis.opendocument.text",
+              "application/vnd.oasis.opendocument.spreadsheet", 
+              "application/vnd.oasis.opendocument.presentation",
+              "application/rtf",
+              "text/plain",
+              "text/csv"
+            ]
+          },
+          audio: {
+            name: "音频格式", 
+            types: ["audio/mpeg", "audio/wav", "audio/ogg", "audio/flac", "audio/m4a"]
+          },
+          video: {
+            name: "视频格式",
+            types: ["video/mp4", "video/avi", "video/mov", "video/wmv", "video/webm"]
+          },
+          code: {
+            name: "代码文件",
+            types: ["text/javascript", "text/css", "text/html", "text/xml", "application/json"]
+          },
+          archives: {
+            name: "压缩文件",
+            types: ["application/zip", "application/x-rar-compressed", "application/x-7z-compressed", "application/gzip", "application/x-tar"]
           }
         },
         mimeToExtension: {
           mappings: {
             "Files": "file",
             "application/octet-stream": "bin",
+            // 图片类型
             "image/png": "png",
-            "image/jpeg": "jpg",
+            "image/jpeg": "jpg", 
             "image/gif": "gif",
             "image/webp": "webp",
-            "text/plain": "txt"
+            "image/svg+xml": "svg",
+            "image/bmp": "bmp",
+            "image/tiff": "tiff",
+            "image/ico": "ico",
+            "image/avif": "avif",
+            // 文档类型
+            "application/pdf": "pdf",
+            "application/msword": "doc",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
+            "application/vnd.ms-excel": "xls",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx", 
+            "application/vnd.ms-powerpoint": "ppt",
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation": "pptx",
+            "application/vnd.oasis.opendocument.text": "odt",
+            "application/vnd.oasis.opendocument.spreadsheet": "ods",
+            "application/vnd.oasis.opendocument.presentation": "odp",
+            "application/rtf": "rtf",
+            "text/plain": "txt",
+            "text/csv": "csv",
+            // 音频类型
+            "audio/mpeg": "mp3",
+            "audio/wav": "wav", 
+            "audio/ogg": "ogg",
+            "audio/flac": "flac",
+            "audio/m4a": "m4a",
+            // 视频类型
+            "video/mp4": "mp4",
+            "video/avi": "avi",
+            "video/mov": "mov", 
+            "video/wmv": "wmv",
+            "video/webm": "webm",
+            // 代码类型
+            "text/javascript": "js",
+            "text/css": "css",
+            "text/html": "html",
+            "text/xml": "xml", 
+            "application/json": "json",
+            // 压缩文件
+            "application/zip": "zip",
+            "application/x-rar-compressed": "rar",
+            "application/x-7z-compressed": "7z",
+            "application/gzip": "gz",
+            "application/x-tar": "tar"
           }
         }
       }

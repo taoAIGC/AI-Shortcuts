@@ -3,11 +3,20 @@ let filePasteHandlerAdded = false;
 
 // 统一的文件扩展名检测
 const SUPPORTED_FILE_EXTENSIONS = [
+  // Office文档类型
   'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
-  'txt', 'csv', 'json', 'xml', 'html', 'css', 'js',
+  'odt', 'ods', 'odp', 'rtf', 'pages', 'numbers', 'key',
+  'wps', 'et', 'dps', 'vsd', 'vsdx', 'pub', 'one', 'msg', 'eml', 'mpp',
+  // 文本和数据文件
+  'txt', 'csv', 'json', 'xml', 'html', 'css', 'js', 'md', 'yaml', 'yml',
+  // 图片格式
   'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'tiff', 'ico', 'avif',
+  // 音视频格式
   'mp4', 'avi', 'mov', 'wmv', 'webm', 'mp3', 'wav', 'ogg', 'flac', 'm4a',
-  'zip', 'rar', '7z', 'gz', 'tar'
+  // 代码文件
+  'py', 'java', 'cpp', 'c', 'php', 'rb', 'go', 'rs', 'swift', 'kt', 'ts',
+  // 压缩文件
+  'zip', 'rar', '7z', 'gz', 'tar', 'bz2', 'xz'
 ];
 
 // 检测是否具有有效的文件扩展名
@@ -174,6 +183,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         filePasteHandlerAdded = true;
         console.log('🎯 统一文件粘贴监听器已添加');
     }
+
+    // 添加文件上传功能的事件监听器
+    initializeFileUpload();
 
 });
 
@@ -2491,6 +2503,144 @@ async function reorderIframes(fromIndex, toIndex) {
     
     console.log('iframe顺序已更新，使用CSS order属性');
   }
+}
+
+// 初始化文件上传功能
+function initializeFileUpload() {
+  const fileUploadButton = document.getElementById('fileUploadButton');
+  const fileInput = document.getElementById('fileInput');
+  
+  if (!fileUploadButton || !fileInput) {
+    console.warn('文件上传元素未找到');
+    return;
+  }
+  
+  // 点击上传按钮触发文件选择
+  fileUploadButton.addEventListener('click', () => {
+    fileInput.click();
+  });
+  
+  // 文件选择变化时处理
+  fileInput.addEventListener('change', handleFileSelection);
+  
+  console.log('🎯 文件上传功能已初始化');
+}
+
+// 处理文件选择
+async function handleFileSelection(event) {
+  const files = event.target.files;
+  
+  if (!files || files.length === 0) {
+    console.log('未选择文件');
+    return;
+  }
+  
+  console.log('🎯 用户选择了文件:', files.length, '个');
+  
+  // 处理第一个文件（暂时只支持单文件）
+  const file = files[0];
+  await processUploadedFile(file);
+  
+  // 清空input，允许重复选择同一文件
+  event.target.value = '';
+}
+
+// 处理上传的文件
+async function processUploadedFile(file) {
+  console.log('🎯 开始处理上传的文件:', {
+    name: file.name,
+    type: file.type,
+    size: file.size,
+    lastModified: file.lastModified
+  });
+  
+  // 文件大小检查（限制10MB）
+  const maxSize = 10 * 1024 * 1024; // 10MB
+  if (file.size > maxSize) {
+    showFileUploadError(`文件大小超过限制（${Math.round(maxSize / 1024 / 1024)}MB）`);
+    return;
+  }
+  
+  try {
+    // 读取文件内容
+    const arrayBuffer = await file.arrayBuffer();
+    const blob = new Blob([arrayBuffer], { type: file.type });
+    
+    // 创建文件数据对象
+    const fileData = {
+      type: file.type,
+      blob: blob,
+      fileName: file.name,
+      originalName: file.name,
+      size: file.size,
+      lastModified: file.lastModified
+    };
+    
+    console.log('🎯 文件数据准备完成:', fileData);
+    
+    // 调用现有的多iframe文件处理流程
+    await processFileToAllIframes(fileData);
+    
+  } catch (error) {
+    console.error('❌ 文件处理失败:', error);
+    showFileUploadError('文件处理失败: ' + error.message);
+  }
+}
+
+// 向所有iframe发送文件
+async function processFileToAllIframes(fileData) {
+  console.log('🎯 开始向所有iframe发送文件');
+  
+  // 获取所有 iframe 元素
+  const iframes = document.querySelectorAll('.ai-iframe');
+  console.log(`找到 ${iframes.length} 个 iframe`);
+  
+  if (iframes.length === 0) {
+    showFileUploadError('没有找到可用的AI站点');
+    return;
+  }
+  
+  // 调用现有的文件上传处理流程
+  await executeFileUploadSequentially(iframes, fileData);
+}
+
+// 显示文件上传错误
+function showFileUploadError(message) {
+  const error = document.createElement('div');
+  error.style.cssText = `
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+    color: white;
+    padding: 16px 24px;
+    border-radius: 12px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+    z-index: 10001;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 14px;
+    max-width: 400px;
+    text-align: center;
+    animation: slideInScale 0.3s ease-out;
+  `;
+  
+  error.innerHTML = `
+    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+      <span style="font-size: 18px;">❌</span>
+      <span style="font-weight: 600;">文件上传失败</span>
+    </div>
+    <div style="font-size: 13px; opacity: 0.9;">${message}</div>
+  `;
+  
+  document.body.appendChild(error);
+  
+  // 3秒后自动关闭
+  setTimeout(() => {
+    if (error.parentElement) {
+      error.remove();
+    }
+  }, 3000);
 }
 
 

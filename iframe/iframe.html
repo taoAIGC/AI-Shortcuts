@@ -29,6 +29,16 @@
             <img id="toggleIcon" src="../icons/down.png" alt="Toggle" />
         </div>
         <button id="searchButton" data-i18n="startCompare">发送</button>
+        
+        <!-- 文件上传按钮 -->
+        <button id="fileUploadButton" class="file-upload-btn" title="上传文件到所有AI站点">
+            <img src="../icons/attachment.png" alt="上传文件" style="width: 16px; height: 16px;">
+        </button>
+        
+        <!-- 隐藏的文件选择input -->
+        <input type="file" id="fileInput" style="display: none;" multiple 
+               accept="image/*,audio/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.rtf,.pages,.numbers,.key,.txt,.csv,.json,.xml,.html,.css,.js,.py,.java,.cpp,.c,.php,.zip,.rar,.7z,.gz,.tar,.wps,.et,.dps,.vsd,.vsdx,.pub,.one,.msg,.eml,.mpp">
+        
         <!-- 
         <select id="analysisDropdown" disabled >
             <option value="">深度分析</option>
