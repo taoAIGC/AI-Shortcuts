@@ -131,6 +131,18 @@ async function executePaste(step) {
   console.log('🎯 执行粘贴操作');
   console.log('粘贴步骤配置:', step);
   
+  // 验证配置加载状态
+  console.log('🔍 配置验证:');
+  console.log('- window.AppConfigManager 存在:', !!window.AppConfigManager);
+  if (window.AppConfigManager) {
+    try {
+      const testTypes = await window.AppConfigManager.getAllSupportedFileTypes();
+      console.log('- 配置加载成功，支持文件类型数量:', testTypes.length);
+    } catch (error) {
+      console.error('- 配置加载失败:', error);
+    }
+  }
+  
   try {
     // 优先使用全局存储的文件数据（来自父页面传递）
     if (window._currentFileData) {
@@ -215,11 +227,14 @@ async function executePaste(step) {
     }
     
     // 处理剪贴板中的文件
+    // 从配置中获取支持的文件类型
+    const fileTypes = await window.AppConfigManager.getAllSupportedFileTypes();
+    console.log('从配置获取支持的文件类型:', fileTypes);
+    
     for (const item of clipboardData) {
       console.log('剪贴板项目类型:', item.types);
       
-      // 检查是否是文件类型（包括图片）
-      const fileTypes = ['Files', 'image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/svg+xml'];
+      // 检查是否是文件类型
       const isFile = fileTypes.some(type => item.types.includes(type));
       
       if (isFile) {
@@ -234,7 +249,7 @@ async function executePaste(step) {
           file = await item.getType('Files');
           fileType = 'Files';
         } else {
-          // 如果没有 Files 类型，尝试获取图片类型
+          // 如果没有 Files 类型，尝试获取其他文件类型
           for (const type of fileTypes) {
             if (item.types.includes(type)) {
               file = await item.getType(type);
@@ -250,13 +265,27 @@ async function executePaste(step) {
         // 创建 DataTransfer 对象
         const dataTransfer = new DataTransfer();
         if (file) {
-          // 如果获取到的是 Blob，需要转换为 File 对象
+          // 如果获取到的是 Blob，需要转换为 File 对象 - 使用智能文件名生成
           let fileToAdd = file;
           if (file instanceof Blob && !(file instanceof File)) {
-            // 从 Blob 创建 File 对象
-            const fileName = `clipboard-${Date.now()}.${fileType.split('/')[1] || 'bin'}`;
+            // 使用智能文件名生成
+            let fileName = null;
+            if (window.AppConfigManager) {
+              fileName = await window.AppConfigManager.generateFileName(null, fileType, 'clipboard');
+              console.log('🎯 生成智能文件名:', fileName, '基于 MIME 类型:', fileType);
+            } else {
+              // 降级处理
+              const extension = await getFileExtensionFromMimeType(fileType);
+              fileName = `clipboard-${Date.now()}.${extension}`;
+            }
+            
             fileToAdd = new File([file], fileName, { type: fileType });
-            console.log('将 Blob 转换为 File:', fileToAdd);
+            console.log('将 Blob 转换为 File:', {
+              name: fileToAdd.name,
+              type: fileToAdd.type,
+              size: fileToAdd.size,
+              originalType: fileType
+            });
           }
           dataTransfer.items.add(fileToAdd);
         }
@@ -271,44 +300,14 @@ async function executePaste(step) {
         // 触发粘贴事件到当前聚焦的元素
         const activeElement = document.activeElement;
         if (activeElement) {
-          console.log('已向聚焦元素发送粘贴事件:', activeElement);
+          console.log('已向聚焦元素发送文件粘贴事件:', activeElement);
           activeElement.dispatchEvent(pasteEvent);
         } else {
-          console.log('没有聚焦的元素，向 document 发送粘贴事件');
+          console.log('没有聚焦的元素，向 document 发送文件粘贴事件');
           document.dispatchEvent(pasteEvent);
         }
         
         console.log('✅ 文件粘贴事件已触发');
-        
-      } else if (item.types.includes('text/html')) {
-        console.log('🎯 检测到HTML内容在剪贴板中');
-        
-        // 获取HTML内容
-        const htmlContent = await item.getType('text/html');
-        console.log('HTML内容:', htmlContent);
-        
-        // 创建 DataTransfer 对象
-        const dataTransfer = new DataTransfer();
-        dataTransfer.setData('text/html', htmlContent);
-        
-        // 创建HTML粘贴事件
-        const pasteEvent = new ClipboardEvent('paste', {
-          clipboardData: dataTransfer,
-          bubbles: true,
-          cancelable: true
-        });
-        
-        // 触发粘贴事件
-        const activeElement = document.activeElement;
-        if (activeElement) {
-          console.log('已向聚焦元素发送HTML粘贴事件:', activeElement);
-          activeElement.dispatchEvent(pasteEvent);
-        } else {
-          console.log('没有聚焦的元素，向 document 发送HTML粘贴事件');
-          document.dispatchEvent(pasteEvent);
-        }
-        
-        console.log('✅ HTML粘贴事件已触发');
         
       } else if (item.types.includes('text/plain')) {
         console.log('🎯 检测到文本在剪贴板中');
@@ -1098,13 +1097,31 @@ async function handleFileDataPaste(fileData) {
             await new Promise(resolve => setTimeout(resolve, 100));
         }
         
-        // 创建 File 对象
+        // 创建 File 对象 - 使用改进的文件名生成逻辑
         let file = fileData.blob;
         if (fileData.blob instanceof Blob && !(fileData.blob instanceof File)) {
-            // 从 Blob 创建 File 对象
-            const fileName = `clipboard-${Date.now()}.${fileData.type.split('/')[1] || 'bin'}`;
+            // 使用传递的智能文件名，如果没有则生成一个
+            let fileName = fileData.fileName;
+            if (!fileName && window.AppConfigManager) {
+                fileName = await window.AppConfigManager.generateFileName(
+                    fileData.originalName, 
+                    fileData.type, 
+                    'clipboard'
+                );
+                console.log('🎯 生成智能文件名:', fileName);
+            } else if (!fileName) {
+                // 最后的降级处理
+                const extension = await getFileExtensionFromMimeType(fileData.type);
+                fileName = `clipboard-${Date.now()}.${extension}`;
+            }
+            
             file = new File([fileData.blob], fileName, { type: fileData.type });
-            console.log('将 Blob 转换为 File:', file);
+            console.log('将 Blob 转换为 File:', {
+                name: file.name,
+                type: file.type,
+                size: file.size,
+                originalData: fileData
+            });
         }
         
         // 创建 DataTransfer 对象
@@ -1134,6 +1151,24 @@ async function handleFileDataPaste(fileData) {
         console.error('❌ 文件数据粘贴失败:', error);
         throw error;
     }
+}
+
+// 辅助函数：从 MIME 类型获取文件扩展名
+async function getFileExtensionFromMimeType(mimeType) {
+    if (window.AppConfigManager) {
+        return await window.AppConfigManager.getFileExtensionByMimeType(mimeType);
+    }
+    
+    // 简单的降级映射
+    const basicMappings = {
+        'application/pdf': 'pdf',
+        'image/png': 'png',
+        'image/jpeg': 'jpg',
+        'text/plain': 'txt',
+        'Files': 'file'
+    };
+    
+    return basicMappings[mimeType] || 'bin';
 } 
 
 // 显示剪切板权限提示

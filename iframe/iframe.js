@@ -146,11 +146,111 @@ document.addEventListener('DOMContentLoaded', async function() {
 
 });
 
+// 检测文本内容是否为本地文件路径
+function isLocalFile(text) {
+  if (!text || typeof text !== 'string') {
+    return false;
+  }
+  
+  // 去除前后空白并取第一行（文件路径通常在第一行）
+  const firstLine = text.trim().split('\n')[0];
+  
+  // 检测常见的文件路径模式
+  const filePathPatterns = [
+    // Windows 路径: C:\Users\... 或 D:\...
+    /^[A-Za-z]:\\[^<>:"|?*\n]+\.[a-zA-Z0-9]+$/,
+    // Unix/Linux/Mac 路径: /Users/... 或 ~/...
+    /^[~\/][^<>:"|?*\n]*\.[a-zA-Z0-9]+$/,
+    // UNC 路径: \\server\share\...
+    /^\\\\[^<>:"|?*\n]+\\[^<>:"|?*\n]*\.[a-zA-Z0-9]+$/
+  ];
+  
+  // 检测常见的文件扩展名
+  const commonExtensions = [
+    'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
+    'txt', 'csv', 'json', 'xml', 'html', 'css', 'js',
+    'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'tiff', 'ico', 'avif',
+    'mp4', 'avi', 'mov', 'wmv', 'webm', 'mp3', 'wav', 'ogg', 'flac', 'm4a',
+    'zip', 'rar', '7z', 'gz', 'tar'
+  ];
+  
+  // 检查是否匹配文件路径模式
+  const matchesPattern = filePathPatterns.some(pattern => pattern.test(firstLine));
+  
+  // 检查是否有常见文件扩展名（包括单独的文件名）
+  const hasFileExtension = commonExtensions.some(ext => 
+    firstLine.toLowerCase().endsWith('.' + ext)
+  );
+  
+  // 检查是否包含文件系统特征（路径分隔符 + 文件扩展名）
+  const hasPathSeparator = firstLine.includes('/') || firstLine.includes('\\');
+  const hasDotExtension = /\.[a-zA-Z0-9]+$/.test(firstLine);
+  
+  // 放宽检测条件：如果是单独的文件名（有扩展名），也认为是文件
+  const isSimpleFileName = hasDotExtension && !firstLine.includes('\t') && !firstLine.includes('\r') && firstLine.length < 256;
+  
+  const isFile = matchesPattern || (hasFileExtension && (hasPathSeparator || isSimpleFileName));
+  
+  if (isFile) {
+    console.log('🎯 文件路径检测结果:', {
+      text: firstLine,
+      matchesPattern,
+      hasFileExtension,
+      hasPathSeparator,
+      hasDotExtension,
+      isSimpleFileName
+    });
+  }
+  
+  return isFile;
+}
+
 // 统一的文件粘贴处理函数
 async function handleUnifiedFilePaste(event) {
   console.log('🎯 检测到粘贴事件，开始统一处理');
   
   try {
+    // 预先检查剪贴板内容，如果可能包含文件则提前阻止默认行为
+    let shouldPreventDefault = false;
+    try {
+      const clipboardDataPreCheck = await navigator.clipboard.read();
+      
+      for (const item of clipboardDataPreCheck) {
+        // 快速检查是否可能包含文件
+        const hasFiles = item.types.includes('Files');
+        const hasImages = item.types.some(type => type.startsWith('image/'));
+        const hasTextAndOthers = item.types.includes('text/plain') && item.types.length > 1;
+        
+        // 检查 text/plain 是否为本地文件路径
+        let hasLocalFile = false;
+        if (item.types.includes('text/plain') && item.types.length === 1) {
+          try {
+            const textContent = await item.getType('text/plain');
+            const text = await textContent.text();
+            hasLocalFile = isLocalFile(text);
+            if (hasLocalFile) {
+              console.log('🎯 预检查发现本地文件路径');
+            }
+          } catch (textError) {
+            // 忽略文本读取错误
+          }
+        }
+        
+        if (hasFiles || hasImages || hasTextAndOthers || hasLocalFile) {
+          shouldPreventDefault = true;
+          console.log('🎯 预检查发现可能的文件内容，提前阻止默认行为');
+          break;
+        }
+      }
+    } catch (preCheckError) {
+      console.log('🎯 预检查失败，继续正常流程:', preCheckError.message);
+    }
+    
+    if (shouldPreventDefault) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    
     // 1. 首先请求剪贴板权限
     const hasPermission = await requestClipboardPermission();
     if (!hasPermission) {
@@ -165,36 +265,183 @@ async function handleUnifiedFilePaste(event) {
     let hasFiles = false;
     let fileData = null;
     
+    // 从配置中获取支持的文件类型
+    const fileTypes = await window.AppConfigManager.getAllSupportedFileTypes();
+    console.log('从配置获取支持的文件类型:', fileTypes);
+    
     for (const item of clipboardData) {
       console.log('剪贴板项目类型:', item.types);
       
-      // 检测文件类型：Files 或常见的文件 MIME 类型
-      const fileTypes = ['Files', 'image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/svg+xml', 'application/octet-stream'];
-      const isFile = fileTypes.some(type => item.types.includes(type));
+      // 改进的文件类型检测逻辑，优先级：Files > 具体MIME类型 > text/plain
+      let isFile = false;
+      
+      // 1. 优先检测 Files 类型
+      if (item.types.includes('Files')) {
+        isFile = true;
+        console.log('🎯 检测到 Files 类型');
+      }
+      
+      // 2. 检测具体的文件MIME类型（排除text/plain）
+      if (!isFile) {
+        const specificFileTypes = fileTypes.filter(type => type !== 'text/plain');
+        isFile = specificFileTypes.some(type => item.types.includes(type));
+        if (isFile) {
+          console.log('🎯 检测到具体文件MIME类型');
+        }
+      }
+      
+      // 3. 检测 text/plain - 需要区分纯文本和本地文件路径
+      if (!isFile && item.types.includes('text/plain')) {
+        // 如果同时包含Files或图片类型，则认为是文件而不是纯文本
+        const hasFilesType = item.types.includes('Files');
+        const hasImageType = item.types.some(type => type.startsWith('image/'));
+        
+        if (hasFilesType || hasImageType) {
+          isFile = true;
+          console.log('🎯 检测到text/plain但同时包含文件类型，识别为文件');
+        } else {
+          // 检查text/plain内容是否为本地文件路径
+          try {
+            const textContent = await item.getType('text/plain');
+            const text = await textContent.text();
+            console.log('🎯 text/plain 内容预检:', text.substring(0, 100) + (text.length > 100 ? '...' : ''));
+            
+            // 检测是否为本地文件路径
+            const isLocalFilePath = isLocalFile(text);
+            if (isLocalFilePath) {
+              isFile = true;
+              console.log('🎯 检测到本地文件路径，识别为文件:', text.split('\n')[0]);
+            } else {
+              console.log('🎯 检测到纯文本类型，不是文件');
+            }
+          } catch (textError) {
+            console.log('🎯 无法读取text/plain内容，默认为纯文本:', textError.message);
+          }
+        }
+      }
       
       if (isFile) {
         hasFiles = true;
         console.log('检测到文件在剪贴板中，类型:', item.types);
         
+        // 阻止默认粘贴行为，避免文件名进入搜索框
+        event.preventDefault();
+        event.stopPropagation();
+        console.log('🎯 已阻止默认粘贴行为，避免文件名进入搜索框');
+        
         // 在父页面统一读取文件数据
         try {
+          let blob = null;
+          let mimeType = null;
+          let originalName = null;
+          
+          // 优先获取Files类型
           if (item.types.includes('Files')) {
-            fileData = {
-              type: 'Files',
-              blob: await item.getType('Files')
-            };
+            blob = await item.getType('Files');
+            mimeType = 'Files';
+            
+            // 尝试获取原始文件信息
+            if (blob instanceof File) {
+              originalName = blob.name;
+              mimeType = blob.type || 'application/octet-stream';
+              console.log('获取到原始文件信息:', {
+                name: originalName,
+                type: mimeType,
+                size: blob.size,
+                lastModified: blob.lastModified
+              });
+            }
           } else {
-            // 找到第一个匹配的文件类型
-            for (const type of fileTypes) {
-              if (item.types.includes(type)) {
-                fileData = {
-                  type: type,
-                  blob: await item.getType(type)
-                };
-                break;
+            // 优先尝试图片类型
+            const imageTypes = item.types.filter(type => type.startsWith('image/'));
+            if (imageTypes.length > 0) {
+              const imageType = imageTypes[0];
+              blob = await item.getType(imageType);
+              mimeType = imageType;
+              console.log('🎯 获取到图片类型:', imageType);
+            } else {
+              // 然后尝试其他具体文件类型（排除text/plain）
+              const specificFileTypes = fileTypes.filter(type => type !== 'text/plain');
+              for (const type of specificFileTypes) {
+                if (item.types.includes(type)) {
+                  blob = await item.getType(type);
+                  mimeType = type;
+                  console.log('🎯 获取到文件类型:', type);
+                  break;
+                }
+              }
+              
+              // 最后才尝试text/plain（如果确认是文件）
+              if (!blob && item.types.includes('text/plain')) {
+                const hasFilesType = item.types.includes('Files');
+                const hasImageType = item.types.some(type => type.startsWith('image/'));
+                
+                // 检查是否为本地文件路径
+                const textContent = await item.getType('text/plain');
+                const text = await textContent.text();
+                const isLocalFilePath = isLocalFile(text);
+                
+                if (hasFilesType || hasImageType || isLocalFilePath) {
+                  if (isLocalFilePath) {
+                    console.log('🎯 处理本地文件路径:', text.split('\n')[0]);
+                    
+                    // 从文件路径中提取文件名和扩展名
+                    const filePath = text.split('\n')[0].trim();
+                    const fileName = filePath.split(/[\/\\]/).pop(); // 获取文件名
+                    const fileExtension = fileName.split('.').pop().toLowerCase();
+                    
+                    // 根据扩展名推断 MIME 类型
+                    let inferredMimeType = 'application/octet-stream';
+                    if (window.AppConfigManager) {
+                      const allMimeTypes = await window.AppConfigManager.getMimeToExtensionMappings();
+                      for (const [mime, ext] of Object.entries(allMimeTypes)) {
+                        if (ext === fileExtension) {
+                          inferredMimeType = mime;
+                          break;
+                        }
+                      }
+                    }
+                    
+                    // 创建一个占位符 Blob，包含文件路径信息
+                    blob = new Blob([text], { type: 'text/plain' });
+                    mimeType = inferredMimeType;
+                    originalName = fileName;
+                    
+                    console.log('🎯 本地文件路径处理结果:', {
+                      fileName,
+                      fileExtension,
+                      inferredMimeType,
+                      originalName
+                    });
+                  } else {
+                    blob = await item.getType('text/plain');
+                    mimeType = 'text/plain';
+                    console.log('🎯 降级获取text/plain类型（但识别为文件）');
+                  }
+                }
               }
             }
           }
+          
+          // 生成智能文件名
+          let fileName = null;
+          if (window.AppConfigManager) {
+            fileName = await window.AppConfigManager.generateFileName(originalName, mimeType, 'clipboard');
+            console.log('生成智能文件名:', fileName, '基于:', { originalName, mimeType });
+          } else {
+            // 降级处理
+            fileName = originalName || `clipboard-${Date.now()}.file`;
+          }
+          
+          fileData = {
+            type: mimeType,
+            blob: blob,
+            fileName: fileName,
+            originalName: originalName,
+            size: blob?.size,
+            lastModified: blob?.lastModified
+          };
+          
           console.log('成功读取文件数据:', fileData);
         } catch (error) {
           console.error('读取文件数据失败:', error);
