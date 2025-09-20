@@ -146,6 +146,115 @@ document.addEventListener('DOMContentLoaded', async function() {
 
 });
 
+// 显示本地文件限制警告
+function showLocalFileWarning(fileName, fileExtension) {
+  const warning = document.createElement('div');
+  warning.style.cssText = `
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+    color: white;
+    padding: 24px;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    z-index: 10001;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 14px;
+    max-width: 480px;
+    width: 90%;
+    text-align: left;
+    line-height: 1.6;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.2);
+    animation: slideInScale 0.3s ease-out;
+  `;
+  
+  // 使用通用的文件图标
+  const icon = '📁';
+  
+  warning.innerHTML = `
+    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+      <span style="font-size: 32px;">${icon}</span>
+      <div>
+        <div style="font-weight: 600; font-size: 16px;">检测到本地文件</div>
+        <div style="font-size: 12px; opacity: 0.9;">${fileName}</div>
+      </div>
+    </div>
+    
+    <div style="background: rgba(255,255,255,0.1); padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+      <div style="font-size: 13px; margin-bottom: 8px;">🚫 <strong>浏览器安全限制</strong></div>
+      <div style="font-size: 12px; opacity: 0.9;">
+        复制本地文件时，浏览器只能获取文件路径，无法读取文件内容。
+      </div>
+    </div>
+    
+    <div style="font-size: 13px; margin-bottom: 16px;">
+      <div style="font-weight: 600; margin-bottom: 8px;">💡 建议操作：</div>
+      <div style="margin-left: 16px;">
+        <div style="margin-bottom: 4px;">• 使用 <strong>拖拽</strong> 将文件直接拖入聊天框</div>
+        <div style="margin-bottom: 4px;">• 点击 <strong>文件上传按钮</strong> 选择文件</div>
+        <div>• 图片文件可以先打开后 <strong>截图粘贴</strong></div>
+      </div>
+    </div>
+    
+    <div style="display: flex; gap: 12px; justify-content: flex-end;">
+      <button id="dismissWarning" style="
+        background: rgba(255,255,255,0.2);
+        border: 1px solid rgba(255,255,255,0.3);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 12px;
+        transition: all 0.2s;
+      ">我知道了</button>
+    </div>
+  `;
+  
+  // 添加 CSS 动画
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes slideInScale {
+      from { 
+        transform: translate(-50%, -50%) scale(0.8); 
+        opacity: 0; 
+      }
+      to { 
+        transform: translate(-50%, -50%) scale(1); 
+        opacity: 1; 
+      }
+    }
+    #dismissWarning:hover {
+      background: rgba(255,255,255,0.3) !important;
+      transform: translateY(-1px);
+    }
+  `;
+  document.head.appendChild(style);
+  
+  document.body.appendChild(warning);
+  
+  // 点击关闭
+  const dismissBtn = warning.querySelector('#dismissWarning');
+  dismissBtn.addEventListener('click', () => {
+    warning.style.animation = 'slideInScale 0.3s ease-out reverse';
+    setTimeout(() => {
+      if (warning.parentElement) {
+        warning.remove();
+        style.remove();
+      }
+    }, 300);
+  });
+  
+  // 8秒后自动关闭
+  setTimeout(() => {
+    if (warning.parentElement) {
+      dismissBtn.click();
+    }
+  }, 8000);
+}
+
 // 检测文本内容是否为本地文件路径
 function isLocalFile(text) {
   if (!text || typeof text !== 'string') {
@@ -383,36 +492,19 @@ async function handleUnifiedFilePaste(event) {
                 
                 if (hasFilesType || hasImageType || isLocalFilePath) {
                   if (isLocalFilePath) {
-                    console.log('🎯 处理本地文件路径:', text.split('\n')[0]);
+                    console.log('🎯 检测到本地文件路径，显示用户提示而非传递无效数据');
                     
                     // 从文件路径中提取文件名和扩展名
                     const filePath = text.split('\n')[0].trim();
-                    const fileName = filePath.split(/[\/\\]/).pop(); // 获取文件名
+                    const fileName = filePath.split(/[\/\\]/).pop();
                     const fileExtension = fileName.split('.').pop().toLowerCase();
                     
-                    // 根据扩展名推断 MIME 类型
-                    let inferredMimeType = 'application/octet-stream';
-                    if (window.AppConfigManager) {
-                      const allMimeTypes = await window.AppConfigManager.getMimeToExtensionMappings();
-                      for (const [mime, ext] of Object.entries(allMimeTypes)) {
-                        if (ext === fileExtension) {
-                          inferredMimeType = mime;
-                          break;
-                        }
-                      }
-                    }
+                    // 显示友好提示，不传递无效数据
+                    showLocalFileWarning(fileName, fileExtension);
                     
-                    // 创建一个占位符 Blob，包含文件路径信息
-                    blob = new Blob([text], { type: 'text/plain' });
-                    mimeType = inferredMimeType;
-                    originalName = fileName;
-                    
-                    console.log('🎯 本地文件路径处理结果:', {
-                      fileName,
-                      fileExtension,
-                      inferredMimeType,
-                      originalName
-                    });
+                    // 不创建文件数据，直接返回，避免传递无效信息给 AI 站点
+                    console.log('🎯 本地文件路径处理完成，已显示用户提示');
+                    return; // 直接返回，不继续处理
                   } else {
                     blob = await item.getType('text/plain');
                     mimeType = 'text/plain';

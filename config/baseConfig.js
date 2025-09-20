@@ -20,6 +20,7 @@ if (DEV_CONFIG.IS_PRODUCTION) {
   console.error = function() { return undefined; };
   console.info = function() { return undefined; };
   console.debug = function() { return undefined; };
+  console.log('当前为开发环境');
 }
 
 // 应用配置管理器
@@ -56,6 +57,29 @@ const AppConfigManager = {
       externalLinks: {
         uninstallSurvey: 'https://wenjuan.feishu.cn/m?t=sxcO29Fz913i-1ad4',
         feedbackSurvey: 'https://wenjuan.feishu.cn/m/cfm?t=sTFPGe4oetOi-9m3a'
+      },
+      supportedFileTypes: {
+        categories: {
+          general: {
+            name: "通用文件类型",
+            types: ["Files", "application/octet-stream"]
+          },
+          images: {
+            name: "图片格式",
+            types: ["image/png", "image/jpeg", "image/gif", "image/webp", "image/svg+xml"]
+          }
+        },
+        mimeToExtension: {
+          mappings: {
+            "Files": "file",
+            "application/octet-stream": "bin",
+            "image/png": "png",
+            "image/jpeg": "jpg",
+            "image/gif": "gif",
+            "image/webp": "webp",
+            "text/plain": "txt"
+          }
+        }
       }
     };
     return this._config;
@@ -83,6 +107,68 @@ const AppConfigManager = {
   async getExternalLinks() {
     const config = await this.loadConfig();
     return config.externalLinks || {};
+  },
+  
+  // 获取支持的文件类型
+  async getSupportedFileTypes() {
+    const config = await this.loadConfig();
+    return config.supportedFileTypes || {};
+  },
+  
+  // 获取所有支持的文件类型（扁平数组）
+  async getAllSupportedFileTypes() {
+    const config = await this.loadConfig();
+    const supportedFileTypes = config.supportedFileTypes;
+    
+    if (!supportedFileTypes || !supportedFileTypes.categories) {
+      return ['Files', 'application/octet-stream', 'image/png', 'image/jpeg', 'text/plain'];
+    }
+    
+    // 将所有分类中的文件类型合并为一个数组
+    const allTypes = [];
+    Object.values(supportedFileTypes.categories).forEach(category => {
+      if (category.types && Array.isArray(category.types)) {
+        allTypes.push(...category.types);
+      }
+    });
+    
+    // 去重并返回
+    return [...new Set(allTypes)];
+  },
+  
+  // 获取 MIME 类型到文件扩展名的映射
+  async getMimeToExtensionMappings() {
+    const config = await this.loadConfig();
+    const supportedFileTypes = config.supportedFileTypes;
+    
+    return supportedFileTypes?.mimeToExtension?.mappings || {};
+  },
+  
+  // 根据 MIME 类型获取文件扩展名
+  async getFileExtensionByMimeType(mimeType) {
+    const mappings = await this.getMimeToExtensionMappings();
+    return mappings[mimeType] || 'unknown';
+  },
+  
+  // 智能生成文件名
+  async generateFileName(originalName, mimeType, fallbackPrefix = 'clipboard') {
+    // 如果有原始文件名且包含扩展名，直接使用
+    if (originalName && originalName.includes('.')) {
+      return originalName;
+    }
+    
+    // 获取正确的文件扩展名
+    const extension = await this.getFileExtensionByMimeType(mimeType);
+    
+    // 使用原始文件名（如果有）或生成时间戳名称
+    const baseName = originalName || `${fallbackPrefix}-${Date.now()}`;
+    
+    // 确保有正确的扩展名
+    if (extension === 'unknown') {
+      return baseName;
+    }
+    
+    return `${baseName}.${extension}`;
   }
 };
 
