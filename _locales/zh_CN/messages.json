@@ -20,7 +20,7 @@
     }
   },
   "inputPlaceholder": {
-    "message": "输入要搜索的内容或 Ctrl+V 粘贴文件"
+    "message": "输入要搜索的内容或 Ctrl+V 粘贴图片"
   },
   "openSettings": {
     "message": "默认AI对比配置"

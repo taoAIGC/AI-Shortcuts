@@ -6,7 +6,7 @@ if (typeof window !== 'undefined' && window.BaseConfigLoaded) {
 
 // 开发环境配置
 const DEV_CONFIG = {
-  IS_PRODUCTION: true,  // 开发时设为 false，发布时设为 true
+  IS_PRODUCTION: false,  // 开发时设为 false，发布时设为 true
   // REMOTE_CONFIG_URL: 'https://raw.githubusercontent.com/taoAIGC/AIShortcuts_test_siteHandlers/refs/heads/main/siteHandlers.json'  // 开发环境远程配置
   REMOTE_CONFIG_URL: 'DEV'  // 测试时使用本地配置文件
 
