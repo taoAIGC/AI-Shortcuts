@@ -132,6 +132,13 @@ async function executePaste(step) {
   console.log('粘贴步骤配置:', step);
   
   try {
+    // 优先使用全局存储的文件数据（来自父页面传递）
+    if (window._currentFileData) {
+      console.log('🎯 使用传递的文件数据进行粘贴');
+      await handleFileDataPaste(window._currentFileData);
+      return;
+    }
+    
     // 检查剪贴板权限
     const permissionStatus = await navigator.permissions.query({ name: 'clipboard-read' });
     console.log('剪贴板权限状态:', permissionStatus.state);
@@ -894,7 +901,7 @@ window.addEventListener('message', async function(event) {
     }
     
     // 检查是否是 AIShortcuts 扩展的消息
-    if (!event.data.query && !event.data.type) {
+    if (!event.data.query && !event.data.type && !event.data.fileData) {
         return; // 静默跳过缺少必要字段的消息
     }
     
@@ -932,6 +939,109 @@ window.addEventListener('message', async function(event) {
         return;
     }
     
+    console.log('收到消息类型:', event.data.type);
+    
+    // 处理文件粘贴消息 - 优先使用站点特定处理器
+    if (event.data.type === 'TRIGGER_PASTE') {
+        console.log('🎯 收到文件粘贴触发消息');
+        console.log('消息详情:', event.data);
+        
+        if (event.data.index && event.data.total) {
+            console.log(`🎯 当前处理进度: ${event.data.index}/${event.data.total}`);
+        }
+        
+        // 检查消息模式
+        if (event.data.fallback) {
+            console.log('🎯 降级模式：iframe 自行尝试读取剪贴板');
+        } else if (event.data.useSiteHandler) {
+            console.log('🎯 优先模式：使用站点特定的文件上传处理器');
+        } else if (event.data.global) {
+            console.log('🎯 全局文件粘贴操作');
+            if (event.data.forced) {
+                console.log('🎯 强制处理模式');
+            }
+        } else {
+            console.log('🎯 单个 iframe 的文件粘贴操作');
+        }
+        
+        // 获取站点处理器
+        const domain = event.data.domain || window.location.hostname;
+        const siteHandler = await getSiteHandler(domain);
+        
+        if (siteHandler && siteHandler.fileUploadHandler) {
+            console.log(`🎯 使用 ${siteHandler.name} 的文件上传处理器`);
+            console.log('站点处理器配置:', siteHandler.fileUploadHandler);
+            
+            try {
+                // 如果有传递文件数据，先将其存储到全局变量供处理器使用
+                if (event.data.fileData) {
+                    console.log('🎯 收到传递的文件数据，存储供站点处理器使用');
+                    window._currentFileData = event.data.fileData;
+                }
+                
+                await executeSiteHandler(null, siteHandler.fileUploadHandler);
+                console.log('🎯 站点文件上传处理器执行完成');
+                
+                // 清理临时数据
+                if (window._currentFileData) {
+                    delete window._currentFileData;
+                }
+                
+            } catch (error) {
+                console.error(`${siteHandler.name} 文件上传处理失败:`, error);
+                
+                // 降级策略：如果有文件数据，尝试直接粘贴
+                if (event.data.fileData) {
+                    console.log('🎯 降级到直接文件数据粘贴');
+                    try {
+                        await handleFileDataPaste(event.data.fileData);
+                        console.log('✅ 降级文件数据粘贴成功');
+                    } catch (fallbackError) {
+                        console.error('❌ 降级文件数据粘贴也失败:', fallbackError);
+                        // 最后的降级：默认粘贴操作
+                        await executeSiteHandler(null, { 
+                            steps: [{ 
+                                action: 'paste', 
+                                description: '最后降级：默认粘贴操作' 
+                            }] 
+                        });
+                    }
+                } else {
+                    // 没有文件数据时的降级
+                    console.log('🎯 降级到默认粘贴操作');
+                    await executeSiteHandler(null, { 
+                        steps: [{ 
+                            action: 'paste', 
+                            description: '降级：默认粘贴操作' 
+                        }] 
+                    });
+                }
+            }
+        } else {
+            console.log('❌ 未找到文件上传处理器');
+            
+            // 如果没有站点处理器，但有文件数据，尝试直接粘贴
+            if (event.data.fileData) {
+                console.log('🎯 使用直接文件数据粘贴');
+                try {
+                    await handleFileDataPaste(event.data.fileData);
+                    console.log('✅ 直接文件数据粘贴成功');
+                } catch (error) {
+                    console.error('❌ 直接文件数据粘贴失败:', error);
+                }
+            } else {
+                console.log('🎯 使用默认粘贴处理方式');
+                await executeSiteHandler(null, { 
+                    steps: [{ 
+                        action: 'paste', 
+                        description: '默认粘贴操作' 
+                    }] 
+                });
+            }
+        }
+        return;
+    }
+
     // 对于搜索消息，必须包含 query 字段
     if (event.data.type !== 'TRIGGER_PASTE' && !event.data.query) {
         return;
@@ -940,85 +1050,91 @@ window.addEventListener('message', async function(event) {
     console.log('收到query:',event.data.query, '收到type:',event.data.type);
     console.log('收到消息event 原始:',event);
 
-  // 处理文件粘贴消息
-  if (event.data.type === 'TRIGGER_PASTE') {
-    console.log('🎯 收到文件粘贴触发消息');
-    console.log('消息详情:', event.data);
-    
-    // 检查是否是全局粘贴
-    if (event.data.global) {
-      console.log('🎯 这是全局文件粘贴操作');
-      if (event.data.fallback) {
-        console.log('🎯 这是降级处理模式');
-      }
-      if (event.data.forced) {
-        console.log('🎯 这是强制处理模式');
-      }
-    } else {
-      console.log('🎯 这是单个 iframe 的文件粘贴操作');
-    }
-    
-    // 使用配置化的文件上传处理器
+    // 使用新的统一处理逻辑
     const domain = event.data.domain || window.location.hostname;
-    const siteHandler = await getSiteHandler(domain);
+    console.log('🔍 调试信息 - 域名:', domain, '当前hostname:', window.location.hostname);
     
-    if (siteHandler && siteHandler.fileUploadHandler) {
-      console.log(`🎯 使用 ${siteHandler.name} 的文件上传处理器`);
-      console.log('站点处理器配置:', siteHandler.fileUploadHandler);
-      try {
-        await executeSiteHandler(null, siteHandler.fileUploadHandler);
-        console.log('🎯 文件上传处理器执行完成');
-      } catch (error) {
-        console.error(`${siteHandler.name} 文件上传处理失败:`, error);
-        // 降级到默认处理方式
-        console.log('降级到默认处理方式');
-        await executeSiteHandler(null, { 
-          steps: [{ 
-            action: 'paste', 
-            description: '默认粘贴操作' 
-          }] 
-        });
-      }
-    } else {
-      console.log('未找到文件上传处理器，使用默认处理方式');
-      await executeSiteHandler(null, { 
-        steps: [{ 
-          action: 'paste', 
-          description: '默认粘贴操作' 
-        }] 
-      });
+    const siteHandler = await getSiteHandler(domain);
+    console.log('🔍 调试信息 - 站点处理器:', siteHandler);
+    
+    if (siteHandler && siteHandler.searchHandler && event.data.query) {
+        console.log(`✅ 使用 ${siteHandler.name} 配置化处理器处理消息`);
+        console.log('🔍 调试信息 - 搜索处理器配置:', siteHandler.searchHandler);
+        try {
+            // 使用配置化处理器执行
+            await executeSiteHandler(event.data.query, siteHandler.searchHandler);
+            console.log(`✅ ${siteHandler.name} 处理完成`);
+        } catch (error) {
+            console.error(`❌ ${siteHandler.name} 处理失败:`, error);
+        }
+        return;
     }
-    return;
-  }
 
-
-  // 使用新的统一处理逻辑
-  const domain = event.data.domain || window.location.hostname;
-  console.log('🔍 调试信息 - 域名:', domain, '当前hostname:', window.location.hostname);
-  
-  const siteHandler = await getSiteHandler(domain);
-  console.log('🔍 调试信息 - 站点处理器:', siteHandler);
-  
-  if (siteHandler && siteHandler.searchHandler && event.data.query) {
-    console.log(`✅ 使用 ${siteHandler.name} 配置化处理器处理消息`);
-    console.log('🔍 调试信息 - 搜索处理器配置:', siteHandler.searchHandler);
-    try {
-      // 使用配置化处理器执行
-      await executeSiteHandler(event.data.query, siteHandler.searchHandler);
-      console.log(`✅ ${siteHandler.name} 处理完成`);
-    } catch (error) {
-      console.error(`❌ ${siteHandler.name} 处理失败:`, error);
-    }
-    return;
-  }
-
-  // 如果没有找到对应的处理器，记录警告
-  console.warn('❌ 未找到对应的站点处理器');
-  console.warn('🔍 调试信息 - 域名:', domain);
-  console.warn('🔍 调试信息 - 站点处理器:', siteHandler);
-  console.warn('🔍 调试信息 - 消息类型:', event.data.type);
-  console.warn('🔍 调试信息 - 查询内容:', event.data.query);
+    // 如果没有找到对应的处理器，记录警告
+    console.warn('❌ 未找到对应的站点处理器');
+    console.warn('🔍 调试信息 - 域名:', domain);
+    console.warn('🔍 调试信息 - 站点处理器:', siteHandler);
+    console.warn('🔍 调试信息 - 消息类型:', event.data.type);
+    console.warn('🔍 调试信息 - 查询内容:', event.data.query);
 }); 
+
+// 处理传递的文件数据粘贴
+async function handleFileDataPaste(fileData) {
+    console.log('🎯 开始处理传递的文件数据');
+    console.log('文件数据:', fileData);
+    
+    if (!fileData || !fileData.blob) {
+        console.error('❌ 无效的文件数据');
+        return;
+    }
+    
+    try {
+        // 确保文档获得焦点
+        console.log('🔍 检查文档焦点状态...');
+        if (!document.hasFocus()) {
+            console.log('⚠️ 文档没有焦点，尝试获取焦点...');
+            window.focus();
+            // 等待一小段时间让焦点生效
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
+        // 创建 File 对象
+        let file = fileData.blob;
+        if (fileData.blob instanceof Blob && !(fileData.blob instanceof File)) {
+            // 从 Blob 创建 File 对象
+            const fileName = `clipboard-${Date.now()}.${fileData.type.split('/')[1] || 'bin'}`;
+            file = new File([fileData.blob], fileName, { type: fileData.type });
+            console.log('将 Blob 转换为 File:', file);
+        }
+        
+        // 创建 DataTransfer 对象
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+        
+        // 创建文件粘贴事件
+        const pasteEvent = new ClipboardEvent('paste', {
+            clipboardData: dataTransfer,
+            bubbles: true,
+            cancelable: true
+        });
+        
+        // 触发粘贴事件到当前聚焦的元素
+        const activeElement = document.activeElement;
+        if (activeElement) {
+            console.log('已向聚焦元素发送文件粘贴事件:', activeElement);
+            activeElement.dispatchEvent(pasteEvent);
+        } else {
+            console.log('没有聚焦的元素，向 document 发送文件粘贴事件');
+            document.dispatchEvent(pasteEvent);
+        }
+        
+        console.log('✅ 文件数据粘贴事件已触发');
+        
+    } catch (error) {
+        console.error('❌ 文件数据粘贴失败:', error);
+        throw error;
+    }
+} 
 
 // 显示剪切板权限提示
 function showClipboardPermissionTip() {

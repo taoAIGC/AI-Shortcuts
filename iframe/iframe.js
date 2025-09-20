@@ -163,6 +163,8 @@ async function handleUnifiedFilePaste(event) {
     console.log('剪贴板内容:', clipboardData);
     
     let hasFiles = false;
+    let fileData = null;
+    
     for (const item of clipboardData) {
       console.log('剪贴板项目类型:', item.types);
       
@@ -173,61 +175,221 @@ async function handleUnifiedFilePaste(event) {
       if (isFile) {
         hasFiles = true;
         console.log('检测到文件在剪贴板中，类型:', item.types);
+        
+        // 在父页面统一读取文件数据
+        try {
+          if (item.types.includes('Files')) {
+            fileData = {
+              type: 'Files',
+              blob: await item.getType('Files')
+            };
+          } else {
+            // 找到第一个匹配的文件类型
+            for (const type of fileTypes) {
+              if (item.types.includes(type)) {
+                fileData = {
+                  type: type,
+                  blob: await item.getType(type)
+                };
+                break;
+              }
+            }
+          }
+          console.log('成功读取文件数据:', fileData);
+        } catch (error) {
+          console.error('读取文件数据失败:', error);
+          fileData = null;
+        }
         break;
       }
     }
     
     if (hasFiles) {
-      console.log('🎯 开始向所有 iframe 广播文件粘贴消息');
+      console.log('🎯 开始逐个向 iframe 执行文件粘贴');
       
       // 获取所有 iframe 元素
       const iframes = document.querySelectorAll('.ai-iframe');
       console.log(`找到 ${iframes.length} 个 iframe`);
       
-      // 向每个 iframe 发送 TRIGGER_PASTE 消息
-      iframes.forEach((iframe, index) => {
-        try {
-          const domain = new URL(iframe.src).hostname;
-          console.log(`🎯 向第 ${index + 1} 个 iframe (${domain}) 发送 TRIGGER_PASTE 消息`);
-          
-          iframe.contentWindow.postMessage({
-            type: 'TRIGGER_PASTE',
-            domain: domain,
-            source: 'iframe-parent',
-            global: true
-          }, '*');
-        } catch (error) {
-          console.error(`向第 ${index + 1} 个 iframe 发送消息失败:`, error);
-        }
-      });
+      // 逐个执行文件粘贴
+      await executeFileUploadSequentially(iframes, fileData);
       
-      console.log('🎯 文件粘贴消息广播完成');
     } else {
       console.log('剪贴板中没有检测到文件类型，跳过文件粘贴处理');
-      // 纯文本粘贴不需要发送 TRIGGER_PASTE 消息
-      
     }
   } catch (error) {
     console.log('剪贴板访问失败:', error.name, error.message);
     console.log('提示: 请确保页面已获得焦点并授权剪贴板访问权限');
     
-    // 即使剪贴板访问失败，也尝试发送消息
-    console.log('🎯 尝试强制发送 TRIGGER_PASTE 消息');
+    // 降级处理：尝试让每个 iframe 自己处理
+    console.log('🎯 降级处理：让每个 iframe 自行尝试粘贴');
     const iframes = document.querySelectorAll('.ai-iframe');
-    iframes.forEach((iframe, index) => {
-      try {
-        const domain = new URL(iframe.src).hostname;
+    await executeFileUploadSequentially(iframes, null, true);
+  }
+}
+
+// 逐个执行文件上传的函数
+async function executeFileUploadSequentially(iframes, fileData, fallbackMode = false) {
+  const totalIframes = iframes.length;
+  let successCount = 0;
+  let failureCount = 0;
+  
+  console.log(`开始逐个执行文件粘贴，共 ${totalIframes} 个 iframe`);
+  
+  // 显示进度提示
+  showFileUploadProgress(0, totalIframes, 'starting');
+  
+  for (let i = 0; i < iframes.length; i++) {
+    const iframe = iframes[i];
+    
+    try {
+      const domain = new URL(iframe.src).hostname;
+      const siteName = iframe.getAttribute('data-site');
+      
+      console.log(`🎯 处理第 ${i + 1}/${totalIframes} 个 iframe: ${siteName} (${domain})`);
+      
+      // 更新进度提示
+      showFileUploadProgress(i + 1, totalIframes, 'processing', siteName);
+      
+      // 给 iframe 一些时间来准备接收
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      if (fallbackMode) {
+        // 降级模式：让 iframe 自己尝试读取剪贴板
         iframe.contentWindow.postMessage({
           type: 'TRIGGER_PASTE',
           domain: domain,
           source: 'iframe-parent',
           global: true,
-          forced: true
+          fallback: true,
+          index: i + 1,
+          total: totalIframes
         }, '*');
-      } catch (error) {
-        console.error(`强制发送消息失败:`, error);
+      } else {
+        // 优先模式：使用站点特定的文件上传处理器
+        iframe.contentWindow.postMessage({
+          type: 'TRIGGER_PASTE',
+          domain: domain,
+          source: 'iframe-parent',
+          global: true,
+          fileData: fileData, // 传递文件数据供站点处理器使用
+          useSiteHandler: true, // 标记使用站点处理器
+          index: i + 1,
+          total: totalIframes
+        }, '*');
       }
-    });
+      
+      // 等待一段时间让 iframe 处理完成
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      successCount++;
+      console.log(`✅ 第 ${i + 1} 个 iframe 处理完成`);
+      
+    } catch (error) {
+      console.error(`❌ 第 ${i + 1} 个 iframe 处理失败:`, error);
+      failureCount++;
+    }
+    
+    // 在处理间隔中等待，避免权限冲突
+    if (i < iframes.length - 1) {
+      await new Promise(resolve => setTimeout(resolve, 300));
+    }
+  }
+  
+  console.log(`🎯 逐个文件粘贴执行完成: 成功 ${successCount}/${totalIframes}, 失败 ${failureCount}`);
+  
+  // 显示完成状态
+  showFileUploadProgress(totalIframes, totalIframes, 'completed', null, { successCount, failureCount });
+  
+  // 3秒后隐藏进度提示
+  setTimeout(() => {
+    hideFileUploadProgress();
+  }, 3000);
+}
+
+// 显示文件上传进度提示
+function showFileUploadProgress(current, total, status, siteName = null, result = null) {
+  let progressElement = document.getElementById('file-upload-progress');
+  
+  if (!progressElement) {
+    progressElement = document.createElement('div');
+    progressElement.id = 'file-upload-progress';
+    progressElement.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 12px 16px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      z-index: 10001;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 14px;
+      min-width: 200px;
+      animation: slideInRight 0.3s ease-out;
+    `;
+    
+    // 添加CSS动画
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes slideInRight {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+    `;
+    document.head.appendChild(style);
+    
+    document.body.appendChild(progressElement);
+  }
+  
+  let message = '';
+  let emoji = '';
+  
+  switch (status) {
+    case 'starting':
+      emoji = '🚀';
+      message = '开始文件粘贴...';
+      break;
+    case 'processing':
+      emoji = '⏳';
+      message = `正在处理 ${current}/${total}`;
+      if (siteName) {
+        message += `<br><small style="opacity: 0.8;">${siteName}</small>`;
+      }
+      break;
+    case 'completed':
+      emoji = '✅';
+      if (result) {
+        if (result.failureCount === 0) {
+          message = `文件粘贴完成<br><small>成功: ${result.successCount}/${total}</small>`;
+        } else {
+          message = `文件粘贴完成<br><small>成功: ${result.successCount}, 失败: ${result.failureCount}</small>`;
+        }
+      } else {
+        message = '文件粘贴完成';
+      }
+      break;
+  }
+  
+  progressElement.innerHTML = `
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <span style="font-size: 16px;">${emoji}</span>
+      <div>${message}</div>
+    </div>
+  `;
+}
+
+// 隐藏文件上传进度提示
+function hideFileUploadProgress() {
+  const progressElement = document.getElementById('file-upload-progress');
+  if (progressElement) {
+    progressElement.style.animation = 'slideInRight 0.3s ease-out reverse';
+    setTimeout(() => {
+      if (progressElement.parentElement) {
+        progressElement.remove();
+      }
+    }, 300);
   }
 }
 
