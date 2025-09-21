@@ -17,7 +17,7 @@
     "<all_urls>"
   ],
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; frame-src *",
+    "extension_pages": "script-src 'self'; object-src 'self'; frame-src *; img-src 'self' chrome-extension: data: blob:;",
     "sandbox": "sandbox allow-scripts allow-forms allow-popups allow-modals; script-src 'unsafe-eval' 'self'"
   },
   "action": {
