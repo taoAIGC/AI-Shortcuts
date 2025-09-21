@@ -20,7 +20,7 @@
     }
   },
   "inputPlaceholder": {
-    "message": "输入要搜索的内容或 Ctrl+V 粘贴图片"
+    "message": "输入要搜索的内容"
   },
   "openSettings": {
     "message": "默认AI对比配置"
@@ -237,5 +237,23 @@
   },
   "templateQueryRequired": {
     "message": "请输入查询模板"
+  },
+  "localFileDetected": {
+    "message": "检测到本地文件"
+  },
+  "browserSecurityRestriction": {
+    "message": "浏览器安全限制"
+  },
+  "localFileSecurityMessage": {
+    "message": "复制本地文件时，浏览器只能获取文件路径，无法读取文件内容。"
+  },
+  "suggestedActions": {
+    "message": "建议操作："
+  },
+  "uploadFileAction": {
+    "message": "点击顶部 <strong>文件上传按钮</strong> 选择文件"
+  },
+  "dismissWarning": {
+    "message": "我知道了"
   }
 } 

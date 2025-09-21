@@ -20,7 +20,6 @@ if (DEV_CONFIG.IS_PRODUCTION) {
   console.error = function() { return undefined; };
   console.info = function() { return undefined; };
   console.debug = function() { return undefined; };
-  console.log('当前为开发环境');
 }
 
 // 应用配置管理器

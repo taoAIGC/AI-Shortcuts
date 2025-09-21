@@ -20,7 +20,7 @@
     }
   },
   "inputPlaceholder": {
-    "message": "Enter content or Ctrl+V to paste images to search..."
+    "message": "Enter content to search..."
   },
   "openSettings": {
     "message": "Default Comparison Settings"
@@ -242,5 +242,23 @@
   },
   "templateQueryRequired": {
     "message": "Please enter query template"
+  },
+  "localFileDetected": {
+    "message": "Local File Detected"
+  },
+  "browserSecurityRestriction": {
+    "message": "Browser Security Restriction"
+  },
+  "localFileSecurityMessage": {
+    "message": "When copying local files, browsers can only access file paths, not file contents."
+  },
+  "suggestedActions": {
+    "message": "Suggested Actions:"
+  },
+  "uploadFileAction": {
+    "message": "Click the <strong>File Upload button</strong> at the top to select files"
+  },
+  "dismissWarning": {
+    "message": "Got it"
   }
 } 

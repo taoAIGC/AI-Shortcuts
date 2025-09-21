@@ -217,26 +217,34 @@ function showLocalFileWarning(fileName, fileExtension) {
   // 使用通用的文件图标
   const icon = '📁';
   
+  // 获取国际化消息
+  const localFileDetected = chrome.i18n.getMessage('localFileDetected');
+  const browserSecurityRestriction = chrome.i18n.getMessage('browserSecurityRestriction');
+  const localFileSecurityMessage = chrome.i18n.getMessage('localFileSecurityMessage');
+  const suggestedActions = chrome.i18n.getMessage('suggestedActions');
+  const uploadFileAction = chrome.i18n.getMessage('uploadFileAction');
+  const dismissWarning = chrome.i18n.getMessage('dismissWarning');
+  
   warning.innerHTML = `
     <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
       <span style="font-size: 32px;">${icon}</span>
       <div>
-        <div style="font-weight: 600; font-size: 16px;">检测到本地文件</div>
+        <div style="font-weight: 600; font-size: 16px;">${localFileDetected}</div>
         <div style="font-size: 12px; opacity: 0.9;">${fileName}</div>
       </div>
     </div>
     
-    <div style="background: rgba(255,255,255,0.1); padding: 12px; border-radius: 8px; margin-bottom: 16px;">
-      <div style="font-size: 13px; margin-bottom: 8px;">🚫 <strong>浏览器安全限制</strong></div>
+    <div style="background: rgba(238, 199, 199, 0.1); padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+      <div style="font-size: 13px; margin-bottom: 8px;">🚫 <strong>${browserSecurityRestriction}</strong></div>
       <div style="font-size: 12px; opacity: 0.9;">
-        复制本地文件时，浏览器只能获取文件路径，无法读取文件内容。
+        ${localFileSecurityMessage}
       </div>
     </div>
     
     <div style="font-size: 13px; margin-bottom: 16px;">
-      <div style="font-weight: 600; margin-bottom: 8px;">💡 建议操作：</div>
+      <div style="font-weight: 600; margin-bottom: 8px;">💡 ${suggestedActions}</div>
       <div style="margin-left: 16px;">
-        <div style="margin-bottom: 4px;">• 点击顶部 <strong>文件上传按钮</strong> 选择文件</div>
+        <div style="margin-bottom: 4px;">• ${uploadFileAction}</div>
       </div>
     </div>
     
@@ -250,7 +258,7 @@ function showLocalFileWarning(fileName, fileExtension) {
         cursor: pointer;
         font-size: 12px;
         transition: all 0.2s;
-      ">我知道了</button>
+      ">${dismissWarning}</button>
     </div>
   `;
   
