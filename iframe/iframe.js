@@ -236,9 +236,7 @@ function showLocalFileWarning(fileName, fileExtension) {
     <div style="font-size: 13px; margin-bottom: 16px;">
       <div style="font-weight: 600; margin-bottom: 8px;">💡 建议操作：</div>
       <div style="margin-left: 16px;">
-        <div style="margin-bottom: 4px;">• 使用 <strong>拖拽</strong> 将文件直接拖入聊天框</div>
-        <div style="margin-bottom: 4px;">• 点击 <strong>文件上传按钮</strong> 选择文件</div>
-        <div>• 图片文件可以先打开后 <strong>截图粘贴</strong></div>
+        <div style="margin-bottom: 4px;">• 点击顶部 <strong>文件上传按钮</strong> 选择文件</div>
       </div>
     </div>
     
