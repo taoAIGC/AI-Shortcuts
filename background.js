@@ -366,22 +366,29 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   else if (message.type === 'TOGGLE_SIDE_PANEL') {
     // 处理侧边栏切换消息
     const windowId = sender.tab.windowId;
+    console.log('🔍 收到TOGGLE_SIDE_PANEL消息，windowId:', windowId);
     
     // 先检查实际的侧边栏标签页是否存在
     chrome.tabs.query({ windowId: windowId }, (tabs) => {
+      console.log('🔍 查询到的标签页数量:', tabs.length);
       const sidePanelTab = tabs.find(tab => tab.url && tab.url.includes('iframe/iframe.html'));
       const actualIsOpen = !!sidePanelTab;
       const recordedIsOpen = sidePanelOpenState.get(windowId) || false;
       
-      console.log('侧边栏状态检查 - 实际状态:', actualIsOpen, '记录状态:', recordedIsOpen, 'windowId:', windowId);
+      console.log('🔍 侧边栏状态检查:');
+      console.log('  - 实际状态:', actualIsOpen);
+      console.log('  - 记录状态:', recordedIsOpen);
+      console.log('  - windowId:', windowId);
+      console.log('  - 找到的侧边栏标签页:', sidePanelTab);
       
       // 如果状态不同步，以实际状态为准
       if (actualIsOpen !== recordedIsOpen) {
-        console.log('侧边栏状态不同步，修正为实际状态:', actualIsOpen);
+        console.log('🔍 侧边栏状态不同步，修正为实际状态:', actualIsOpen);
         sidePanelOpenState.set(windowId, actualIsOpen);
       }
       
       // 执行切换操作
+      console.log('🔍 开始执行侧边栏切换操作...');
       handleSidePanelToggle(windowId, actualIsOpen);
     });
     
@@ -828,56 +835,69 @@ function resetSidePanelState(windowId) {
 
 // 处理侧边栏切换逻辑
 function handleSidePanelToggle(windowId, isCurrentlyOpen) {
+  console.log('🔍 handleSidePanelToggle 被调用:');
+  console.log('  - windowId:', windowId);
+  console.log('  - isCurrentlyOpen:', isCurrentlyOpen);
+  
   if (isCurrentlyOpen) {
     // 如果侧边栏已经打开，则关闭它
+    console.log('🔍 侧边栏已打开，准备关闭...');
     chrome.tabs.query({ windowId: windowId }, (tabs) => {
       const sidePanelTab = tabs.find(tab => tab.url && tab.url.includes('iframe/iframe.html'));
       if (sidePanelTab) {
         chrome.tabs.sendMessage(sidePanelTab.id, { action: 'closeSidePanel' });
         sidePanelOpenState.set(windowId, false);
-        console.log('已发送关闭侧边栏消息');
+        console.log('✅ 已发送关闭侧边栏消息');
       } else {
         sidePanelOpenState.set(windowId, false);
-        console.log('侧边栏已关闭');
+        console.log('✅ 侧边栏已关闭');
       }
     });
   } else {
     // 如果侧边栏未打开，则打开它
-    console.log('正在尝试打开侧边栏...');
+    console.log('🔍 侧边栏未打开，准备打开...');
     
     // 先检查是否支持 sidePanel API
+    console.log('🔍 检查 sidePanel API 支持:');
+    console.log('  - chrome.sidePanel 存在:', !!chrome.sidePanel);
+    console.log('  - chrome.sidePanel.open 存在:', !!(chrome.sidePanel && chrome.sidePanel.open));
+    
     if (!chrome.sidePanel || !chrome.sidePanel.open) {
-      console.error('当前浏览器不支持 sidePanel API');
+      console.error('❌ 当前浏览器不支持 sidePanel API');
       sidePanelOpenState.set(windowId, false);
       return;
     }
     
     // 调用 sidePanel.open() 并正确处理 Promise
+    console.log('🔍 调用 chrome.sidePanel.open({ windowId:', windowId, '})');
     chrome.sidePanel.open({ windowId: windowId })
       .then(() => {
         // 只有在成功打开后才设置状态为 true
         sidePanelOpenState.set(windowId, true);
-        console.log('侧边栏已成功打开');
+        console.log('✅ 侧边栏已成功打开');
       })
       .catch(error => {
         // 打开失败时确保状态为 false
         sidePanelOpenState.set(windowId, false);
-        console.error('打开侧边栏失败:', error);
+        console.error('❌ 打开侧边栏失败:', error);
         
         // 提供更详细的错误信息
         if (error.message) {
-          console.error('错误详情:', error.message);
+          console.error('❌ 错误详情:', error.message);
+        }
+        if (error.name) {
+          console.error('❌ 错误名称:', error.name);
         }
         
         // 尝试备用方案：直接打开新标签页
-        console.log('尝试备用方案：打开新标签页');
+        console.log('🔄 尝试备用方案：打开新标签页');
         chrome.tabs.create({
           url: chrome.runtime.getURL('iframe/iframe.html'),
           active: true
         }).then(() => {
-          console.log('已通过新标签页打开侧边栏内容');
+          console.log('✅ 已通过新标签页打开侧边栏内容');
         }).catch(tabError => {
-          console.error('备用方案也失败:', tabError);
+          console.error('❌ 备用方案也失败:', tabError);
         });
       });
   }
