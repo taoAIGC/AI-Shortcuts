@@ -939,10 +939,10 @@ function createSingleIframe(siteName, url, container, query) {
   iframe.className = 'ai-iframe';
   iframe.setAttribute('data-site', siteName);
   
-  // 修改 sandbox 属性，添加更多必要的权限
-  iframe.sandbox = 'allow-same-origin allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation';
+  // 临时移除 sandbox 属性以测试剪贴板权限
+  // iframe.sandbox = 'allow-same-origin allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation';
   
-  iframe.allow = 'clipboard-read; microphone; camera; geolocation; autoplay; fullscreen; picture-in-picture; storage-access; web-share';
+  iframe.allow = 'clipboard-read; clipboard-write; microphone; camera; geolocation; autoplay; fullscreen; picture-in-picture; storage-access; web-share';
   
   // 记录是否已经处理过点击事件
   let clickHandlerAdded = false;
@@ -1024,25 +1024,11 @@ function createSingleIframe(siteName, url, container, query) {
       doc.documentElement.setAttribute('tabindex', '-1');
       doc.body.setAttribute('tabindex', '-1');
       
-      // 阻止所有可能的焦点事件
+      // 只监听焦点事件，保持搜索框焦点
       doc.addEventListener('focus', (e) => {
         e.preventDefault();
         e.stopPropagation();
         searchInput.focus();
-      }, true);
-      
-      doc.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        searchInput.focus();
-      }, true);
-      
-      doc.addEventListener('click', (e) => {
-        if (e.target.tagName !== 'A') {
-          e.preventDefault();
-          e.stopPropagation();
-          searchInput.focus();
-        }
       }, true);
     } catch (error) {
       console.log('无法直接访问 iframe 内容，将通过消息通信处理');
@@ -2560,8 +2546,8 @@ async function processUploadedFile(file) {
     lastModified: file.lastModified
   });
   
-  // 文件大小检查（限制10MB）
-  const maxSize = 10 * 1024 * 1024; // 10MB
+  // 文件大小检查（限制50MB）
+  const maxSize = 50 * 1024 * 1024; // 50MB
   if (file.size > maxSize) {
     showFileUploadError(`文件大小超过限制（${Math.round(maxSize / 1024 / 1024)}MB）`);
     return;
