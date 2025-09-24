@@ -186,6 +186,9 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // 添加文件上传功能的事件监听器
     initializeFileUpload();
+    
+    // 添加导出回答功能的事件监听器
+    initializeExportResponses();
 
 });
 
@@ -2516,6 +2519,24 @@ function initializeFileUpload() {
   fileInput.addEventListener('change', handleFileSelection);
   
   console.log('🎯 文件上传功能已初始化');
+}
+
+// 初始化导出回答功能
+function initializeExportResponses() {
+  const exportButton = document.getElementById('exportResponsesButton');
+  
+  if (!exportButton) {
+    console.warn('导出回答按钮未找到');
+    return;
+  }
+  
+  // 点击导出按钮显示导出模态框
+  exportButton.addEventListener('click', () => {
+    console.log('🎯 导出按钮被点击');
+    showExportModal();
+  });
+  
+  console.log('🎯 导出回答功能已初始化');
 }
 
 // 处理文件选择

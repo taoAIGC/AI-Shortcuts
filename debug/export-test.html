@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>导出功能测试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 5px;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>导出功能测试页面</h1>
+    
+    <div class="test-section">
+        <h2>1. 测试导出按钮是否存在</h2>
+        <button class="test-button" onclick="testExportButton()">检查导出按钮</button>
+        <div id="buttonTest" class="log"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. 测试导出功能初始化</h2>
+        <button class="test-button" onclick="testExportInitialization()">测试初始化</button>
+        <div id="initTest" class="log"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. 测试模态框显示</h2>
+        <button class="test-button" onclick="testModalDisplay()">显示导出模态框</button>
+        <div id="modalTest" class="log"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. 测试站点配置</h2>
+        <button class="test-button" onclick="testSiteConfig()">检查站点配置</button>
+        <div id="configTest" class="log"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>5. 测试内容提取</h2>
+        <button class="test-button" onclick="testContentExtraction()">测试内容提取</button>
+        <div id="extractionTest" class="log"></div>
+    </div>
+
+    <script>
+        function log(elementId, message) {
+            const element = document.getElementById(elementId);
+            const timestamp = new Date().toLocaleTimeString();
+            element.textContent += `[${timestamp}] ${message}\n`;
+            element.scrollTop = element.scrollHeight;
+        }
+        
+        function testExportButton() {
+            const logElement = document.getElementById('buttonTest');
+            logElement.textContent = '';
+            
+            log('buttonTest', '开始检查导出按钮...');
+            
+            const exportButton = document.getElementById('exportResponsesButton');
+            if (exportButton) {
+                log('buttonTest', '✅ 导出按钮存在');
+                log('buttonTest', `按钮类名: ${exportButton.className}`);
+                log('buttonTest', `按钮可见性: ${exportButton.style.display}`);
+                log('buttonTest', `按钮是否禁用: ${exportButton.disabled}`);
+            } else {
+                log('buttonTest', '❌ 导出按钮不存在');
+                log('buttonTest', '检查页面中是否有 id="exportResponsesButton" 的元素');
+            }
+        }
+        
+        function testExportInitialization() {
+            const logElement = document.getElementById('initTest');
+            logElement.textContent = '';
+            
+            log('initTest', '开始测试导出功能初始化...');
+            
+            try {
+                if (typeof initializeExportResponses === 'function') {
+                    log('initTest', '✅ initializeExportResponses 函数存在');
+                    initializeExportResponses();
+                    log('initTest', '✅ 导出功能初始化完成');
+                } else {
+                    log('initTest', '❌ initializeExportResponses 函数不存在');
+                }
+            } catch (error) {
+                log('initTest', `❌ 初始化失败: ${error.message}`);
+            }
+        }
+        
+        function testModalDisplay() {
+            const logElement = document.getElementById('modalTest');
+            logElement.textContent = '';
+            
+            log('modalTest', '开始测试模态框显示...');
+            
+            try {
+                if (typeof showExportModal === 'function') {
+                    log('modalTest', '✅ showExportModal 函数存在');
+                    showExportModal();
+                    log('modalTest', '✅ 模态框显示完成');
+                } else {
+                    log('modalTest', '❌ showExportModal 函数不存在');
+                }
+            } catch (error) {
+                log('modalTest', `❌ 模态框显示失败: ${error.message}`);
+            }
+        }
+        
+        async function testSiteConfig() {
+            const logElement = document.getElementById('configTest');
+            logElement.textContent = '';
+            
+            log('configTest', '开始检查站点配置...');
+            
+            try {
+                if (typeof window.getDefaultSites === 'function') {
+                    log('configTest', '✅ getDefaultSites 函数存在');
+                    const sites = await window.getDefaultSites();
+                    log('configTest', `✅ 获取到 ${sites.length} 个站点配置`);
+                    
+                    sites.forEach((site, index) => {
+                        log('configTest', `${index + 1}. ${site.name}: ${site.url}`);
+                        if (site.contentExtractor) {
+                            log('configTest', `   - 有内容提取配置: ${site.contentExtractor.selectors?.length || 0} 个选择器`);
+                        } else {
+                            log('configTest', `   - 无内容提取配置`);
+                        }
+                    });
+                } else {
+                    log('configTest', '❌ getDefaultSites 函数不存在');
+                }
+            } catch (error) {
+                log('configTest', `❌ 获取站点配置失败: ${error.message}`);
+            }
+        }
+        
+        async function testContentExtraction() {
+            const logElement = document.getElementById('extractionTest');
+            logElement.textContent = '';
+            
+            log('extractionTest', '开始测试内容提取...');
+            
+            try {
+                // 创建测试iframe
+                const testIframe = document.createElement('iframe');
+                testIframe.style.display = 'none';
+                testIframe.src = 'data:text/html,<html><body><div class="test-content">这是测试内容</div></body></html>';
+                document.body.appendChild(testIframe);
+                
+                testIframe.onload = async () => {
+                    try {
+                        if (typeof extractIframeContent === 'function') {
+                            log('extractionTest', '✅ extractIframeContent 函数存在');
+                            const content = await extractIframeContent(testIframe, 'TestSite');
+                            log('extractionTest', `✅ 内容提取结果: ${content}`);
+                        } else {
+                            log('extractionTest', '❌ extractIframeContent 函数不存在');
+                        }
+                    } catch (error) {
+                        log('extractionTest', `❌ 内容提取失败: ${error.message}`);
+                    } finally {
+                        document.body.removeChild(testIframe);
+                    }
+                };
+            } catch (error) {
+                log('extractionTest', `❌ 测试失败: ${error.message}`);
+            }
+        }
+        
+        // 页面加载完成后自动运行基本测试
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                testExportButton();
+                testExportInitialization();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>本地规则验证器</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .header {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .status-card {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .card {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 15px;
+            text-align: center;
+        }
+        .card.success { border-color: #28a745; background: #d4edda; }
+        .card.warning { border-color: #ffc107; background: #fff3cd; }
+        .card.error { border-color: #dc3545; background: #f8d7da; }
+        .card h3 { margin: 0 0 10px 0; font-size: 14px; }
+        .card .value { font-size: 24px; font-weight: bold; }
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        .btn:hover { background: #0056b3; }
+        .btn.success { background: #28a745; }
+        .btn.warning { background: #ffc107; color: #212529; }
+        .btn.danger { background: #dc3545; }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        .site-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .site-item {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .site-item.valid { border-color: #28a745; }
+        .site-item.invalid { border-color: #dc3545; }
+        .site-name {
+            font-weight: bold;
+            color: #333;
+        }
+        .site-issues {
+            color: #dc3545;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+        .site-details {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 本地规则验证器</h1>
+            <p>验证 chrome.storage.local 中的站点配置规则</p>
+        </div>
+
+        <div class="status-card">
+            <div class="card" id="totalSitesCard">
+                <h3>总站点数</h3>
+                <div class="value" id="totalSites">-</div>
+            </div>
+            <div class="card" id="validSitesCard">
+                <h3>有效站点</h3>
+                <div class="value" id="validSites">-</div>
+            </div>
+            <div class="card" id="invalidSitesCard">
+                <h3>无效站点</h3>
+                <div class="value" id="invalidSites">-</div>
+            </div>
+            <div class="card" id="contentExtractorsCard">
+                <h3>内容提取器</h3>
+                <div class="value" id="contentExtractors">-</div>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-bottom: 20px;">
+            <button class="btn" onclick="validateRules()">🔍 验证规则</button>
+            <button class="btn success" onclick="reloadFromLocal()">🔄 重新加载</button>
+            <button class="btn warning" onclick="clearCache()">🗑️ 清除缓存</button>
+            <button class="btn danger" onclick="clearLocalStorage()">⚠️ 清除本地存储</button>
+        </div>
+
+        <div class="container">
+            <h3>📋 站点详情</h3>
+            <div id="siteList" class="site-list">
+                <p style="text-align: center; color: #666;">点击"验证规则"查看详情</p>
+            </div>
+        </div>
+
+        <div class="container">
+            <h3>📊 操作日志</h3>
+            <div id="log" class="log">等待操作...</div>
+        </div>
+    </div>
+
+    <script>
+        // 模拟 siteDetector 功能
+        class LocalRulesValidator {
+            constructor() {
+                this.log('🚀 本地规则验证器已初始化');
+            }
+
+            log(message) {
+                const logElement = document.getElementById('log');
+                const timestamp = new Date().toLocaleTimeString();
+                logElement.textContent += `[${timestamp}] ${message}\n`;
+                logElement.scrollTop = logElement.scrollHeight;
+                console.log(message);
+            }
+
+            async validateRules() {
+                this.log('🔍 开始验证本地存储中的规则...');
+                
+                try {
+                    // 检查 chrome.storage.local 是否可用
+                    if (typeof chrome === 'undefined' || !chrome.storage) {
+                        throw new Error('Chrome 扩展环境不可用');
+                    }
+
+                    const result = await chrome.storage.local.get('remoteSiteHandlers');
+                    const sites = result.remoteSiteHandlers?.sites || [];
+                    
+                    this.log(`📊 从本地存储读取到 ${sites.length} 个站点配置`);
+
+                    if (sites.length === 0) {
+                        this.updateStatus({
+                            totalSites: 0,
+                            validSites: 0,
+                            invalidSites: 0,
+                            contentExtractors: 0
+                        });
+                        this.log('⚠️ 本地存储中没有站点配置');
+                        return;
+                    }
+
+                    // 验证每个站点配置
+                    const validationResults = sites.map(site => {
+                        const issues = [];
+                        
+                        if (!site.name) issues.push('缺少站点名称');
+                        if (!site.url) issues.push('缺少站点URL');
+                        if (!site.contentExtractor) issues.push('缺少内容提取器配置');
+                        if (site.contentExtractor && !site.contentExtractor.selectors) {
+                            issues.push('内容提取器缺少选择器配置');
+                        }
+                        if (site.contentExtractor && site.contentExtractor.selectors && site.contentExtractor.selectors.length === 0) {
+                            issues.push('内容提取器选择器为空');
+                        }
+                        
+                        return {
+                            site: site.name || '未知站点',
+                            valid: issues.length === 0,
+                            issues: issues,
+                            hasContentExtractor: !!site.contentExtractor,
+                            hasSearchHandler: !!site.searchHandler,
+                            hasFileUploadHandler: !!site.fileUploadHandler,
+                            selectorsCount: site.contentExtractor?.selectors?.length || 0
+                        };
+                    });
+
+                    const validSites = validationResults.filter(r => r.valid);
+                    const invalidSites = validationResults.filter(r => !r.valid);
+                    const contentExtractors = sites.filter(s => s.contentExtractor).length;
+
+                    this.updateStatus({
+                        totalSites: sites.length,
+                        validSites: validSites.length,
+                        invalidSites: invalidSites.length,
+                        contentExtractors: contentExtractors
+                    });
+
+                    this.displaySiteList(validationResults);
+                    
+                    this.log(`✅ 验证完成: ${validSites.length} 个有效站点, ${invalidSites.length} 个无效站点`);
+                    
+                    if (invalidSites.length > 0) {
+                        this.log('❌ 发现无效站点:');
+                        invalidSites.forEach(site => {
+                            this.log(`   - ${site.site}: ${site.issues.join(', ')}`);
+                        });
+                    }
+
+                } catch (error) {
+                    this.log(`❌ 验证失败: ${error.message}`);
+                    this.updateStatus({
+                        totalSites: 0,
+                        validSites: 0,
+                        invalidSites: 0,
+                        contentExtractors: 0
+                    });
+                }
+            }
+
+            updateStatus(stats) {
+                document.getElementById('totalSites').textContent = stats.totalSites;
+                document.getElementById('validSites').textContent = stats.validSites;
+                document.getElementById('invalidSites').textContent = stats.invalidSites;
+                document.getElementById('contentExtractors').textContent = stats.contentExtractors;
+
+                // 更新卡片样式
+                const totalCard = document.getElementById('totalSitesCard');
+                const validCard = document.getElementById('validSitesCard');
+                const invalidCard = document.getElementById('invalidSitesCard');
+                const extractorCard = document.getElementById('contentExtractorsCard');
+
+                totalCard.className = 'card';
+                validCard.className = stats.validSites > 0 ? 'card success' : 'card';
+                invalidCard.className = stats.invalidSites > 0 ? 'card error' : 'card';
+                extractorCard.className = stats.contentExtractors > 0 ? 'card success' : 'card';
+            }
+
+            displaySiteList(validationResults) {
+                const siteList = document.getElementById('siteList');
+                siteList.innerHTML = '';
+
+                validationResults.forEach(result => {
+                    const siteItem = document.createElement('div');
+                    siteItem.className = `site-item ${result.valid ? 'valid' : 'invalid'}`;
+                    
+                    siteItem.innerHTML = `
+                        <div class="site-name">${result.site}</div>
+                        <div class="site-details">
+                            选择器数量: ${result.selectorsCount} | 
+                            内容提取器: ${result.hasContentExtractor ? '✅' : '❌'} | 
+                            搜索处理器: ${result.hasSearchHandler ? '✅' : '❌'} | 
+                            文件上传: ${result.hasFileUploadHandler ? '✅' : '❌'}
+                        </div>
+                        ${result.issues.length > 0 ? `<div class="site-issues">问题: ${result.issues.join(', ')}</div>` : ''}
+                    `;
+                    
+                    siteList.appendChild(siteItem);
+                });
+            }
+
+            async reloadFromLocal() {
+                this.log('🔄 强制从本地存储重新加载规则...');
+                await this.validateRules();
+            }
+
+            async clearCache() {
+                this.log('🗑️ 清除缓存...');
+                // 这里可以调用 siteDetector.clearCache()
+                this.log('✅ 缓存已清除');
+            }
+
+            async clearLocalStorage() {
+                if (confirm('确定要清除本地存储中的所有站点配置吗？此操作不可撤销！')) {
+                    this.log('⚠️ 清除本地存储...');
+                    try {
+                        await chrome.storage.local.remove('remoteSiteHandlers');
+                        this.log('✅ 本地存储已清除');
+                        await this.validateRules();
+                    } catch (error) {
+                        this.log(`❌ 清除失败: ${error.message}`);
+                    }
+                }
+            }
+        }
+
+        // 初始化验证器
+        const validator = new LocalRulesValidator();
+
+        // 全局函数
+        function validateRules() {
+            validator.validateRules();
+        }
+
+        function reloadFromLocal() {
+            validator.reloadFromLocal();
+        }
+
+        function clearCache() {
+            validator.clearCache();
+        }
+
+        function clearLocalStorage() {
+            validator.clearLocalStorage();
+        }
+
+        // 页面加载时自动验证
+        document.addEventListener('DOMContentLoaded', () => {
+            validator.log('📄 页面加载完成，准备验证规则...');
+            setTimeout(() => {
+                validateRules();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

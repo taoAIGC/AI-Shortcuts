@@ -4,7 +4,18 @@ console.log('🎯 inject.js 脚本已加载');
 // 动态检查是否在 AI 站点中运行
 async function isAISite() {
   try {
-    // 使用 getDefaultSites 函数获取站点列表
+    // 使用新的统一站点检测器
+    if (window.siteDetector) {
+      const isAI = await window.siteDetector.isAISite();
+      if (isAI) {
+        console.log('🎯 使用新检测器匹配到 AI 站点');
+      } else {
+        console.log('🎯 使用新检测器：当前站点不在 AI 站点配置中');
+      }
+      return isAI;
+    }
+    
+    // 降级到原有逻辑
     if (!window.getDefaultSites) {
       console.log('🎯 getDefaultSites 函数不可用，跳过处理');
       return false;
@@ -831,7 +842,16 @@ async function executeCustom(step, query) {
 // 根据域名获取站点处理器
 async function getSiteHandler(domain) {
   try {
-    // 使用 getDefaultSites 获取站点列表（已包含完整的降级逻辑）
+    // 优先使用新的统一站点检测器
+    if (window.siteDetector) {
+      const siteHandler = await window.siteDetector.getSiteHandler(domain);
+      if (siteHandler) {
+        console.log(`✅ 使用新检测器找到站点配置: ${siteHandler.name}`);
+        return siteHandler;
+      }
+    }
+    
+    // 降级到原有逻辑
     let sites = [];
     try {
       if (!window.getDefaultSites) {
@@ -878,7 +898,8 @@ async function getSiteHandler(domain) {
     return {
       name: site.name,
       searchHandler: site.searchHandler,
-      fileUploadHandler: site.fileUploadHandler
+      fileUploadHandler: site.fileUploadHandler,
+      contentExtractor: site.contentExtractor
     };
   } catch (error) {
     console.error('获取站点处理器失败:', error);
@@ -932,7 +953,7 @@ window.addEventListener('message', async function(event) {
     }
     
     // 只处理 AIShortcuts 扩展的特定消息类型
-    const validMultiAITypes = ['TRIGGER_PASTE', 'search'];
+    const validMultiAITypes = ['TRIGGER_PASTE', 'search', 'EXTRACT_CONTENT'];
     
     if (!validMultiAITypes.includes(event.data.type)) {
         return;
@@ -1038,6 +1059,38 @@ window.addEventListener('message', async function(event) {
                 });
             }
         }
+        return;
+    }
+
+    // 处理内容提取消息
+    if (event.data.type === 'EXTRACT_CONTENT') {
+        console.log('🎯 收到内容提取请求:', event.data);
+        
+        // 使用 async/await 处理异步内容提取
+        (async () => {
+            try {
+                // 提取页面内容
+                const content = await extractPageContent();
+                
+                // 发送提取结果回主窗口
+                window.parent.postMessage({
+                    type: 'EXTRACTED_CONTENT',
+                    siteName: event.data.siteName,
+                    content: content
+                }, '*');
+                
+                console.log('✅ 内容提取完成，已发送结果');
+            } catch (error) {
+                console.error('❌ 内容提取失败:', error);
+                
+                // 发送错误结果
+                window.parent.postMessage({
+                    type: 'EXTRACTED_CONTENT',
+                    siteName: event.data.siteName,
+                    content: `内容提取失败: ${error.message}`
+                }, '*');
+            }
+        })();
         return;
     }
 
@@ -1176,4 +1229,575 @@ function showClipboardPermissionTip() {
   console.log('提示: 需要用户授权剪切板访问权限');
   console.log('解决方法: 请重新加载扩展以应用新的权限设置');
   console.log('或者点击页面获得焦点后重试');
+}
+
+// 提取页面内容
+async function extractPageContent() {
+    console.log('🔍 开始提取页面内容...');
+    
+    try {
+        // 获取当前域名
+        const domain = window.location.hostname;
+        console.log('🔍 当前域名:', domain);
+        
+        // 调试：查找页面上所有可能的 markdown 相关元素
+        console.log('🔍 调试信息 - 查找 markdown 相关元素:');
+        const markdownElements = document.querySelectorAll('[class*="markdown"], [class*="prose"], [class*="message"], [class*="response"]');
+        console.log(`🔍 找到 ${markdownElements.length} 个可能的 markdown 元素`);
+        markdownElements.forEach((el, i) => {
+            if (i < 5) { // 只显示前5个
+                console.log(`🔍 元素 ${i + 1}:`, el.className, '内容长度:', (el.textContent || '').length);
+            }
+        });
+        
+        // 获取站点配置
+        const siteHandler = await getSiteHandler(domain);
+        console.log('🔍 站点处理器:', siteHandler);
+        
+        let content = '';
+        
+        if (siteHandler && siteHandler.contentExtractor) {
+            // 使用配置文件中的提取规则
+            console.log('✅ 使用配置文件中的内容提取规则');
+            content = await extractWithConfig(siteHandler.contentExtractor, siteHandler.name);
+        } else {
+            // 没有找到站点配置，返回提示信息
+            const siteName = siteHandler ? siteHandler.name : await getSiteNameFromDomain(domain);
+            console.log(`⚠️ 未找到 ${siteName} 的内容提取配置，返回提示信息`);
+            content = `无法自动提取 ${siteName} 的详细内容，请手动复制。\n\n提示：该站点可能尚未配置内容提取规则，或者页面结构发生了变化。`;
+        }
+        
+        console.log('✅ 内容提取完成，长度:', content.length);
+        return content;
+        
+    } catch (error) {
+        console.error('❌ 内容提取失败:', error);
+        return `内容提取失败: ${error.message}`;
+    }
+}
+
+// 使用配置文件提取内容（优化版）
+async function extractWithConfig(contentExtractor, siteName) {
+    console.log(`🔍 使用 ${siteName} 配置提取内容...`);
+    console.log('🔍 内容提取配置:', contentExtractor);
+    
+    const startTime = performance.now();
+    let content = '';
+    let extractionMethod = '';
+    
+    try {
+        // 1. 首先尝试主要选择器
+        if (contentExtractor.selectors && contentExtractor.selectors.length > 0) {
+            console.log('🔍 尝试主要选择器...');
+            content = await extractWithSelectorsOptimized(contentExtractor.selectors, siteName, contentExtractor.excludeSelectors);
+            
+            if (content.trim() && !content.includes('无法自动提取')) {
+                extractionMethod = '主要选择器';
+                console.log('✅ 主要选择器提取成功');
+                return content;
+            }
+        }
+        
+        // 2. 如果主要选择器失败，尝试备用选择器
+        if (contentExtractor.fallbackSelectors && contentExtractor.fallbackSelectors.length > 0) {
+            console.log('🔍 主要选择器失败，尝试备用选择器...');
+            content = await extractWithSelectorsOptimized(contentExtractor.fallbackSelectors, siteName, contentExtractor.excludeSelectors);
+            
+            if (content.trim() && !content.includes('无法自动提取')) {
+                extractionMethod = '备用选择器';
+                console.log('✅ 备用选择器提取成功');
+                return content;
+            }
+        }
+        
+        // 3. 尝试智能内容检测
+        console.log('🔍 尝试智能内容检测...');
+        content = await intelligentContentDetection(siteName);
+        
+        if (content.trim() && !content.includes('无法自动提取')) {
+            extractionMethod = '智能检测';
+            console.log('✅ 智能内容检测成功');
+            return content;
+        }
+        
+        // 4. 最后尝试通用内容提取
+        console.log('🔍 尝试通用内容提取...');
+        content = await genericContentExtraction(siteName);
+        
+        if (content.trim() && !content.includes('无法自动提取')) {
+            extractionMethod = '通用提取';
+            console.log('✅ 通用内容提取成功');
+            return content;
+        }
+        
+    } catch (error) {
+        console.error('❌ 内容提取过程中发生错误:', error);
+        return `内容提取失败: ${error.message}`;
+    } finally {
+        const endTime = performance.now();
+        const duration = endTime - startTime;
+        console.log(`📊 内容提取完成 - 方法: ${extractionMethod || '失败'}, 耗时: ${duration.toFixed(2)}ms`);
+    }
+    
+    // 如果都失败了，返回提示信息
+    console.log('⚠️ 所有提取方法都失败，返回提示信息');
+    return `无法自动提取 ${siteName} 的详细内容，请手动复制。\n\n提示：该站点可能尚未配置内容提取规则，或者页面结构发生了变化。`;
+}
+
+// 验证选择器有效性
+function validateSelectors(selectors) {
+    const validSelectors = [];
+    for (const selector of selectors) {
+        try {
+            const elements = document.querySelectorAll(selector);
+            if (elements.length > 0) {
+                validSelectors.push(selector);
+                console.log(`✅ 选择器 ${selector} 有效，找到 ${elements.length} 个元素`);
+            } else {
+                console.log(`⚠️ 选择器 ${selector} 无效，未找到元素`);
+            }
+        } catch (error) {
+            console.error(`❌ 选择器 ${selector} 语法错误:`, error);
+        }
+    }
+    return validSelectors;
+}
+
+// 内容质量检测
+function isHighQualityContent(content) {
+    if (!content || content.length < 10) return false;
+    
+    // 检查是否包含AI回答的特征
+    const aiIndicators = [
+        '回答', '回复', 'response', 'answer',
+        '根据', '基于', '建议', '推荐',
+        '分析', '总结', '解释', '说明',
+        '首先', '其次', '最后', '总结',
+        '我认为', '建议', '推荐', '可以',
+        '以下', '如下', '具体', '详细'
+    ];
+    
+    const hasAIIndicator = aiIndicators.some(indicator => 
+        content.toLowerCase().includes(indicator.toLowerCase())
+    );
+    
+    // 检查内容长度和结构
+    const hasStructure = content.includes('\n') || content.includes('。') || content.includes('.');
+    
+    // 检查是否包含代码块或列表
+    const hasCodeOrList = content.includes('```') || content.includes('- ') || content.includes('1. ');
+    
+    return hasAIIndicator && (hasStructure || hasCodeOrList);
+}
+
+// 优化版选择器提取内容
+async function extractWithSelectorsOptimized(selectors, siteName, excludeSelectors = []) {
+    console.log(`🔍 开始提取 ${siteName} 的内容...`);
+    console.log(`🔍 使用选择器:`, selectors);
+    console.log(`🔍 排除选择器:`, excludeSelectors);
+    
+    let content = '';
+    
+    // 默认排除的选择器
+    const defaultExcludeSelectors = ['nav', 'header', 'footer', '.sidebar', '.menu'];
+    const allExcludeSelectors = [...defaultExcludeSelectors, ...(excludeSelectors || [])];
+    
+    // 调试：显示页面上所有可能的元素
+    const allElements = document.querySelectorAll('*');
+    console.log(`🔍 页面总元素数: ${allElements.length}`);
+    
+    // 查找可能的AI回答元素
+    const possibleElements = document.querySelectorAll('[class*="response"], [class*="message"], [class*="answer"], [class*="markdown"]');
+    console.log(`🔍 找到 ${possibleElements.length} 个可能的AI回答元素`);
+    
+    // 验证选择器有效性
+    const validSelectors = validateSelectors(selectors);
+    console.log(`🔍 有效选择器数量: ${validSelectors.length}/${selectors.length}`);
+    
+    // 使用 Promise.all 并行处理选择器
+    const extractionPromises = validSelectors.map(async (selector) => {
+        try {
+            const elements = document.querySelectorAll(selector);
+            console.log(`🔍 选择器 ${selector} 找到 ${elements.length} 个元素`);
+            
+            if (elements.length === 0) return '';
+            
+            let selectorContent = '';
+            
+            for (const [index, element] of elements.entries()) {
+                // 检查是否应该排除此元素
+                const shouldExclude = allExcludeSelectors.some(excludeSelector => 
+                    element.closest(excludeSelector)
+                );
+                
+                if (shouldExclude) continue;
+                
+                // 等待元素内容加载完成
+                await waitForContentLoad(element);
+                
+                // 尝试提取 markdown 格式的内容
+                let text = await extractElementContent(element);
+                
+                if (text.trim()) {
+                    // 内容质量检测
+                    const quality = isHighQualityContent(text);
+                    const qualityLabel = quality ? '' : ' (低质量)';
+                    console.log(`${quality ? '✅' : '⚠️'} 内容质量检测${quality ? '通过' : '未通过'}，长度: ${text.length}`);
+                    
+                    selectorContent += `\n\n## ${siteName} 回答 ${index + 1}${qualityLabel}\n\n${text.trim()}\n`;
+                }
+            }
+            
+            return selectorContent;
+        } catch (error) {
+            console.warn(`选择器 ${selector} 提取失败:`, error);
+            return '';
+        }
+    });
+    
+    // 等待所有选择器处理完成
+    const results = await Promise.all(extractionPromises);
+    
+    // 合并结果
+    content = results.filter(result => result.trim()).join('\n');
+    
+    if (!content.trim()) {
+        content = `无法自动提取 ${siteName} 的详细内容，请手动复制。`;
+    }
+    
+    return content.trim();
+}
+
+// 等待内容加载完成
+async function waitForContentLoad(element, timeout = 1000) {
+    return new Promise((resolve) => {
+        const startTime = Date.now();
+        
+        const checkContent = () => {
+            const hasContent = element.textContent && element.textContent.trim().length > 10;
+            const isTimeout = Date.now() - startTime > timeout;
+            
+            if (hasContent || isTimeout) {
+                resolve();
+            } else {
+                setTimeout(checkContent, 50);
+            }
+        };
+        
+        checkContent();
+    });
+}
+
+// 提取元素内容（优化版）
+async function extractElementContent(element) {
+    let text = '';
+    
+    try {
+        // 方法1: 检查是否是 markdown 容器，直接使用 innerHTML
+        if (element.classList.contains('markdown') || 
+            element.classList.contains('response-content-markdown') ||
+            element.classList.contains('prose')) {
+            // ChatGPT、GROK 等站点的 markdown 容器，直接使用 innerHTML 然后转换
+            const html = element.innerHTML || '';
+            if (html.trim()) {
+                text = convertHtmlToMarkdown(html);
+            } else {
+                text = element.textContent || element.innerText || '';
+            }
+        } else if (element.dataset.markdown) {
+            // 方法2: 尝试获取 markdown 属性或数据
+            text = element.dataset.markdown;
+        } else if (element.getAttribute('data-markdown')) {
+            text = element.getAttribute('data-markdown');
+        } else {
+            // 方法3: 使用 innerHTML 保留格式，然后转换为 markdown
+            const html = element.innerHTML || '';
+            if (html.trim()) {
+                text = convertHtmlToMarkdown(html);
+            } else {
+                // 方法4: 降级到纯文本
+                text = element.textContent || element.innerText || '';
+            }
+        }
+        
+        // 清理和优化文本
+        text = cleanExtractedText(text);
+        
+    } catch (error) {
+        console.warn('提取元素内容失败:', error);
+        text = element.textContent || element.innerText || '';
+    }
+    
+    return text;
+}
+
+// 清理提取的文本
+function cleanExtractedText(text) {
+    if (!text) return '';
+    
+    // 移除多余的空白字符
+    text = text.replace(/\s+/g, ' ').trim();
+    
+    // 移除常见的无用内容
+    const unwantedPatterns = [
+        /^Loading\.\.\.$/i,
+        /^Please wait\.\.\.$/i,
+        /^Generating\.\.\.$/i,
+        /^Thinking\.\.\.$/i,
+        /^Processing\.\.\.$/i
+    ];
+    
+    for (const pattern of unwantedPatterns) {
+        text = text.replace(pattern, '');
+    }
+    
+    return text.trim();
+}
+
+// 智能内容检测
+async function intelligentContentDetection(siteName) {
+    console.log(`🧠 开始智能内容检测 ${siteName}...`);
+    
+    try {
+        // 1. 检测流式内容
+        const streamingContent = await detectStreamingContent();
+        if (streamingContent) {
+            console.log('✅ 检测到流式内容');
+            return streamingContent;
+        }
+        
+        // 2. 检测最新生成的内容
+        const latestContent = await detectLatestContent();
+        if (latestContent) {
+            console.log('✅ 检测到最新内容');
+            return latestContent;
+        }
+        
+        // 3. 检测高价值内容区域
+        const valuableContent = await detectValuableContent();
+        if (valuableContent) {
+            console.log('✅ 检测到高价值内容');
+            return valuableContent;
+        }
+        
+    } catch (error) {
+        console.error('智能内容检测失败:', error);
+    }
+    
+    return '';
+}
+
+// 检测流式内容
+async function detectStreamingContent() {
+    const streamingSelectors = [
+        '.streaming',
+        '.typing',
+        '.generating',
+        '[class*="stream"]',
+        '[class*="typing"]',
+        '[class*="generating"]',
+        '.result-streaming',
+        '.response-streaming'
+    ];
+    
+    for (const selector of streamingSelectors) {
+        const elements = document.querySelectorAll(selector);
+        if (elements.length > 0) {
+            const content = await extractElementContent(elements[0]);
+            if (content && isHighQualityContent(content)) {
+                return content;
+            }
+        }
+    }
+    
+    return '';
+}
+
+// 检测最新生成的内容
+async function detectLatestContent() {
+    // 查找最近添加的元素
+    const recentElements = document.querySelectorAll('[class*="message"], [class*="response"], [class*="answer"]');
+    
+    if (recentElements.length === 0) return '';
+    
+    // 按时间戳或位置排序，获取最新的
+    const latestElement = Array.from(recentElements).pop();
+    const content = await extractElementContent(latestElement);
+    
+    if (content && isHighQualityContent(content)) {
+        return content;
+    }
+    
+    return '';
+}
+
+// 检测高价值内容区域
+async function detectValuableContent() {
+    const valuableSelectors = [
+        'main',
+        'article',
+        '.content',
+        '.main-content',
+        '.chat-content',
+        '.conversation',
+        '.messages'
+    ];
+    
+    for (const selector of valuableSelectors) {
+        const elements = document.querySelectorAll(selector);
+        if (elements.length > 0) {
+            const content = await extractElementContent(elements[0]);
+            if (content && content.length > 100 && isHighQualityContent(content)) {
+                return content;
+            }
+        }
+    }
+    
+    return '';
+}
+
+// 通用内容提取
+async function genericContentExtraction(siteName) {
+    console.log(`🔧 开始通用内容提取 ${siteName}...`);
+    
+    try {
+        // 获取页面主要内容
+        const mainContent = document.querySelector('main') || document.querySelector('article') || document.body;
+        
+        if (mainContent) {
+            const content = await extractElementContent(mainContent);
+            if (content && content.length > 50) {
+                return content;
+            }
+        }
+        
+        // 如果主要内容提取失败，尝试提取整个页面
+        const bodyContent = document.body ? document.body.textContent || document.body.innerText : '';
+        if (bodyContent && bodyContent.length > 100) {
+            return cleanExtractedText(bodyContent);
+        }
+        
+    } catch (error) {
+        console.error('通用内容提取失败:', error);
+    }
+    
+    return '';
+}
+
+// 从域名推断站点名称
+function getSiteNameFromDomain(domain) {
+    const domainMappings = {
+        'chatgpt.com': 'ChatGPT',
+        'gemini.google.com': 'Gemini',
+        'grok.x.ai': 'Grok',
+        'grok.com': 'Grok',
+        'claude.ai': 'Claude',
+        'deepseek.com': 'DeepSeek',
+        'poe.com': 'Poe',
+        'perplexity.ai': 'Perplexity',
+        'you.com': 'You.com',
+        'bing.com': 'Bing Chat',
+        'bard.google.com': 'Bard'
+    };
+    
+    // 直接匹配
+    if (domainMappings[domain]) {
+        return domainMappings[domain];
+    }
+    
+    // 部分匹配
+    for (const [key, value] of Object.entries(domainMappings)) {
+        if (domain.includes(key)) {
+            return value;
+        }
+    }
+    
+    // 如果都不匹配，返回格式化的域名
+    return domain.charAt(0).toUpperCase() + domain.slice(1);
+}
+
+// 将 HTML 转换为 Markdown
+function convertHtmlToMarkdown(html) {
+    try {
+        // 创建一个临时容器来解析 HTML
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = html;
+        
+        // 简单的 HTML 到 Markdown 转换
+        let markdown = html
+            // 标题
+            .replace(/<h1[^>]*>(.*?)<\/h1>/gi, '# $1\n\n')
+            .replace(/<h2[^>]*>(.*?)<\/h2>/gi, '## $1\n\n')
+            .replace(/<h3[^>]*>(.*?)<\/h3>/gi, '### $1\n\n')
+            .replace(/<h4[^>]*>(.*?)<\/h4>/gi, '#### $1\n\n')
+            .replace(/<h5[^>]*>(.*?)<\/h5>/gi, '##### $1\n\n')
+            .replace(/<h6[^>]*>(.*?)<\/h6>/gi, '###### $1\n\n')
+            
+            // 粗体和斜体
+            .replace(/<strong[^>]*>(.*?)<\/strong>/gi, '**$1**')
+            .replace(/<b[^>]*>(.*?)<\/b>/gi, '**$1**')
+            .replace(/<em[^>]*>(.*?)<\/em>/gi, '*$1*')
+            .replace(/<i[^>]*>(.*?)<\/i>/gi, '*$1*')
+            
+            // 链接
+            .replace(/<a[^>]*href="([^"]*)"[^>]*>(.*?)<\/a>/gi, '[$2]($1)')
+            
+            // 代码
+            .replace(/<code[^>]*>(.*?)<\/code>/gi, '`$1`')
+            .replace(/<pre[^>]*><code[^>]*>(.*?)<\/code><\/pre>/gi, '```\n$1\n```')
+            
+            // 列表
+            .replace(/<ul[^>]*>(.*?)<\/ul>/gis, (match, content) => {
+                return content.replace(/<li[^>]*>(.*?)<\/li>/gi, '- $1\n') + '\n';
+            })
+            .replace(/<ol[^>]*>(.*?)<\/ol>/gis, (match, content) => {
+                let counter = 1;
+                return content.replace(/<li[^>]*>(.*?)<\/li>/gi, () => `${counter++}. $1\n`) + '\n';
+            })
+            
+            // 段落
+            .replace(/<p[^>]*>(.*?)<\/p>/gi, '$1\n\n')
+            
+            // 换行
+            .replace(/<br[^>]*>/gi, '\n')
+            
+            // 表格（简单处理）
+            .replace(/<table[^>]*>(.*?)<\/table>/gis, (match, content) => {
+                // 提取表头
+                const headerMatch = content.match(/<thead[^>]*>(.*?)<\/thead>/is);
+                const bodyMatch = content.match(/<tbody[^>]*>(.*?)<\/tbody>/is);
+                
+                if (headerMatch && bodyMatch) {
+                    // 处理表头
+                    const headers = headerMatch[1].match(/<th[^>]*>(.*?)<\/th>/gi) || [];
+                    const headerRow = headers.map(h => h.replace(/<[^>]*>/g, '').trim()).join(' | ');
+                    
+                    // 处理表体
+                    const rows = bodyMatch[1].match(/<tr[^>]*>(.*?)<\/tr>/gi) || [];
+                    const dataRows = rows.map(row => {
+                        const cells = row.match(/<td[^>]*>(.*?)<\/td>/gi) || [];
+                        return cells.map(cell => cell.replace(/<[^>]*>/g, '').trim()).join(' | ');
+                    });
+                    
+                    return `\n${headerRow}\n${headers.map(() => '---').join(' | ')}\n${dataRows.join('\n')}\n\n`;
+                }
+                return match;
+            })
+            
+            // 移除其他 HTML 标签
+            .replace(/<[^>]*>/g, '')
+            
+            // 清理多余的空行
+            .replace(/\n{3,}/g, '\n\n')
+            .trim();
+        
+        return markdown;
+        
+    } catch (error) {
+        console.warn('HTML 到 Markdown 转换失败:', error);
+        // 降级到纯文本
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = html;
+        return tempDiv.textContent || tempDiv.innerText || '';
+    }
 }

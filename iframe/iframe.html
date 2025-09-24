@@ -35,6 +35,11 @@
             <img src="../icons/attachment.png" alt="上传文件" style="width: 16px; height: 16px;">
         </button>
         
+        <!-- 导出回答按钮 -->
+        <button id="exportResponsesButton" class="export-responses-btn" data-i18n="exportResponses" title="导出所有AI回答">
+            <img src="../icons/save.png" alt="导出回答" style="width: 16px; height: 16px;">
+        </button>
+        
         <!-- 隐藏的文件选择input -->
         <input type="file" id="fileInput" style="display: none;" multiple 
                accept="image/*,audio/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.rtf,.pages,.numbers,.key,.txt,.csv,.json,.xml,.html,.css,.js,.py,.java,.cpp,.c,.php,.zip,.rar,.7z,.gz,.tar,.wps,.et,.dps,.vsd,.vsdx,.pub,.one,.msg,.eml,.mpp">
@@ -75,5 +80,6 @@
     </div>
     <script src="../config/baseConfig.js"></script>
     <script type="module" src="iframe.js"></script>
+    <script src="export-responses.js"></script>
 </body>
 </html> 

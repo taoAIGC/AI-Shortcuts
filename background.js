@@ -472,7 +472,20 @@ async function getHandlerForUrl(url) {
     const hostname = new URL(url).hostname;
     console.log('当前网站:', hostname);
     
-    // 从 remoteSiteHandlers 获取站点列表
+    // 优先使用新的统一站点检测器
+    if (self.siteDetector) {
+      const siteHandler = await self.siteDetector.getSiteHandler(hostname);
+      if (siteHandler) {
+        console.log(`✅ 使用新检测器找到站点配置: ${siteHandler.name}`);
+        return {
+          name: siteHandler.name,
+          searchHandler: siteHandler.searchHandler,
+          supportUrlQuery: siteHandler.supportUrlQuery
+        };
+      }
+    }
+    
+    // 降级到原有逻辑
     let sites = [];
     try {
       const result = await chrome.storage.local.get('remoteSiteHandlers');

@@ -255,5 +255,44 @@
   },
   "dismissWarning": {
     "message": "我知道了"
+  },
+  "exportResponses": {
+    "message": "导出AI回答"
+  },
+  "exportModalTitle": {
+    "message": "导出AI回答"
+  },
+  "exportFormat": {
+    "message": "导出格式"
+  },
+  "selectSites": {
+    "message": "选择站点"
+  },
+  "preview": {
+    "message": "预览"
+  },
+  "export": {
+    "message": "导出"
+  },
+  "cancel": {
+    "message": "取消"
+  },
+  "exportSuccess": {
+    "message": "导出成功！"
+  },
+  "exportFailed": {
+    "message": "导出失败"
+  },
+  "selectSitesToExport": {
+    "message": "请选择要导出的站点"
+  },
+  "noContentFound": {
+    "message": "没有找到可导出的内容"
+  },
+  "contentExtractionFailed": {
+    "message": "内容提取失败"
+  },
+  "devNotice": {
+    "message": "功能在开发中，可能会有错误或不足"
   }
 } 

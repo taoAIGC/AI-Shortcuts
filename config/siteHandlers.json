@@ -61,6 +61,37 @@
             "description": "执行文件粘贴操作"
           }
         ]
+      },
+      "contentExtractor": {
+        "messageContainer": "[data-message-author-role=\"assistant\"]",
+        "contentSelectors": [
+          ".markdown.prose",
+          ".markdown"
+        ],
+        "thinkingSelector": ":scope > div:not(.markdown)",
+        "excludeSelectors": [
+          "button",
+          "[class*=\"copy\"]",
+          "[class*=\"regenerate\"]",
+          "[class*=\"user\"]",
+          ".flex",
+          "nav",
+          "header",
+          "footer"
+        ],
+        "extractThinking": true,
+        "thinkingBlockFilters": [
+          ":scope > div:not(.markdown)",
+          "[class*=\"thinking\"]",
+          "[data-testid*=\"thinking\"]",
+          ".transition-all.rounded-lg"
+        ],
+        "fallbackSelectors": [
+          "[class*=\"message\"][class*=\"assistant\"]",
+          "[class*=\"response\"]",
+          "main",
+          "article"
+        ]
       }
     },
     {
@@ -121,6 +152,39 @@
             "description": "执行文件粘贴操作"
           }
         ]
+      },
+      "contentExtractor": {
+        "messageContainer": ".conversation-container",
+        "contentSelectors": [
+          "model-response .model-response-text",
+          "model-response",
+          "[data-message-author-role=\"model\"]"
+        ],
+        "userMessageSelector": "user-query .query-text",
+        "excludeSelectors": [
+          "button",
+          "[class*=\"copy\"]",
+          "[class*=\"user\"]",
+          "[class*=\"input\"]",
+          "[class*=\"prompt\"]",
+          "textarea",
+          ".safety-info",
+          "[class*=\"safety\"]",
+          "nav",
+          "header",
+          "footer"
+        ],
+        "extractThinking": false,
+        "fallbackSelectors": [
+          ".model-response-text",
+          "[class*=\"model\"][class*=\"response\"]",
+          ".gemini-response",
+          "[class*=\"ai-response\"]",
+          "main",
+          "article"
+        ],
+        "containerSelector": "#chat-history",
+        "editModeCheck": "textarea"
       }
     },
     {
@@ -186,6 +250,40 @@
             "action": "paste",
             "description": "执行文件粘贴操作"
           }
+        ]
+      },
+      "contentExtractor": {
+        "messageContainer": "[data-message-author-role=\"assistant\"]",
+        "contentSelectors": [
+          ".response-content-markdown.markdown",
+          ".response-content-markdown",
+          ".markdown"
+        ],
+        "excludeSelectors": [
+          "button",
+          "[class*=\"copy\"]",
+          "[class*=\"user\"]",
+          "[class*=\"input\"]",
+          "[class*=\"prompt\"]",
+          ".sticky",
+          "[class*=\"sticky\"]",
+          "nav",
+          "header",
+          "footer"
+        ],
+        "extractThinking": false,
+        "thinkingBlockFilters": [
+          "[class*=\"thinking\"]",
+          "[data-testid*=\"thinking\"]",
+          ".transition-all.rounded-lg",
+          "[class*=\"internal\"]"
+        ],
+        "fallbackSelectors": [
+          ".grok-response",
+          "[class*=\"grok\"]",
+          "[class*=\"ai-response\"]",
+          "main",
+          "article"
         ]
       }
     },
@@ -255,6 +353,46 @@
             "description": "执行文件粘贴操作"
           }
         ]
+      },
+      "contentExtractor": {
+        "messageContainer": "[data-test-render-count]",
+        "contentSelectors": [
+          ".font-claude-response",
+          "[data-testid=\"ai-message\"]",
+          ".claude-message .markdown",
+          ".message-content"
+        ],
+        "userMessageSelector": "[data-testid=\"user-message\"]",
+        "excludeSelectors": [
+          "button",
+          "[class*=\"copy\"]",
+          "[class*=\"user\"]",
+          "[class*=\"input\"]",
+          "[class*=\"prompt\"]",
+          ".attachment",
+          "[class*=\"attachment\"]",
+          "textarea",
+          ".transition-all.rounded-lg",
+          "[class*=\"transition-all\"][class*=\"rounded-lg\"]",
+          "[aria-expanded]",
+          "nav",
+          "header",
+          "footer"
+        ],
+        "extractThinking": false,
+        "thinkingBlockFilters": [
+          ".transition-all.rounded-lg.border",
+          "[class*=\"transition-all\"][class*=\"rounded-lg\"][class*=\"border\"]",
+          "button[aria-expanded]"
+        ],
+        "fallbackSelectors": [
+          ".claude-response",
+          "[class*=\"claude-response\"]",
+          "[class*=\"ai-response\"]",
+          "main",
+          "article"
+        ],
+        "editModeCheck": "textarea"
       }
     },
     {
@@ -314,6 +452,57 @@
             "description": "执行文件粘贴操作"
           }
         ]
+      },
+      "contentExtractor": {
+        "selectors": [
+          "[data-message-author-role=\"assistant\"] .markdown",
+          "[data-message-author-role=\"assistant\"]",
+          ".deepseek-message .markdown",
+          ".deepseek-message",
+          ".message-content .markdown",
+          ".message-content",
+          "[class*=\"deepseek\"][class*=\"message\"]",
+          "[class*=\"deepseek\"]",
+          "[class*=\"message\"]",
+          "[class*=\"response\"]",
+          "[class*=\"conversation\"]",
+          "[class*=\"chat\"]",
+          ".deepseek-response",
+          "[class*=\"deepseek-response\"]",
+          ".ai-response",
+          "[class*=\"ai-response\"]",
+          ".chat-message",
+          "[class*=\"chat-message\"]"
+        ],
+        "fallbackSelectors": [
+          "main",
+          "article",
+          ".container",
+          "[class*=\"content\"]",
+          "[class*=\"result\"]",
+          "[class*=\"output\"]"
+        ],
+        "excludeSelectors": [
+          "nav",
+          "header",
+          "footer",
+          ".sidebar",
+          ".menu",
+          ".input",
+          ".prompt",
+          "[class*=\"input\"]",
+          "[class*=\"prompt\"]",
+          "[class*=\"user\"]",
+          "[class*=\"question\"]",
+          ".copy-button",
+          "[class*=\"copy\"]",
+          ".regenerate-button",
+          "[class*=\"regenerate\"]",
+          ".stop-button",
+          "[class*=\"stop\"]",
+          ".attachment",
+          "[class*=\"attachment\"]"
+        ]
       }
     },
     {
@@ -366,6 +555,61 @@
             "action": "paste",
             "description": "执行文件粘贴操作"
           }
+        ]
+      },
+      "contentExtractor": {
+        "selectors": [
+          "[data-message-author-role=\"assistant\"] .markdown",
+          "[data-message-author-role=\"assistant\"]",
+          ".doubao-message .markdown",
+          ".doubao-message",
+          ".message-content .markdown",
+          ".message-content",
+          "[class*=\"doubao\"][class*=\"message\"]",
+          "[class*=\"doubao\"]",
+          "[class*=\"message\"]",
+          "[class*=\"response\"]",
+          "[class*=\"conversation\"]",
+          "[class*=\"chat\"]",
+          ".doubao-response",
+          "[class*=\"doubao-response\"]",
+          ".ai-response",
+          "[class*=\"ai-response\"]",
+          ".chat-message",
+          "[class*=\"chat-message\"]",
+          "[data-testid*=\"message\"]",
+          "[data-testid*=\"response\"]"
+        ],
+        "fallbackSelectors": [
+          "main",
+          "article",
+          ".container",
+          "[class*=\"content\"]",
+          "[class*=\"result\"]",
+          "[class*=\"output\"]"
+        ],
+        "excludeSelectors": [
+          "nav",
+          "header",
+          "footer",
+          ".sidebar",
+          ".menu",
+          ".input",
+          ".prompt",
+          "[class*=\"input\"]",
+          "[class*=\"prompt\"]",
+          "[class*=\"user\"]",
+          "[class*=\"question\"]",
+          ".copy-button",
+          "[class*=\"copy\"]",
+          ".regenerate-button",
+          "[class*=\"regenerate\"]",
+          ".stop-button",
+          "[class*=\"stop\"]",
+          ".attachment",
+          "[class*=\"attachment\"]",
+          "[data-testid*=\"input\"]",
+          "[data-testid*=\"send\"]"
         ]
       }
     },
@@ -526,6 +770,63 @@
             "description": "执行文件粘贴操作"
           }
         ]
+      },
+      "contentExtractor": {
+        "selectors": [
+          "[data-message-author-role=\"assistant\"] .markdown",
+          "[data-message-author-role=\"assistant\"]",
+          ".wenxin-message .markdown",
+          ".wenxin-message",
+          ".message-content .markdown",
+          ".message-content",
+          "[class*=\"wenxin\"][class*=\"message\"]",
+          "[class*=\"wenxin\"]",
+          "[class*=\"message\"]",
+          "[class*=\"response\"]",
+          "[class*=\"conversation\"]",
+          "[class*=\"chat\"]",
+          ".wenxin-response",
+          "[class*=\"wenxin-response\"]",
+          ".ai-response",
+          "[class*=\"ai-response\"]",
+          ".chat-message",
+          "[class*=\"chat-message\"]",
+          ".baidu-response",
+          "[class*=\"baidu\"]",
+          ".yiyan-response",
+          "[class*=\"yiyan\"]"
+        ],
+        "fallbackSelectors": [
+          "main",
+          "article",
+          ".container",
+          "[class*=\"content\"]",
+          "[class*=\"result\"]",
+          "[class*=\"output\"]"
+        ],
+        "excludeSelectors": [
+          "nav",
+          "header",
+          "footer",
+          ".sidebar",
+          ".menu",
+          ".input",
+          ".prompt",
+          "[class*=\"input\"]",
+          "[class*=\"prompt\"]",
+          "[class*=\"user\"]",
+          "[class*=\"question\"]",
+          ".copy-button",
+          "[class*=\"copy\"]",
+          ".regenerate-button",
+          "[class*=\"regenerate\"]",
+          ".stop-button",
+          "[class*=\"stop\"]",
+          ".attachment",
+          "[class*=\"attachment\"]",
+          ".yc-editor",
+          "[class*=\"yc-editor\"]"
+        ]
       }
     },
     {
@@ -586,6 +887,59 @@
             "description": "执行文件粘贴操作"
           }
         ]
+      },
+      "contentExtractor": {
+        "selectors": [
+          "[data-message-author-role=\"assistant\"] .markdown",
+          "[data-message-author-role=\"assistant\"]",
+          ".yuanbao-message .markdown",
+          ".yuanbao-message",
+          ".message-content .markdown",
+          ".message-content",
+          "[class*=\"yuanbao\"][class*=\"message\"]",
+          "[class*=\"yuanbao\"]",
+          "[class*=\"message\"]",
+          "[class*=\"response\"]",
+          "[class*=\"conversation\"]",
+          "[class*=\"chat\"]",
+          ".yuanbao-response",
+          "[class*=\"yuanbao-response\"]",
+          ".ai-response",
+          "[class*=\"ai-response\"]",
+          ".chat-message",
+          "[class*=\"chat-message\"]",
+          ".tencent-response",
+          "[class*=\"tencent\"]"
+        ],
+        "fallbackSelectors": [
+          "main",
+          "article",
+          ".container",
+          "[class*=\"content\"]",
+          "[class*=\"result\"]",
+          "[class*=\"output\"]"
+        ],
+        "excludeSelectors": [
+          "nav",
+          "header",
+          "footer",
+          ".sidebar",
+          ".menu",
+          ".input",
+          ".prompt",
+          "[class*=\"input\"]",
+          "[class*=\"prompt\"]",
+          "[class*=\"user\"]",
+          "[class*=\"question\"]",
+          ".copy-button",
+          "[class*=\"copy\"]",
+          ".regenerate-button",
+          "[class*=\"regenerate\"]",
+          ".stop-button",
+          "[class*=\"stop\"]",
+          ".attachment",
+          "[class*=\"attachment\"]"
+        ]
       }
     },
     {
@@ -643,6 +997,61 @@
             "customAction": "placeholder",
             "description": "站点暂未实现搜索处理器"
           }
+        ]
+      },
+      "contentExtractor": {
+        "selectors": [
+          "[data-message-author-role=\"assistant\"] .markdown",
+          "[data-message-author-role=\"assistant\"]",
+          ".zhipu-message .markdown",
+          ".zhipu-message",
+          ".message-content .markdown",
+          ".message-content",
+          "[class*=\"zhipu\"][class*=\"message\"]",
+          "[class*=\"zhipu\"]",
+          "[class*=\"message\"]",
+          "[class*=\"response\"]",
+          "[class*=\"conversation\"]",
+          "[class*=\"chat\"]",
+          ".zhipu-response",
+          "[class*=\"zhipu-response\"]",
+          ".ai-response",
+          "[class*=\"ai-response\"]",
+          ".chat-message",
+          "[class*=\"chat-message\"]",
+          ".chatglm-response",
+          "[class*=\"chatglm\"]",
+          ".glm-response",
+          "[class*=\"glm\"]"
+        ],
+        "fallbackSelectors": [
+          "main",
+          "article",
+          ".container",
+          "[class*=\"content\"]",
+          "[class*=\"result\"]",
+          "[class*=\"output\"]"
+        ],
+        "excludeSelectors": [
+          "nav",
+          "header",
+          "footer",
+          ".sidebar",
+          ".menu",
+          ".input",
+          ".prompt",
+          "[class*=\"input\"]",
+          "[class*=\"prompt\"]",
+          "[class*=\"user\"]",
+          "[class*=\"question\"]",
+          ".copy-button",
+          "[class*=\"copy\"]",
+          ".regenerate-button",
+          "[class*=\"regenerate\"]",
+          ".stop-button",
+          "[class*=\"stop\"]",
+          ".attachment",
+          "[class*=\"attachment\"]"
         ]
       }
     },
@@ -703,6 +1112,59 @@
             "action": "paste",
             "description": "执行文件粘贴操作"
           }
+        ]
+      },
+      "contentExtractor": {
+        "selectors": [
+          "[data-message-author-role=\"assistant\"] .markdown",
+          "[data-message-author-role=\"assistant\"]",
+          ".kimi-message .markdown",
+          ".kimi-message",
+          ".message-content .markdown",
+          ".message-content",
+          "[class*=\"kimi\"][class*=\"message\"]",
+          "[class*=\"kimi\"]",
+          "[class*=\"message\"]",
+          "[class*=\"response\"]",
+          "[class*=\"conversation\"]",
+          "[class*=\"chat\"]",
+          ".kimi-response",
+          "[class*=\"kimi-response\"]",
+          ".ai-response",
+          "[class*=\"ai-response\"]",
+          ".chat-message",
+          "[class*=\"chat-message\"]",
+          ".moonshot-response",
+          "[class*=\"moonshot\"]"
+        ],
+        "fallbackSelectors": [
+          "main",
+          "article",
+          ".container",
+          "[class*=\"content\"]",
+          "[class*=\"result\"]",
+          "[class*=\"output\"]"
+        ],
+        "excludeSelectors": [
+          "nav",
+          "header",
+          "footer",
+          ".sidebar",
+          ".menu",
+          ".input",
+          ".prompt",
+          "[class*=\"input\"]",
+          "[class*=\"prompt\"]",
+          "[class*=\"user\"]",
+          "[class*=\"question\"]",
+          ".copy-button",
+          "[class*=\"copy\"]",
+          ".regenerate-button",
+          "[class*=\"regenerate\"]",
+          ".stop-button",
+          "[class*=\"stop\"]",
+          ".attachment",
+          "[class*=\"attachment\"]"
         ]
       }
     },
@@ -769,6 +1231,61 @@
             "action": "paste",
             "description": "执行文件粘贴操作"
           }
+        ]
+      },
+      "contentExtractor": {
+        "selectors": [
+          "[data-message-author-role=\"assistant\"] .markdown",
+          "[data-message-author-role=\"assistant\"]",
+          ".tongyi-message .markdown",
+          ".tongyi-message",
+          ".message-content .markdown",
+          ".message-content",
+          "[class*=\"tongyi\"][class*=\"message\"]",
+          "[class*=\"tongyi\"]",
+          "[class*=\"message\"]",
+          "[class*=\"response\"]",
+          "[class*=\"conversation\"]",
+          "[class*=\"chat\"]",
+          ".tongyi-response",
+          "[class*=\"tongyi-response\"]",
+          ".ai-response",
+          "[class*=\"ai-response\"]",
+          ".chat-message",
+          "[class*=\"chat-message\"]",
+          ".qwen-response",
+          "[class*=\"qwen\"]",
+          ".alibaba-response",
+          "[class*=\"alibaba\"]"
+        ],
+        "fallbackSelectors": [
+          "main",
+          "article",
+          ".container",
+          "[class*=\"content\"]",
+          "[class*=\"result\"]",
+          "[class*=\"output\"]"
+        ],
+        "excludeSelectors": [
+          "nav",
+          "header",
+          "footer",
+          ".sidebar",
+          ".menu",
+          ".input",
+          ".prompt",
+          "[class*=\"input\"]",
+          "[class*=\"prompt\"]",
+          "[class*=\"user\"]",
+          "[class*=\"question\"]",
+          ".copy-button",
+          "[class*=\"copy\"]",
+          ".regenerate-button",
+          "[class*=\"regenerate\"]",
+          ".stop-button",
+          "[class*=\"stop\"]",
+          ".attachment",
+          "[class*=\"attachment\"]"
         ]
       }
     },

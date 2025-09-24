@@ -260,5 +260,44 @@
   },
   "dismissWarning": {
     "message": "Got it"
+  },
+  "exportResponses": {
+    "message": "Export AI Responses"
+  },
+  "exportModalTitle": {
+    "message": "Export AI Responses"
+  },
+  "exportFormat": {
+    "message": "Export Format"
+  },
+  "selectSites": {
+    "message": "Select Sites"
+  },
+  "preview": {
+    "message": "Preview"
+  },
+  "export": {
+    "message": "Export"
+  },
+  "cancel": {
+    "message": "Cancel"
+  },
+  "exportSuccess": {
+    "message": "Export successful!"
+  },
+  "exportFailed": {
+    "message": "Export failed"
+  },
+  "selectSitesToExport": {
+    "message": "Please select sites to export"
+  },
+  "noContentFound": {
+    "message": "No content found to export"
+  },
+  "contentExtractionFailed": {
+    "message": "Content extraction failed"
+  },
+  "devNotice": {
+    "message": "Feature in development, may have errors or limitations"
   }
 } 
