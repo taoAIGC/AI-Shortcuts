@@ -53,7 +53,6 @@
       "matches": ["<all_urls>"],
       "js": [
         "config/baseConfig.js",
-        "config/siteDetector.js",
         "content-scripts/selection.js"
       ],
       "css": ["content-scripts/selection.css"]
@@ -63,7 +62,6 @@
       "css": ["content-scripts/float-button.css"],
       "js": [
         "config/baseConfig.js",
-        "config/siteDetector.js",
         "content-scripts/float-button.js"
       ],
       "run_at": "document_end"
@@ -77,7 +75,6 @@
       ],
       "js": [
         "config/baseConfig.js",
-        "config/siteDetector.js",
         "content-scripts/search-engines.js"
       ]
     }

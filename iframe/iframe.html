@@ -10,16 +10,20 @@
     <div class="search-bar">
         <div class="search-input-container">
             <div class="input-wrapper">
-                <input 
-                    type="text" 
+                <textarea 
                     id="searchInput" 
-                    data-i18n="inputPlaceholder"
                     placeholder=""
                     autofocus
-                >
+                    rows="1"
+                ></textarea>
                 <button id="favoriteButton" class="favorite-btn" style="display: none;" data-i18n="favoriteButton">
                     <img id="favoriteIcon" src="../icons/star_unsaved.png" alt="收藏">
                 </button>
+                <!-- 文件上传按钮 -->
+                <button id="fileUploadButton" class="file-upload-btn" title="上传文件到所有AI站点">
+                    <img src="../icons/attachment.png" alt="上传文件">
+                </button>
+                <button id="searchButton" class="search-btn" data-i18n="startCompare">发送</button>
             </div>
             <div id="querySuggestions" class="query-suggestions" style="display: none;">
                 <!-- queryItem.name 将显示在这里 -->
@@ -28,12 +32,6 @@
         <div id="iconContainer">
             <img id="toggleIcon" src="../icons/down.png" alt="Toggle" />
         </div>
-        <button id="searchButton" data-i18n="startCompare">发送</button>
-        
-        <!-- 文件上传按钮 -->
-        <button id="fileUploadButton" class="file-upload-btn" title="上传文件到所有AI站点">
-            <img src="../icons/attachment.png" alt="上传文件" style="width: 16px; height: 16px;">
-        </button>
         
         <!-- 导出回答按钮 -->
         <button id="exportResponsesButton" class="export-responses-btn" data-i18n="exportResponses" title="导出所有AI回答">

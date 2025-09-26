@@ -49,19 +49,19 @@
     "message": "AI Shortcuts"
   },
   "column1": {
-    "message": "1 Column",
+    "message": "1 Col",
     "description": "Single column layout option"
   },
   "column2": {
-    "message": "2 Columns",
+    "message": "2 Cols",
     "description": "Two columns layout option"
   },
   "column3": {
-    "message": "3 Columns",
+    "message": "3 Cols",
     "description": "Three columns layout option"
   },
   "column4": {
-    "message": "4 Columns",
+    "message": "4 Cols",
     "description": "Four columns layout option"
   },
   "closeButton": {

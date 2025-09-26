@@ -85,6 +85,62 @@ async function requestClipboardPermission() {
 
 // 页面加载完成后的初始化
 document.addEventListener('DOMContentLoaded', async function() {
+    // 初始化自动调整高度的输入框
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        // 自动调整输入框高度
+        function autoResizeTextarea() {
+            searchInput.style.height = 'auto';
+            const scrollHeight = searchInput.scrollHeight;
+            const minHeight = 36; // 最小高度
+            const maxHeight = 200; // 最大高度
+            
+            // 如果内容高度小于等于最小高度，保持最小高度不变
+            if (scrollHeight <= minHeight) {
+                searchInput.style.height = minHeight + 'px';
+            } else {
+                // 只有当内容真正需要更多空间时才调整高度
+                const newHeight = Math.min(scrollHeight, maxHeight);
+                searchInput.style.height = newHeight + 'px';
+            }
+        }
+        
+        // 监听输入事件
+        searchInput.addEventListener('input', autoResizeTextarea);
+        
+        // 监听粘贴事件
+        searchInput.addEventListener('paste', () => {
+            // 延迟执行，等待粘贴内容处理完成
+            setTimeout(autoResizeTextarea, 10);
+        });
+        
+        // 监听聚焦事件，只在需要时调整高度
+        searchInput.addEventListener('focus', () => {
+            // 只有在内容超过一行时才调整高度
+            const currentHeight = parseInt(searchInput.style.height) || 36;
+            if (currentHeight > 36) {
+                autoResizeTextarea();
+            }
+        });
+        
+        // 监听失焦事件，自动收回高度并隐藏建议
+        searchInput.addEventListener('blur', (e) => {
+            // 失焦后始终收回到底部（单行高度）
+            searchInput.style.height = '36px';
+            
+            // 延迟隐藏查询建议，以便用户能够点击建议项
+            setTimeout(() => {
+                const querySuggestions = document.getElementById('querySuggestions');
+                if (querySuggestions) {
+                    querySuggestions.style.display = 'none';
+                }
+            }, 200);
+        });
+        
+        // 初始调整
+        autoResizeTextarea();
+    }
+    
     // 初始化列数选择
     const columnSelect = document.getElementById('columnSelect');
     const iframesContainer = document.getElementById('iframes-container');
@@ -1267,14 +1323,7 @@ document.getElementById('searchInput').addEventListener('focus', (e) => {
     }
 });
 
-// 添加失焦事件监听器，延迟隐藏建议
-document.getElementById('searchInput').addEventListener('blur', (e) => {
-    // 延迟隐藏，以便用户能够点击建议项
-    setTimeout(() => {
-        const querySuggestions = document.getElementById('querySuggestions');
-        querySuggestions.style.display = 'none';
-    }, 200);
-});
+// 注意：失焦事件监听器已合并到DOMContentLoaded中的自动调整高度功能中
 
 // 在 DOMContentLoaded 时设置按钮文案
 document.addEventListener('DOMContentLoaded', () => {
@@ -1486,9 +1535,10 @@ function initializeI18n() {
         const key = element.getAttribute('data-i18n');
         const message = chrome.i18n.getMessage(key);
         if (message) {
-            if (element.tagName.toLowerCase() === 'input' && 
-                element.type === 'text') {
-                // 对于输入框，设置 placeholder
+            if ((element.tagName.toLowerCase() === 'input' && 
+                element.type === 'text') || 
+                element.tagName.toLowerCase() === 'textarea') {
+                // 对于输入框和文本域，设置 placeholder
                 element.placeholder = message;
             } else if (element.tagName.toLowerCase() === 'button') {
                 // 对于按钮，设置 title 属性
@@ -1499,6 +1549,15 @@ function initializeI18n() {
             }
         }
     });
+    
+    // 手动设置输入框的占位符
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        const placeholderMessage = chrome.i18n.getMessage('inputPlaceholder');
+        if (placeholderMessage) {
+            searchInput.placeholder = placeholderMessage;
+        }
+    }
 }
 
 
