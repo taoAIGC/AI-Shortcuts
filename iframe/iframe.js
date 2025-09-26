@@ -406,267 +406,97 @@ function isLocalFile(text) {
 
 // 统一的文件粘贴处理函数
 async function handleUnifiedFilePaste(event) {
-  console.log('🎯 检测到粘贴事件，开始统一处理');
+  console.log('🎯 检测到粘贴事件，开始简化处理');
   
   try {
-    // 预先检查剪贴板内容，如果可能包含文件则提前阻止默认行为
-    let shouldPreventDefault = false;
-    try {
-      const clipboardDataPreCheck = await navigator.clipboard.read();
-      
-      for (const item of clipboardDataPreCheck) {
-        // 快速检查是否可能包含文件
-        const hasFiles = item.types.includes('Files');
-        const hasImages = item.types.some(type => type.startsWith('image/'));
-        const hasTextAndOthers = item.types.includes('text/plain') && item.types.length > 1;
-        
-        // 检查 text/plain 是否为本地文件路径
-        let hasLocalFile = false;
-        if (item.types.includes('text/plain') && item.types.length === 1) {
-          try {
-            const textContent = await item.getType('text/plain');
-            const text = await textContent.text();
-            hasLocalFile = isLocalFile(text);
-            if (hasLocalFile) {
-              console.log('🎯 预检查发现本地文件路径');
-            }
-          } catch (textError) {
-            // 忽略文本读取错误
-          }
-        }
-        
-        if (hasFiles || hasImages || hasTextAndOthers || hasLocalFile) {
-          shouldPreventDefault = true;
-          console.log('🎯 预检查发现可能的文件内容，提前阻止默认行为');
-          break;
-        }
-      }
-    } catch (preCheckError) {
-      console.log('🎯 预检查失败，继续正常流程:', preCheckError.message);
-    }
-    
-    if (shouldPreventDefault) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-    
     // 1. 首先请求剪贴板权限
     const hasPermission = await requestClipboardPermission();
     if (!hasPermission) {
-      console.log('❌ 无法访问剪贴板，权限不足');
+      console.log('❌ 无法访问剪贴板，权限不足，允许默认行为');
       return;
     }
     
-    // 2. 检查剪贴板中是否有文件
+    // 2. 检查剪贴板内容
     const clipboardData = await navigator.clipboard.read();
     console.log('剪贴板内容:', clipboardData);
     
-    let hasFiles = false;
-    let fileData = null;
-    let localFileCount = 0; // 本地文件计数器
-    let totalFileCount = 0; // 总文件计数器
-    
-    // 从配置中获取支持的文件类型
-    const fileTypes = await window.AppConfigManager.getAllSupportedFileTypes();
-    console.log('从配置获取支持的文件类型:', fileTypes);
+    let hasNetworkImage = false;
     
     for (const item of clipboardData) {
       console.log('剪贴板项目类型:', item.types);
       
-      // 改进的文件类型检测逻辑，优先级：Files > 具体MIME类型 > text/plain
-      let isFile = false;
-      
-      // 1. 优先检测 Files 类型
-      if (item.types.includes('Files')) {
-        isFile = true;
-        console.log('🎯 检测到 Files 类型');
-      }
-      
-      // 2. 检测具体的文件MIME类型（排除text/plain）
-      if (!isFile) {
-        const specificFileTypes = fileTypes.filter(type => type !== 'text/plain');
-        isFile = specificFileTypes.some(type => item.types.includes(type));
-        if (isFile) {
-          console.log('🎯 检测到具体文件MIME类型');
-        }
-      }
-      
-      // 3. 检测 text/plain - 需要区分纯文本和本地文件路径
-      if (!isFile && item.types.includes('text/plain')) {
-        // 如果同时包含Files或图片类型，则认为是文件而不是纯文本
-        const hasFilesType = item.types.includes('Files');
-        const hasImageType = item.types.some(type => type.startsWith('image/'));
+      // 只处理网络图片（截图）
+      if (item.types.some(type => type.startsWith('image/'))) {
+        hasNetworkImage = true;
+        console.log('🎯 检测到网络图片，开始处理');
         
-        if (hasFilesType || hasImageType) {
-          isFile = true;
-          console.log('🎯 检测到text/plain但同时包含文件类型，识别为文件');
-        } else {
-          // 检查text/plain内容是否为本地文件路径
-          try {
-            const textContent = await item.getType('text/plain');
-            const text = await textContent.text();
-            console.log('🎯 text/plain 内容预检:', text.substring(0, 100) + (text.length > 100 ? '...' : ''));
-            
-            // 检测是否为本地文件（路径或文件名）
-            const isLocalFilePath = isLocalFile(text);
-            const isLocalFileName = hasValidFileExtension(text);
-            
-            if (isLocalFilePath || isLocalFileName) {
-              isFile = true;
-              console.log('🎯 检测到本地文件:', text.split('\n')[0]);
-            } else {
-              console.log('🎯 检测到纯文本类型，不是文件');
-            }
-          } catch (textError) {
-            console.log('🎯 无法读取text/plain内容，默认为纯文本:', textError.message);
-          }
-        }
-      }
-      
-      if (isFile) {
-        hasFiles = true;
-        totalFileCount++; // 增加总文件计数
-        console.log('检测到文件在剪贴板中，类型:', item.types);
-        
-        // 阻止默认粘贴行为，避免文件名进入搜索框
-        event.preventDefault();
-        event.stopPropagation();
-        console.log('🎯 已阻止默认粘贴行为，避免文件名进入搜索框');
-        
-        // 预先检测本地文件，避免进入文件数据生成流程
-        if (item.types.includes('text/plain') && item.types.length === 1) {
-          try {
-            const textContent = await item.getType('text/plain');
-            const text = await textContent.text();
-            const isLocalFilePath = isLocalFile(text);
-            const isLocalFileName = hasValidFileExtension(text);
-            
-            if (isLocalFilePath || isLocalFileName) {
-              localFileCount++; // 增加本地文件计数
-              console.log('🎯 检测到本地文件，显示用户提示并跳过文件数据生成');
-              
-              // 提取文件名和扩展名
-              const firstLine = text.trim().split('\n')[0];
-              let fileName, fileExtension;
-              if (isLocalFilePath) {
-                fileName = firstLine.split(/[\/\\]/).pop();
-              } else {
-                fileName = firstLine;
-              }
-              fileExtension = fileName.split('.').pop().toLowerCase();
-              
-              // 显示友好提示
-              showLocalFileWarning(fileName, fileExtension);
-              
-              // 跳过当前项目，不进行任何文件数据处理
-              console.log('🎯 本地文件处理完成，已显示用户提示，跳过当前项目');
-              continue; // 跳过当前项目，继续处理其他项目
-            }
-          } catch (error) {
-            console.log('🎯 预检测失败，继续正常流程:', error.message);
-          }
-        }
-        
-        // 在父页面统一读取文件数据（只处理真正的文件，不是本地文件路径）
         try {
-          let blob = null;
-          let mimeType = null;
-          let originalName = null;
+          // 获取图片数据
+          const imageType = item.types.find(type => type.startsWith('image/'));
+          const imageData = await item.getType(imageType);
           
-          // 优先获取Files类型
-          if (item.types.includes('Files')) {
-            blob = await item.getType('Files');
-            mimeType = 'Files';
-            
-            // 尝试获取原始文件信息
-            if (blob instanceof File) {
-              originalName = blob.name;
-              mimeType = blob.type || 'application/octet-stream';
-              console.log('获取到原始文件信息:', {
-                name: originalName,
-                type: mimeType,
-                size: blob.size,
-                lastModified: blob.lastModified
-              });
-            }
-          } else {
-            // 尝试图片类型
-            const imageTypes = item.types.filter(type => type.startsWith('image/'));
-            if (imageTypes.length > 0) {
-              const imageType = imageTypes[0];
-              blob = await item.getType(imageType);
-              mimeType = imageType;
-              console.log('🎯 获取到图片类型:', imageType);
-            } else {
-              // 尝试其他具体文件类型（排除text/plain，因为本地文件已经被处理）
-              const fileTypes = await window.AppConfigManager.getAllSupportedFileTypes();
-              const specificFileTypes = fileTypes.filter(type => type !== 'text/plain');
-              for (const type of specificFileTypes) {
-                if (item.types.includes(type)) {
-                  blob = await item.getType(type);
-                  mimeType = type;
-                  console.log('🎯 获取到文件类型:', type);
-                  break;
-                }
-              }
-            }
-          }
-          
-          // 简化的文件名生成
-          let fileName = originalName;
-          if (!fileName && window.AppConfigManager) {
-            fileName = await window.AppConfigManager.generateFileName(null, mimeType, 'clipboard');
-          } else if (!fileName) {
-            fileName = `clipboard-${Date.now()}.file`;
-          }
-          
-          fileData = {
-            type: mimeType,
-            blob: blob,
-            fileName: fileName,
-            originalName: originalName,
-            size: blob?.size,
-            lastModified: blob?.lastModified
+          // 创建文件数据对象
+          const fileObj = {
+            name: `clipboard_image_${Date.now()}.${imageType.split('/')[1] || 'png'}`,
+            type: imageType,
+            size: imageData.size || 0,
+            data: imageData
           };
           
-          console.log('成功读取文件数据:', fileData);
-        } catch (error) {
-          console.error('读取文件数据失败:', error);
-          fileData = null;
+          // 发送到所有iframe
+          await sendFileToAllIframes(fileObj);
+          console.log('🎯 网络图片已发送到所有iframe');
+          
+        } catch (imageError) {
+          console.log('🎯 处理网络图片失败:', imageError);
         }
-        break;
       }
     }
     
-    // 检查是否所有文件都是本地文件
-    console.log('🎯 文件检测统计:', { 总文件数: totalFileCount, 本地文件数: localFileCount });
-    if (totalFileCount > 0 && localFileCount === totalFileCount) {
-      console.log('🎯 所有文件都是本地文件，跳过iframe文件粘贴流程');
-      hasFiles = false; // 重置hasFiles标志，阻止后续的iframe粘贴流程
+    // 如果检测到网络图片，阻止默认行为
+    if (hasNetworkImage) {
+      event.preventDefault();
+      event.stopPropagation();
+      console.log('🎯 已阻止默认粘贴行为，图片已处理');
+      return;
     }
     
-    if (hasFiles) {
-      console.log('🎯 开始逐个向 iframe 执行文件粘贴');
-      
-      // 获取所有 iframe 元素
-      const iframes = document.querySelectorAll('.ai-iframe');
-      console.log(`找到 ${iframes.length} 个 iframe`);
-      
-      // 逐个执行文件粘贴
-      await executeFileUploadSequentially(iframes, fileData);
-      
-    } else {
-      console.log('剪贴板中没有检测到文件类型，跳过文件粘贴处理');
-    }
+    // 其他情况（纯文字或其他内容）允许默认行为
+    console.log('🎯 允许默认粘贴行为（文字或其他内容）');
+    
   } catch (error) {
-    console.log('剪贴板访问失败:', error.name, error.message);
-    console.log('提示: 请确保页面已获得焦点并授权剪贴板访问权限');
-    
-    // 降级处理：尝试让每个 iframe 自己处理
-    console.log('🎯 降级处理：让每个 iframe 自行尝试粘贴');
-    const iframes = document.querySelectorAll('.ai-iframe');
-    await executeFileUploadSequentially(iframes, null, true);
+    console.error('🎯 粘贴处理出错:', error);
+    // 出错时允许默认行为
   }
+}
+
+// 发送文件到所有iframe的简化函数
+async function sendFileToAllIframes(fileObj) {
+  const iframes = document.querySelectorAll('.ai-iframe');
+  console.log(`🎯 开始向 ${iframes.length} 个iframe发送文件`);
+  
+  for (const iframe of iframes) {
+    try {
+      const domain = new URL(iframe.src).hostname;
+      const siteName = iframe.getAttribute('data-site');
+      
+      console.log(`🎯 向 ${siteName} (${domain}) 发送文件`);
+      
+      // 给iframe发送文件数据
+      iframe.contentWindow.postMessage({
+        type: 'FILE_PASTE',
+        fileData: fileObj
+      }, '*');
+      
+      // 给iframe一些时间处理
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+    } catch (error) {
+      console.log(`🎯 向iframe发送文件失败:`, error);
+    }
+  }
+  
+  console.log('🎯 文件发送完成');
 }
 
 // 逐个执行文件上传的函数
