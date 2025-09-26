@@ -61,18 +61,23 @@ html {
     max-width: 1200px;
     margin: 0 auto;
     justify-content: flex-start;
+    min-height: 36px; /* 最小高度，允许扩展 */
+    align-items: flex-start; /* 顶部对齐，允许输入框向下扩展 */
 }
 
 .search-input-container {
     flex: 1;
     min-width: 0;
     position: relative;
+    height: auto; /* 允许容器高度自动调整 */
+    min-height: 36px; /* 最小高度与输入框一致 */
 }
 
 .input-wrapper {
     position: relative;
     display: flex;
-    align-items: center;
+    align-items: flex-start; /* 改为顶部对齐，允许输入框向下扩展 */
+    height: auto; /* 允许高度自动调整 */
 }
 
 .search-bar textarea {
@@ -232,6 +237,10 @@ html {
     background: white;
     margin: 0 10px;
     width: 45px;
+    height: 36px; /* 与输入框高度一致 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 #analysisDropdown  {
@@ -259,9 +268,10 @@ html {
 
 .settings-icon-container {
     position: relative;
-    display: inline-block;
     display: flex;
     align-items: center;
+    justify-content: center;
+    height: 36px; /* 与输入框高度一致 */
 }
 
 .settings-icon {
@@ -443,8 +453,7 @@ html {
     display: flex;
     align-items: center;        /* 垂直居中 */
     justify-content: center;    /* 水平居中 */
-    height: 100%;               /* 占满父容器高度 */
-    min-height: 36px;           /* 最小高度与输入框一致 */
+    height: 36px;               /* 与输入框高度一致 */
 }
 
 #toggleIcon {
@@ -627,7 +636,7 @@ html {
     background: transparent;
     border: none;
     border-radius: 6px;
-    padding: 8px 12px;
+    padding: 6px 12px;
     cursor: pointer;
     transition: all 0.2s ease;
     display: flex;
@@ -637,6 +646,7 @@ html {
     color: #333;
     margin-left: auto;
     flex-shrink: 0;
+    height: 36px; /* 与输入框高度一致 */
 }
 
 .export-responses-btn:hover {

@@ -114,13 +114,10 @@ document.addEventListener('DOMContentLoaded', async function() {
             setTimeout(autoResizeTextarea, 10);
         });
         
-        // 监听聚焦事件，只在需要时调整高度
+        // 监听聚焦事件，自动调整高度
         searchInput.addEventListener('focus', () => {
-            // 只有在内容超过一行时才调整高度
-            const currentHeight = parseInt(searchInput.style.height) || 36;
-            if (currentHeight > 36) {
-                autoResizeTextarea();
-            }
+            // 聚焦时总是调用自动调整函数
+            autoResizeTextarea();
         });
         
         // 监听失焦事件，自动收回高度并隐藏建议
