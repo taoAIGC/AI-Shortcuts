@@ -847,7 +847,7 @@ function resetSidePanelState(windowId) {
 }
 
 // 处理侧边栏切换逻辑
-function handleSidePanelToggle(windowId, isCurrentlyOpen) {
+async function handleSidePanelToggle(windowId, isCurrentlyOpen) {
   console.log('🔍 handleSidePanelToggle 被调用:');
   console.log('  - windowId:', windowId);
   console.log('  - isCurrentlyOpen:', isCurrentlyOpen);
@@ -855,12 +855,14 @@ function handleSidePanelToggle(windowId, isCurrentlyOpen) {
   if (isCurrentlyOpen) {
     // 如果侧边栏已经打开，则关闭它
     console.log('🔍 侧边栏已打开，准备关闭...');
+    
+    // 直接关闭侧边栏标签页
     chrome.tabs.query({ windowId: windowId }, (tabs) => {
       const sidePanelTab = tabs.find(tab => tab.url && tab.url.includes('iframe/iframe.html'));
       if (sidePanelTab) {
-        chrome.tabs.sendMessage(sidePanelTab.id, { action: 'closeSidePanel' });
+        chrome.tabs.remove(sidePanelTab.id);
         sidePanelOpenState.set(windowId, false);
-        console.log('✅ 已发送关闭侧边栏消息');
+        console.log('✅ 已关闭侧边栏标签页');
       } else {
         sidePanelOpenState.set(windowId, false);
         console.log('✅ 侧边栏已关闭');
@@ -883,36 +885,38 @@ function handleSidePanelToggle(windowId, isCurrentlyOpen) {
     
     // 调用 sidePanel.open() 并正确处理 Promise
     console.log('🔍 调用 chrome.sidePanel.open({ windowId:', windowId, '})');
-    chrome.sidePanel.open({ windowId: windowId })
-      .then(() => {
-        // 只有在成功打开后才设置状态为 true
-        sidePanelOpenState.set(windowId, true);
-        console.log('✅ 侧边栏已成功打开');
-      })
-      .catch(error => {
-        // 打开失败时确保状态为 false
-        sidePanelOpenState.set(windowId, false);
-        console.error('❌ 打开侧边栏失败:', error);
-        
-        // 提供更详细的错误信息
-        if (error.message) {
-          console.error('❌ 错误详情:', error.message);
-        }
-        if (error.name) {
-          console.error('❌ 错误名称:', error.name);
-        }
-        
-        // 尝试备用方案：直接打开新标签页
-        console.log('🔄 尝试备用方案：打开新标签页');
-        chrome.tabs.create({
+    
+    // 使用正确的API调用方式
+    try {
+      await chrome.sidePanel.open({ windowId: windowId });
+      // 只有在成功打开后才设置状态为 true
+      sidePanelOpenState.set(windowId, true);
+      console.log('✅ 侧边栏已成功打开');
+    } catch (error) {
+      // 打开失败时确保状态为 false
+      sidePanelOpenState.set(windowId, false);
+      console.error('❌ 打开侧边栏失败:', error);
+      
+      // 提供更详细的错误信息
+      if (error.message) {
+        console.error('❌ 错误详情:', error.message);
+      }
+      if (error.name) {
+        console.error('❌ 错误名称:', error.name);
+      }
+      
+      // 尝试备用方案：直接打开新标签页
+      console.log('🔄 尝试备用方案：打开新标签页');
+      try {
+        await chrome.tabs.create({
           url: chrome.runtime.getURL('iframe/iframe.html'),
           active: true
-        }).then(() => {
-          console.log('✅ 已通过新标签页打开侧边栏内容');
-        }).catch(tabError => {
-          console.error('❌ 备用方案也失败:', tabError);
         });
-      });
+        console.log('✅ 已通过新标签页打开侧边栏内容');
+      } catch (tabError) {
+        console.error('❌ 备用方案也失败:', tabError);
+      }
+    }
   }
 }
 

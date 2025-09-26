@@ -1363,32 +1363,6 @@ function validateSelectors(selectors) {
     return validSelectors;
 }
 
-// 内容质量检测
-function isHighQualityContent(content) {
-    if (!content || content.length < 10) return false;
-    
-    // 检查是否包含AI回答的特征
-    const aiIndicators = [
-        '回答', '回复', 'response', 'answer',
-        '根据', '基于', '建议', '推荐',
-        '分析', '总结', '解释', '说明',
-        '首先', '其次', '最后', '总结',
-        '我认为', '建议', '推荐', '可以',
-        '以下', '如下', '具体', '详细'
-    ];
-    
-    const hasAIIndicator = aiIndicators.some(indicator => 
-        content.toLowerCase().includes(indicator.toLowerCase())
-    );
-    
-    // 检查内容长度和结构
-    const hasStructure = content.includes('\n') || content.includes('。') || content.includes('.');
-    
-    // 检查是否包含代码块或列表
-    const hasCodeOrList = content.includes('```') || content.includes('- ') || content.includes('1. ');
-    
-    return hasAIIndicator && (hasStructure || hasCodeOrList);
-}
 
 // 优化版选择器提取内容
 async function extractWithSelectorsOptimized(selectors, siteName, excludeSelectors = []) {
@@ -1439,12 +1413,7 @@ async function extractWithSelectorsOptimized(selectors, siteName, excludeSelecto
                 let text = await extractElementContent(element);
                 
                 if (text.trim()) {
-                    // 内容质量检测
-                    const quality = isHighQualityContent(text);
-                    const qualityLabel = quality ? '' : ' (低质量)';
-                    console.log(`${quality ? '✅' : '⚠️'} 内容质量检测${quality ? '通过' : '未通过'}，长度: ${text.length}`);
-                    
-                    selectorContent += `\n\n## ${siteName} 回答 ${index + 1}${qualityLabel}\n\n${text.trim()}\n`;
+                    selectorContent += `\n\n## ${siteName}\n\n${text.trim()}\n`;
                 }
             }
             
@@ -1604,7 +1573,7 @@ async function detectStreamingContent() {
         const elements = document.querySelectorAll(selector);
         if (elements.length > 0) {
             const content = await extractElementContent(elements[0]);
-            if (content && isHighQualityContent(content)) {
+            if (content) {
                 return content;
             }
         }
@@ -1624,7 +1593,7 @@ async function detectLatestContent() {
     const latestElement = Array.from(recentElements).pop();
     const content = await extractElementContent(latestElement);
     
-    if (content && isHighQualityContent(content)) {
+    if (content) {
         return content;
     }
     
@@ -1647,7 +1616,7 @@ async function detectValuableContent() {
         const elements = document.querySelectorAll(selector);
         if (elements.length > 0) {
             const content = await extractElementContent(elements[0]);
-            if (content && content.length > 100 && isHighQualityContent(content)) {
+            if (content && content.length > 100) {
                 return content;
             }
         }

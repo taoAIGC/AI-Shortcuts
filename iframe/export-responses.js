@@ -13,36 +13,7 @@ function getI18nMessage(key, fallback) {
   return fallback;
 }
 
-// 内容质量检测
-function isHighQualityContent(content) {
-  if (!content || content.length < 10) return false;
-  
-  // 检查是否包含AI回答的特征
-  const aiIndicators = [
-    '回答', '回复', 'response', 'answer',
-    '根据', '基于', '建议', '推荐',
-    '分析', '总结', '解释', '说明',
-    '首先', '其次', '最后', '总结',
-    '我认为', '建议', '推荐', '可以',
-    '以下', '如下', '具体', '详细'
-  ];
-  
-  const hasAIIndicator = aiIndicators.some(indicator => 
-    content.toLowerCase().includes(indicator.toLowerCase())
-  );
-  
-  // 检查内容长度和结构
-  const hasStructure = content.includes('\n') || content.includes('。') || content.includes('.');
-  
-  // 检查是否包含代码块或列表
-  const hasCodeOrList = content.includes('```') || content.includes('- ') || content.includes('1. ');
-  
-  // 检查是否包含完整的句子
-  const hasCompleteSentences = content.includes('。') || content.includes('!') || content.includes('?');
-  
-  return hasAIIndicator && (hasStructure || hasCodeOrList) && hasCompleteSentences;
-}
-
+ 
 // Toast 提示函数
 function showToast(message, duration = 2000) {
   const toast = document.createElement('div');
@@ -198,23 +169,38 @@ function initializeExportModal(modal) {
   // 加载站点列表
   loadExportSites(siteSelection, modal);
   
-  // 更新预览
+  // 更新预览（优化版）
   function updatePreview() {
     if (!modal.selectedSites || modal.selectedSites.size === 0) {
       previewContent.textContent = '请选择要导出的站点...';
       return;
     }
     
-    // 收集选中站点的回答内容
-    collectResponses(modal.selectedSites).then(responses => {
+    // 显示加载状态
+    previewContent.innerHTML = `
+      <div class="loading-indicator">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">正在提取内容...</div>
+        <div class="loading-progress">准备中...</div>
+      </div>
+    `;
+    
+    // 收集选中站点的回答内容（使用缓存）
+    collectResponses(modal.selectedSites, true).then(responses => {
       const preview = generatePreview(responses, selectedFormat);
       previewContent.textContent = preview;
     }).catch(error => {
-      previewContent.textContent = `预览生成失败: ${error.message}`;
+      previewContent.innerHTML = `
+        <div class="error-message">
+          <div class="error-icon">❌</div>
+          <div class="error-text">预览生成失败: ${error.message}</div>
+          <div class="error-hint">请尝试刷新后重试</div>
+        </div>
+      `;
     });
   }
   
-  // 确认导出
+  // 确认导出（优化版）
   confirmBtn.addEventListener('click', async () => {
     console.log('导出按钮被点击，当前选中的站点:', Array.from(modal.selectedSites || new Set()));
     
@@ -225,10 +211,15 @@ function initializeExportModal(modal) {
     
     try {
       confirmBtn.disabled = true;
-      confirmBtn.textContent = '导出中...';
+      confirmBtn.innerHTML = `
+        <div class="button-loading">
+          <div class="button-spinner"></div>
+          <span>导出中...</span>
+        </div>
+      `;
       
-      // 收集回答内容
-      const responses = await collectResponses(modal.selectedSites);
+      // 收集回答内容（导出时不使用缓存，确保最新内容）
+      const responses = await collectResponses(modal.selectedSites, false);
       
       // 生成导出内容
       const exportContent = generateExportContent(responses, selectedFormat);
@@ -249,7 +240,7 @@ function initializeExportModal(modal) {
       showToast(getI18nMessage('exportFailed', '导出失败') + ': ' + error.message);
     } finally {
       confirmBtn.disabled = false;
-      confirmBtn.textContent = getI18nMessage('export', '导出');
+      confirmBtn.innerHTML = getI18nMessage('export', '导出');
     }
   });
 }
@@ -326,18 +317,94 @@ function loadExportSites(container, modal) {
   }, 100);
 }
 
-// 收集iframe中的回答内容
-async function collectResponses(selectedSites) {
+// 内容缓存管理器
+const ContentCache = {
+  _cache: new Map(),
+  _cacheTimeout: 5 * 60 * 1000, // 5分钟缓存过期
+  
+  // 生成缓存键
+  _generateKey(siteName, url) {
+    return `${siteName}:${url || 'unknown'}`;
+  },
+  
+  // 设置缓存
+  set(siteName, url, content) {
+    const key = this._generateKey(siteName, url);
+    this._cache.set(key, {
+      content: content,
+      timestamp: Date.now(),
+      siteName: siteName
+    });
+    console.log(`💾 缓存 ${siteName} 内容，长度: ${content.content?.length || 0}`);
+  },
+  
+  // 获取缓存
+  get(siteName, url) {
+    const key = this._generateKey(siteName, url);
+    const cached = this._cache.get(key);
+    
+    if (!cached) {
+      return null;
+    }
+    
+    // 检查是否过期
+    if (Date.now() - cached.timestamp > this._cacheTimeout) {
+      this._cache.delete(key);
+      console.log(`🗑️ 清理过期缓存: ${siteName}`);
+      return null;
+    }
+    
+    console.log(`💨 使用缓存 ${siteName} 内容`);
+    return cached.content;
+  },
+  
+  // 清理所有缓存
+  clear() {
+    this._cache.clear();
+    console.log('🧹 清理所有内容缓存');
+  },
+  
+  // 获取缓存状态
+  getStats() {
+    const total = this._cache.size;
+    const expired = Array.from(this._cache.values()).filter(
+      item => Date.now() - item.timestamp > this._cacheTimeout
+    ).length;
+    return { total, expired, valid: total - expired };
+  }
+};
+
+// 收集iframe中的回答内容（并行化优化版）
+async function collectResponses(selectedSites, useCache = true) {
   console.log('🎯 开始收集回答内容，选择的站点:', selectedSites);
+  console.log('📊 缓存状态:', ContentCache.getStats());
   
   const responses = [];
   
-  for (const siteName of selectedSites) {
+  // 性能监控
+  const startTime = performance.now();
+  let successCount = 0;
+  let errorCount = 0;
+  let cacheHits = 0;
+  
+  // 并行处理所有站点，提升性能
+  const extractPromises = Array.from(selectedSites).map(async (siteName) => {
     try {
       const iframe = document.querySelector(`[data-site="${siteName}"]`);
       if (!iframe) {
         console.log(`⚠️ 未找到 ${siteName} 的iframe`);
-        continue;
+        return null;
+      }
+      
+      const iframeUrl = iframe.src || 'unknown';
+      
+      // 尝试使用缓存
+      if (useCache) {
+        const cachedContent = ContentCache.get(siteName, iframeUrl);
+        if (cachedContent) {
+          cacheHits++;
+          return cachedContent;
+        }
       }
       
       console.log(`🎯 开始提取 ${siteName} 的内容...`);
@@ -346,24 +413,18 @@ async function collectResponses(selectedSites) {
       const extractResult = await extractIframeContent(iframe, siteName);
       
       // 处理新的返回格式
-      let content, thinking, quality, extractionMethod;
+      let content, extractionMethod;
       
       if (typeof extractResult === 'string') {
         // 旧格式 - 只是字符串内容
         content = extractResult;
-        thinking = '';
-        quality = isHighQualityContent(content) ? 'high' : 'low';
         extractionMethod = 'legacy';
       } else if (extractResult && typeof extractResult === 'object') {
         // 新格式 - 包含详细信息的对象
         content = extractResult.content || '';
-        thinking = extractResult.thinking || '';
-        quality = extractResult.quality || 'low';
         extractionMethod = extractResult.extractionMethod || 'unknown';
       } else {
         content = '';
-        thinking = '';
-        quality = 'error';
         extractionMethod = 'failed';
       }
       
@@ -371,38 +432,54 @@ async function collectResponses(selectedSites) {
         const responseData = {
           siteName: siteName,
           content: content.trim(),
-          thinking: thinking.trim(),
           timestamp: new Date().toISOString(),
-          quality: quality,
           extractionMethod: extractionMethod,
           length: content.length,
-          url: iframe.src || 'unknown'
+          url: iframeUrl
         };
         
-        // 如果有thinking内容，添加到描述中
-        if (thinking) {
-          responseData.hasThinking = true;
-          responseData.thinkingLength = thinking.length;
+        // 缓存成功提取的内容
+        if (useCache && !responseData.error) {
+          ContentCache.set(siteName, iframeUrl, responseData);
         }
         
-         responses.push(responseData);
-         console.log(`✅ 成功提取 ${siteName} 内容，长度: ${content.length}${thinking ? `, thinking: ${thinking.length}` : ''}, 质量: ${quality}, 方法: ${extractionMethod}`);
-       } else {
-         console.log(`⚠️ ${siteName} 未提取到内容`);
-       }
+        console.log(`✅ 成功提取 ${siteName} 内容，长度: ${content.length}, 方法: ${extractionMethod}`);
+        return responseData;
+      } else {
+        console.log(`⚠️ ${siteName} 未提取到内容`);
+        return null;
+      }
     } catch (error) {
       console.error(`❌ 提取 ${siteName} 内容失败:`, error);
-      responses.push({
+      return {
         siteName: siteName,
         content: `内容提取失败: ${error.message}`,
         timestamp: new Date().toISOString(),
-        error: true,
-        quality: 'error'
-      });
+        error: true
+      };
     }
-  }
+  });
+  
+  // 等待所有提取任务完成
+  const results = await Promise.all(extractPromises);
+  
+  // 过滤和统计结果
+  results.forEach(result => {
+    if (result) {
+      responses.push(result);
+      if (result.error) {
+        errorCount++;
+      } else {
+        successCount++;
+      }
+    }
+  });
+  
+  const endTime = performance.now();
+  const totalTime = endTime - startTime;
   
   console.log(`🎯 收集完成，共获得 ${responses.length} 个回答`);
+  console.log(`📊 性能统计: 成功 ${successCount}, 失败 ${errorCount}, 缓存命中 ${cacheHits}, 耗时 ${totalTime.toFixed(2)}ms`);
   
   return responses;
 }
@@ -547,8 +624,6 @@ async function extractContentFromDocument(doc, siteName) {
         responses.push({
           siteName: siteName,
           content: content.trim(),
-          thinking: '',
-          quality: isHighQualityContent(content) ? 'high' : 'low',
           extractionMethod: 'contentSelectors'
         });
       }
@@ -559,8 +634,6 @@ async function extractContentFromDocument(doc, siteName) {
         responses.push({
           siteName: siteName,
           content: content.trim(),
-          thinking: '',
-          quality: isHighQualityContent(content) ? 'high' : 'low',
           extractionMethod: 'legacy'
         });
       }
@@ -586,8 +659,6 @@ async function extractContentFromDocument(doc, siteName) {
         responses.push({
           siteName: siteName,
           content: content.trim(),
-          thinking: '',
-          quality: isHighQualityContent(content) ? 'high' : 'low',
           extractionMethod: 'fallback'
         });
       }
@@ -600,8 +671,6 @@ async function extractContentFromDocument(doc, siteName) {
         responses.push({
           siteName: siteName,
           content: pageText.slice(0, 1000) + (pageText.length > 1000 ? '...' : ''),
-          thinking: '',
-          quality: 'low',
           extractionMethod: 'page_text'
         });
       }
@@ -610,12 +679,9 @@ async function extractContentFromDocument(doc, siteName) {
     // 合并多个回答的内容
     if (responses.length > 0) {
       const mainContent = responses.map(r => r.content).join('\n\n---\n\n');
-      const allThinking = responses.filter(r => r.thinking).map(r => r.thinking).join('\n\n');
       
       return {
         content: mainContent,
-        thinking: allThinking,
-        quality: responses.some(r => r.quality === 'high') ? 'high' : 'low',
         extractionMethod: responses[0].extractionMethod,
         messageCount: responses.length
       };
@@ -690,7 +756,6 @@ async function extractMessagesWithContainer(doc, siteName, siteConfig) {
       }
       
       let mainContent = '';
-      let thinkingContent = '';
       
       // 提取主要内容
       if (siteConfig.contentSelectors && siteConfig.contentSelectors.length > 0) {
@@ -727,37 +792,17 @@ async function extractMessagesWithContainer(doc, siteName, siteConfig) {
         mainContent = await extractElementContent(container);
       }
       
-      // 提取thinking内容（如果配置了）
-      if (siteConfig.extractThinking && siteConfig.thinkingSelector) {
-        try {
-          const thinkingElements = container.querySelectorAll(siteConfig.thinkingSelector);
-          for (const element of thinkingElements) {
-            // 确保thinking元素不包含主要内容
-            if (!element.querySelector('.markdown') && !element.classList.contains('markdown')) {
-              const text = element.textContent || element.innerText || '';
-              if (text.trim() && !text.includes('button') && text.length > 10) {
-                thinkingContent += (thinkingContent ? '\n\n' : '') + text.trim();
-              }
-            }
-          }
-        } catch (error) {
-          console.warn(`提取 ${siteName} thinking内容失败:`, error);
-        }
-      }
       
       // 如果找到了有效内容，添加到响应列表
       if (mainContent && mainContent.trim()) {
-        const quality = isHighQualityContent(mainContent);
         responses.push({
           siteName: siteName,
           content: mainContent.trim(),
-          thinking: thinkingContent.trim(),
-          quality: quality ? 'high' : 'low',
           extractionMethod: 'messageContainer',
           position: index
         });
         
-        console.log(`✅ ${siteName} 成功提取消息 ${index + 1}${thinkingContent ? ' (含thinking)' : ''}`);
+        console.log(`✅ ${siteName} 成功提取消息 ${index + 1}`);
       }
     }
     
@@ -805,13 +850,10 @@ async function extractWithSelectors(doc, selectors, excludeSelectors = [], siteN
         let text = await extractElementContent(element);
         
         if (text.trim()) {
-          // 内容质量检测
-          const quality = isHighQualityContent(text);
-          const qualityLabel = quality ? '' : ' (低质量)';
-          
           // 如果有siteName，添加标题，否则直接添加内容
           if (siteName) {
-            selectorContent += `\n\n## ${siteName} 回答 ${elementIndex + 1}${qualityLabel}\n\n${text.trim()}\n`;
+            selectorContent += `\n\n## ${siteName} 回答 ${elementIndex + 1}\n\n${text.trim()}\n`;
+            
           } else {
             selectorContent += (selectorContent ? '\n\n' : '') + text.trim();
           }
@@ -839,19 +881,32 @@ async function extractWithSelectors(doc, selectors, excludeSelectors = [], siteN
   return content;
 }
 
-// 等待内容加载完成
-async function waitForContentLoad(element, timeout = 1000) {
+// 等待内容加载完成（优化版）
+async function waitForContentLoad(element, timeout = 300) {
   return new Promise((resolve) => {
     const startTime = Date.now();
     
+    // 快速检测：如果已经有足够内容，立即返回
+    const initialContent = element.textContent || element.innerText || '';
+    if (initialContent.trim().length > 20) {
+      resolve();
+      return;
+    }
+    
     const checkContent = () => {
-      const hasContent = element.textContent && element.textContent.trim().length > 10;
+      const currentContent = element.textContent || element.innerText || '';
+      const hasContent = currentContent.trim().length > 10;
       const isTimeout = Date.now() - startTime > timeout;
       
+      // 有内容或超时就返回
       if (hasContent || isTimeout) {
+        if (isTimeout) {
+          console.log(`⏰ DOM等待超时(${timeout}ms)，当前内容长度: ${currentContent.length}`);
+        }
         resolve();
       } else {
-        setTimeout(checkContent, 50);
+        // 减少检查频率，从50ms改为100ms
+        setTimeout(checkContent, 100);
       }
     };
     
@@ -979,38 +1034,42 @@ function requestIframeContent(iframe, siteName) {
   });
 }
 
-// 生成预览内容
+// 生成预览内容（优化版）
 function generatePreview(responses, format) {
   if (responses.length === 0) {
     return '没有找到可导出的内容';
   }
   
   let preview = '';
+  const maxPreviewLength = 150; // 减少预览长度，提升性能
   
-  responses.forEach((response, index) => {
+  responses.forEach((response) => {
     if (format === 'markdown') {
       preview += `## ${response.siteName}\n\n`;
-      preview += response.content.substring(0, 200);
-      if (response.content.length > 200) {
-        preview += '...\n';
+      const contentPreview = response.content.substring(0, maxPreviewLength);
+      preview += contentPreview;
+      if (response.content.length > maxPreviewLength) {
+        preview += '...';
       }
       preview += '\n\n---\n\n';
     } else if (format === 'html') {
-      preview += `<h2>${response.siteName}</h2>\n`;
-      preview += `<p>${response.content.substring(0, 200)}`;
-      if (response.content.length > 200) {
+      preview += `<h3>${response.siteName}</h3>\n`;
+      const contentPreview = response.content.substring(0, maxPreviewLength);
+      preview += `<p>${contentPreview}`;
+      if (response.content.length > maxPreviewLength) {
         preview += '...</p>\n';
       } else {
         preview += '</p>\n';
       }
       preview += '<hr>\n\n';
-    } else {
+    } else { // txt format
       preview += `${response.siteName}:\n`;
-      preview += response.content.substring(0, 200);
-      if (response.content.length > 200) {
-        preview += '...\n';
+      const contentPreview = response.content.substring(0, maxPreviewLength);
+      preview += contentPreview;
+      if (response.content.length > maxPreviewLength) {
+        preview += '...';
       }
-      preview += '\n\n' + '='.repeat(50) + '\n\n';
+      preview += '\n\n' + '='.repeat(30) + '\n\n';
     }
   });
   
@@ -1032,24 +1091,18 @@ function generateExportContent(responses, format) {
     content += `---\n\n`;
     
     responses.forEach((response, responseIndex) => {
-      content += `## ${responseIndex + 1}. ${response.siteName}\n\n`;
+      content += `## ${response.siteName}\n\n`;
       
-      // 添加thinking内容（如果存在）
-      if (response.thinking && response.thinking.trim()) {
-        content += `### 💭 思考过程\n\n`;
-        content += response.thinking + '\n\n';
-        content += `### 📝 回答内容\n\n`;
+      // 添加 iframe 的完整 URL
+      if (response.url && response.url !== 'unknown') {
+        content += `**URL:** ${response.url}\n\n`;
       }
       
       content += response.content + '\n\n';
       
-      // 添加元数据
-      if (response.quality || response.extractionMethod) {
-        content += `> **质量:** ${response.quality === 'high' ? '高' : response.quality === 'low' ? '低' : response.quality}`;
-        if (response.extractionMethod) {
-          content += ` | **提取方法:** ${response.extractionMethod}`;
-        }
-        content += '\n\n';
+      // 提取方法只在控制台输出，不显示给用户
+      if (response.extractionMethod) {
+        console.log(`📊 ${response.siteName} 提取方法: ${response.extractionMethod}`);
       }
       
       content += `---\n\n`;
@@ -1070,9 +1123,6 @@ function generateExportContent(responses, format) {
         .meta { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
         .thinking { background: #fff3cd; padding: 10px; border-left: 4px solid #ffc107; margin: 15px 0; border-radius: 4px; }
         .response-meta { font-size: 0.9em; color: #666; margin-top: 10px; }
-        .quality-high { color: #28a745; font-weight: bold; }
-        .quality-low { color: #ffc107; font-weight: bold; }
-        .quality-error { color: #dc3545; font-weight: bold; }
         pre { background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; }
         code { background: #f8f9fa; padding: 2px 4px; border-radius: 3px; }
     </style>
@@ -1086,26 +1136,18 @@ function generateExportContent(responses, format) {
     </div>`;
     
     responses.forEach((response, responseIndex) => {
-      content += `<h2>${responseIndex + 1}. ${response.siteName}</h2>`;
+      content += `<h2>${response.siteName}</h2>`;
       
-      // 添加thinking内容（如果存在）
-      if (response.thinking && response.thinking.trim()) {
-        content += `<h3>💭 思考过程</h3>`;
-        content += `<div class="thinking">${response.thinking.replace(/\n/g, '<br>')}</div>`;
-        content += `<h3>📝 回答内容</h3>`;
+      // 添加 iframe 的完整 URL
+      if (response.url && response.url !== 'unknown') {
+        content += `<p><strong>URL:</strong> <a href="${response.url}" target="_blank">${response.url}</a></p>`;
       }
       
       content += `<div>${response.content.replace(/\n/g, '<br>')}</div>`;
       
-      // 添加元数据
-      if (response.quality || response.extractionMethod) {
-        const qualityClass = response.quality === 'high' ? 'quality-high' : response.quality === 'low' ? 'quality-low' : 'quality-error';
-        content += `<div class="response-meta">`;
-        content += `<span class="${qualityClass}">质量: ${response.quality === 'high' ? '高' : response.quality === 'low' ? '低' : response.quality}</span>`;
-        if (response.extractionMethod) {
-          content += ` | 提取方法: ${response.extractionMethod}`;
-        }
-        content += `</div>`;
+      // 提取方法只在控制台输出，不显示给用户
+      if (response.extractionMethod) {
+        console.log(`📊 ${response.siteName} 提取方法: ${response.extractionMethod}`);
       }
       
       if (responseIndex < responses.length - 1) {
@@ -1123,25 +1165,19 @@ function generateExportContent(responses, format) {
     content += `${'='.repeat(50)}\n\n`;
     
     responses.forEach((response, responseIndex) => {
-      content += `${responseIndex + 1}. ${response.siteName}\n`;
-      content += `${'-'.repeat(response.siteName.length + 3)}\n\n`;
+      content += `${response.siteName}\n`;
+      content += `${'-'.repeat(response.siteName.length)}\n\n`;
       
-      // 添加thinking内容（如果存在）
-      if (response.thinking && response.thinking.trim()) {
-        content += `💭 思考过程:\n`;
-        content += response.thinking + '\n\n';
-        content += `📝 回答内容:\n`;
+      // 添加 iframe 的完整 URL
+      if (response.url && response.url !== 'unknown') {
+        content += `URL: ${response.url}\n\n`;
       }
       
       content += response.content + '\n\n';
       
-      // 添加元数据
-      if (response.quality || response.extractionMethod) {
-        content += `[质量: ${response.quality === 'high' ? '高' : response.quality === 'low' ? '低' : response.quality}`;
-        if (response.extractionMethod) {
-          content += ` | 提取方法: ${response.extractionMethod}`;
-        }
-        content += ']\n\n';
+      // 提取方法只在控制台输出，不显示给用户
+      if (response.extractionMethod) {
+        console.log(`📊 ${response.siteName} 提取方法: ${response.extractionMethod}`);
       }
       
       content += `${'='.repeat(50)}\n\n`;

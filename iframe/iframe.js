@@ -796,7 +796,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const searchInput = document.getElementById('searchInput');
     searchInput.value = message.query;
     createIframes(message.query, message.sites);
-
   }
 });
 
