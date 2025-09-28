@@ -139,7 +139,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
     
     // 初始化列数选择
-    const columnSelect = document.getElementById('columnSelect');
+    const columnCurrentBtn = document.getElementById('columnCurrentBtn');
+    const columnDropdown = document.getElementById('columnDropdown');
+    const columnOptionBtns = document.querySelectorAll('.column-option-btn');
     const iframesContainer = document.getElementById('iframes-container');
 
     // 从存储中获取列数设置
@@ -147,7 +149,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (window.innerWidth < 500) {
        preferredColumns = '1';
     }
-    columnSelect.value = preferredColumns;
+    
+    // 设置默认激活状态和当前显示
+    setActiveColumnOption(preferredColumns);
+    updateCurrentDisplay(preferredColumns);
     updateColumns(preferredColumns);
 
     // 检查 URL 参数，判断打开方式
@@ -223,11 +228,26 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     }
 
-    // 列数变化监听器
-    columnSelect.addEventListener('change', function(e) {
-        const columns = e.target.value;
-        chrome.storage.sync.set({ 'preferredColumns': columns });
-        updateColumns(columns);
+    // 当前按钮点击监听器 - 展开/收起下拉菜单
+    columnCurrentBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        toggleDropdown();
+    });
+
+    // 下拉选项点击监听器
+    columnOptionBtns.forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const columns = e.currentTarget.getAttribute('data-columns');
+            selectColumnOption(columns);
+        });
+    });
+
+    // 点击其他地方关闭下拉菜单
+    document.addEventListener('click', function(e) {
+        if (!columnDropdown.contains(e.target) && !columnCurrentBtn.contains(e.target)) {
+            closeDropdown();
+        }
     });
 
     // 统一的文件粘贴处理 - 只添加一次监听器
@@ -662,6 +682,83 @@ function hideFileUploadProgress() {
       }
     }, 300);
   }
+}
+
+// 切换下拉菜单显示状态
+function toggleDropdown() {
+    const columnDropdown = document.getElementById('columnDropdown');
+    const isOpen = columnDropdown.classList.contains('show');
+    
+    if (isOpen) {
+        closeDropdown();
+    } else {
+        openDropdown();
+    }
+}
+
+// 打开下拉菜单
+function openDropdown() {
+    const columnDropdown = document.getElementById('columnDropdown');
+    columnDropdown.classList.add('show');
+}
+
+// 关闭下拉菜单
+function closeDropdown() {
+    const columnDropdown = document.getElementById('columnDropdown');
+    columnDropdown.classList.remove('show');
+}
+
+// 选择列数选项
+function selectColumnOption(columns) {
+    // 更新激活状态
+    setActiveColumnOption(columns);
+    
+    // 更新当前显示
+    updateCurrentDisplay(columns);
+    
+    // 更新布局
+    updateColumns(columns);
+    
+    // 保存到存储
+    chrome.storage.sync.set({ 'preferredColumns': columns });
+    
+    // 关闭下拉菜单
+    closeDropdown();
+}
+
+// 设置激活的列数选项
+function setActiveColumnOption(columns) {
+    const columnOptionBtns = document.querySelectorAll('.column-option-btn');
+    columnOptionBtns.forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.getAttribute('data-columns') === columns) {
+            btn.classList.add('active');
+        }
+    });
+}
+
+// 更新当前显示的图标
+function updateCurrentDisplay(columns) {
+    const columnCurrentBtn = document.getElementById('columnCurrentBtn');
+    const svg = columnCurrentBtn.querySelector('svg');
+    
+    // 根据列数更新 SVG 图标
+    const svgTemplates = {
+        '1': `<rect x="6" y="3" width="8" height="14" rx="1" stroke="currentColor" stroke-width="2" fill="none"/>`,
+        '2': `<rect x="2" y="3" width="6" height="14" rx="1" stroke="currentColor" stroke-width="2" fill="none"/>
+              <rect x="12" y="3" width="6" height="14" rx="1" stroke="currentColor" stroke-width="2" fill="none"/>`,
+        '3': `<rect x="1" y="3" width="4" height="14" rx="1" stroke="currentColor" stroke-width="2" fill="none"/>
+              <rect x="8" y="3" width="4" height="14" rx="1" stroke="currentColor" stroke-width="2" fill="none"/>
+              <rect x="15" y="3" width="4" height="14" rx="1" stroke="currentColor" stroke-width="2" fill="none"/>`,
+        '4': `<rect x="1" y="3" width="3" height="14" rx="1" stroke="currentColor" stroke-width="1.8" fill="none"/>
+              <rect x="6" y="3" width="3" height="14" rx="1" stroke="currentColor" stroke-width="1.8" fill="none"/>
+              <rect x="11" y="3" width="3" height="14" rx="1" stroke="currentColor" stroke-width="1.8" fill="none"/>
+              <rect x="16" y="3" width="3" height="14" rx="1" stroke="currentColor" stroke-width="1.8" fill="none"/>`
+    };
+    
+    if (svgTemplates[columns]) {
+        svg.innerHTML = svgTemplates[columns];
+    }
 }
 
 // 更新列数的辅助函数

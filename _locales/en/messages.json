@@ -29,7 +29,7 @@
     "message": "Search with AIShortcuts"
   },
   "startCompare": {
-    "message": "Compare",
+    "message": "PK",
     "placeholders": {
       "n": {
         "content": "$1"

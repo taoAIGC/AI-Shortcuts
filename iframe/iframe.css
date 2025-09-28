@@ -60,9 +60,17 @@ html {
     gap: 10px;
     max-width: 1200px;
     margin: 0 auto;
-    justify-content: flex-start;
+    justify-content: space-between; /* 改为两端对齐 */
     min-height: 36px; /* 最小高度，允许扩展 */
     align-items: flex-start; /* 顶部对齐，允许输入框向下扩展 */
+}
+
+/* 右侧按钮组容器 - 实现等间距分布 */
+.search-bar-right-buttons {
+    display: flex;
+    align-items: center;
+    gap: 12px; /* 按钮之间的间距 */
+    flex-shrink: 0;
 }
 
 .search-input-container {
@@ -102,10 +110,21 @@ html {
     background: transparent;
     border: none;
     cursor: pointer;
-    padding: 6px 4px; /* 上下6px，左右4px，让高度更大 */
+    width: 36px;                /* 统一宽度 */
+    height: 36px;               /* 统一高度 */
+    padding: 0;                 /* 移除内边距 */
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-/* 移除上传文件按钮的悬停背景色效果 */
+.file-upload-btn:hover {
+    background: #e9ecef;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.15);
+}
 
 .file-upload-btn img {
     width: 16px;
@@ -229,18 +248,135 @@ html {
     height: calc(100vh - 60px);
 }
 
-#columnSelect {
-    padding: 5px 2px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    background: white;
-    margin: 0 10px;
-    width: 45px;
-    height: 36px; /* 与输入框高度一致 */
+/* 列数选择器样式 */
+.column-selector {
+    position: relative;
+    display: flex;
+    align-items: center;
+    /* 移除 margin，由父容器控制间距 */
+}
+
+/* 当前选中的图标显示区域 */
+.column-current {
+    position: relative;
+}
+
+.column-current-btn {
     display: flex;
     align-items: center;
     justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    cursor: pointer;
+    background: #f8f9fa;
+    color: #333;
+    transition: all 0.2s ease;
+}
+
+.column-current-btn:hover {
+    background: #e9ecef;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.15);
+}
+
+.column-current-btn svg {
+    width: 20px !important;
+    height: 20px !important;
+    transition: transform 0.2s ease;
+    display: block;
+    flex-shrink: 0;
+}
+
+
+/* 下拉选项区域 */
+.column-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.2s ease;
+    margin-top: 4px;
+    min-width: 160px; /* 确保下拉菜单有足够的宽度 */
+    width: max-content; /* 根据内容自动调整宽度 */
+}
+
+.column-dropdown.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.column-options {
+    display: flex;
+    gap: 4px;
+    padding: 4px;
+    min-width: 160px; /* 确保有足够的宽度容纳4个图标 */
+    width: max-content; /* 根据内容自动调整宽度 */
+}
+
+.column-option-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    background: transparent;
+    color: #666;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.column-option-btn:hover {
+    background: #e8e8e8;
+    color: #333;
+    transform: translateY(-1px);
+}
+
+.column-option-btn.active {
+    background: #007bff;
+    color: white;
+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+}
+
+.column-option-btn.active:hover {
+    background: #0056b3;
+    transform: translateY(-1px);
+}
+
+.column-option-btn svg {
+    width: 20px !important;
+    height: 20px !important;
+    transition: transform 0.2s ease;
+    display: block;
+    flex-shrink: 0;
+}
+
+.column-option-btn:hover svg {
+    transform: scale(1.1);
+}
+
+.column-option-btn.active svg {
+    transform: scale(1.05);
+}
+
+/* 确保所有 SVG 图标都是正方形 */
+.column-current-btn svg,
+.column-option-btn svg {
+    aspect-ratio: 1 / 1;
+    object-fit: contain;
 }
 
 #analysisDropdown  {
@@ -271,12 +407,25 @@ html {
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 36px; /* 与输入框高度一致 */
+    width: 36px;                /* 统一宽度 */
+    height: 36px;               /* 统一高度 */
+    border: none;               /* 移除默认边框 */
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    padding: 0;                 /* 移除内边距 */
+    cursor: pointer;
+    background: transparent;     /* 透明背景 */
+}
+
+.settings-icon-container:hover {
+    background: #e9ecef;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.15);
 }
 
 .settings-icon {
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
     cursor: pointer;
 }
 
@@ -448,12 +597,23 @@ html {
 
 #iconContainer {
     cursor: pointer;            /* 鼠标悬停时显示为手型 */
-    margin-left: auto;          /* 向右侧移动 */
     flex-shrink: 0;             /* 不收缩 */
     display: flex;
     align-items: center;        /* 垂直居中 */
     justify-content: center;    /* 水平居中 */
-    height: 36px;               /* 与输入框高度一致 */
+    width: 36px;               /* 统一宽度 */
+    height: 36px;               /* 统一高度 */
+    border: none;               /* 移除默认边框 */
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    padding: 0;                 /* 移除内边距 */
+    background: transparent;    /* 透明背景 */
+}
+
+#iconContainer:hover {
+    background: #e9ecef;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.15);
 }
 
 #toggleIcon {
@@ -634,23 +794,31 @@ html {
 /* 导出回答按钮样式 */
 .export-responses-btn {
     background: transparent;
-    border: none;
+    border: 1px solid #e0e0e0; /* 添加默认边框 */
     border-radius: 6px;
-    padding: 6px 12px;
+    padding: 0 !important;      /* 强制移除内边距，覆盖通用样式 */
     cursor: pointer;
     transition: all 0.2s ease;
     display: flex;
     align-items: center;
-    gap: 6px;
+    justify-content: center;    /* 水平居中 */
+    gap: 0;                     /* 移除间距 */
     font-size: 14px;
     color: #333;
     margin-left: auto;
     flex-shrink: 0;
-    height: 36px; /* 与输入框高度一致 */
+    width: 36px !important;     /* 强制设置宽度 */
+    height: 36px !important;    /* 强制设置高度 */
+    min-width: 36px;            /* 确保最小宽度 */
+    min-height: 36px;           /* 确保最小高度 */
+    max-width: 36px;           /* 确保最大宽度 */
+    max-height: 36px;          /* 确保最大高度 */
 }
 
 .export-responses-btn:hover {
-    background: transparent;
+    background: #e9ecef;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.15);
 }
 
 .export-responses-btn:active {
