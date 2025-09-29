@@ -1,6 +1,6 @@
 {
-  "version": "1.1.0",
-  "lastUpdated": "2025-09-27T12:00:00Z",
+  "version": "1.1.1",
+  "lastUpdated": "2025-09-29T00:00:00Z",
   "description": "支持粘贴功能",
   "author": "AIShortcuts",
   "sites": [
@@ -945,11 +945,11 @@
     {
       "name": "Google",
       "url": "https://www.google.com/search?q={query}",
-      "enabled": false,
+      "enabled": true,
       "supportUrlQuery": true,
       "region": "US",
       "hidden": false,
-      "supportIframe": true,
+      "supportIframe": false,
       "note": "",
       "searchHandler": {
         "steps": [
@@ -1352,11 +1352,11 @@
     {
       "name": "百度",
       "url": "https://www.baidu.com/s?wd={query}",
-      "enabled": false,
+      "enabled": true,
       "supportUrlQuery": true,
       "region": "China",
       "hidden": false,
-      "supportIframe": true,
+      "supportIframe": false,
       "note": "百度搜索，使用URL查询方式，无需输入框操作",
       "searchHandler": {
         "steps": [
@@ -1506,11 +1506,11 @@
     {
       "name": "Bing",
       "url": "https://www.bing.com/search?q={query}",
-      "enabled": false,
+      "enabled": true,
       "supportUrlQuery": true,
       "region": "US",
       "hidden": false,
-      "supportIframe": true,
+      "supportIframe": false,
       "note": "",
       "searchHandler": {
         "steps": [

@@ -3,6 +3,8 @@ let isToolbarVisible = false;
 let lastSelectedText = '';
 let favoriteButton = null;
 let currentSelectedText = '';
+let siteSelectButton = null;
+let siteDropdown = null;
 
 
 
@@ -40,10 +42,10 @@ async function createToolbar() {
   favoriteButton = document.createElement('button');
   favoriteButton.className = 'multi-ai-favorite-button';
   // 创建下拉选择器和列表
-  const siteSelectButton = document.createElement('button');
+  siteSelectButton = document.createElement('button');
   siteSelectButton.className = 'site-select-button';
   siteSelectButton.textContent = '▼';
-  const siteDropdown = document.createElement('div');
+  siteDropdown = document.createElement('div');
   siteDropdown.className = 'site-dropdown';  // 修改类名
 
 
@@ -54,8 +56,22 @@ function initializeSiteDropdown() {
   if (!siteDropdown || !siteSelectButton) return;
   console.log("初始化下拉菜单",visibleSites);
 
+  // 筛选支持 query 的站点
+  const querySupportedSites = visibleSites.filter(site => 
+    site.supportUrlQuery === true && site.enabled === true
+  );
+  
+  console.log("支持query的站点:", querySupportedSites);
+
+  // 如果没有支持 query 的站点，隐藏下拉按钮
+  if (querySupportedSites.length === 0) {
+    console.log("没有支持query的站点，隐藏下拉按钮");
+    siteSelectButton.style.display = 'none';
+    return;
+  }
+
   // 创建站点列表
-  visibleSites.forEach(site => {
+  querySupportedSites.forEach(site => {
     const siteItem = document.createElement('div');
     siteItem.className = 'site-item';
     siteItem.textContent = `${site.name}`;
@@ -164,7 +180,7 @@ function initializeSiteDropdown() {
   // 创建单站点搜索组
   const singleSearchGroup = document.createElement('div');
   singleSearchGroup.className = 'single-search-group';
-  singleSearchGroup.style.display = 'none'; // 隐藏单站点搜索组
+  singleSearchGroup.style.display = 'flex'; // 显示单站点搜索组
   
   // 将相关元素添加到单站点搜索组
   singleSearchGroup.appendChild(favoriteButton);

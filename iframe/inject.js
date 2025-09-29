@@ -1135,7 +1135,7 @@ async function handleFileDataPaste(fileData) {
     console.log('🎯 开始处理传递的文件数据');
     console.log('文件数据:', fileData);
     
-    if (!fileData || !fileData.blob) {
+    if (!fileData || (!fileData.blob && !fileData.data)) {
         console.error('❌ 无效的文件数据');
         return;
     }
@@ -1151,10 +1151,12 @@ async function handleFileDataPaste(fileData) {
         }
         
         // 创建 File 对象 - 使用改进的文件名生成逻辑
-        let file = fileData.blob;
-        if (fileData.blob instanceof Blob && !(fileData.blob instanceof File)) {
+        const blobData = fileData.blob || fileData.data; // 支持两种数据结构
+        let file = blobData;
+        
+        if (blobData instanceof Blob && !(blobData instanceof File)) {
             // 使用传递的智能文件名，如果没有则生成一个
-            let fileName = fileData.fileName;
+            let fileName = fileData.fileName || fileData.name;
             if (!fileName && window.AppConfigManager) {
                 fileName = await window.AppConfigManager.generateFileName(
                     fileData.originalName, 
@@ -1168,7 +1170,7 @@ async function handleFileDataPaste(fileData) {
                 fileName = `clipboard-${Date.now()}.${extension}`;
             }
             
-            file = new File([fileData.blob], fileName, { type: fileData.type });
+            file = new File([blobData], fileName, { type: fileData.type });
             console.log('将 Blob 转换为 File:', {
                 name: file.name,
                 type: file.type,

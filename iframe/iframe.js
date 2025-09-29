@@ -426,7 +426,7 @@ function isLocalFile(text) {
 
 // 统一的文件粘贴处理函数
 async function handleUnifiedFilePaste(event) {
-  console.log('🎯 检测到粘贴事件，开始简化处理');
+  console.log('🎯 检测到粘贴事件，开始处理');
   
   try {
     // 1. 首先请求剪贴板权限
@@ -440,49 +440,88 @@ async function handleUnifiedFilePaste(event) {
     const clipboardData = await navigator.clipboard.read();
     console.log('剪贴板内容:', clipboardData);
     
-    let hasNetworkImage = false;
+    let hasImage = false;
+    let hasText = false;
     
     for (const item of clipboardData) {
       console.log('剪贴板项目类型:', item.types);
+      console.log('剪贴板项目详情:', item);
       
-      // 只处理网络图片（截图）
+      // 检查是否有图片
       if (item.types.some(type => type.startsWith('image/'))) {
-        hasNetworkImage = true;
-        console.log('🎯 检测到网络图片，开始处理');
-        
-        try {
-          // 获取图片数据
-          const imageType = item.types.find(type => type.startsWith('image/'));
-          const imageData = await item.getType(imageType);
-          
-          // 创建文件数据对象
-          const fileObj = {
-            name: `clipboard_image_${Date.now()}.${imageType.split('/')[1] || 'png'}`,
-            type: imageType,
-            size: imageData.size || 0,
-            data: imageData
-          };
-          
-          // 发送到所有iframe
-          await sendFileToAllIframes(fileObj);
-          console.log('🎯 网络图片已发送到所有iframe');
-          
-        } catch (imageError) {
-          console.log('🎯 处理网络图片失败:', imageError);
-        }
+        hasImage = true;
+        console.log('🎯 检测到图片内容');
+      }
+      
+      // 检查是否有纯文字
+      if (item.types.includes('text/plain')) {
+        hasText = true;
+        console.log('🎯 检测到纯文字内容');
       }
     }
     
-    // 如果检测到网络图片，阻止默认行为
-    if (hasNetworkImage) {
-      event.preventDefault();
-      event.stopPropagation();
-      console.log('🎯 已阻止默认粘贴行为，图片已处理');
+    console.log('🎯 内容分析结果:', {
+      hasText,
+      hasImage
+    });
+    
+    // 采用排除法：只允许纯文本和图片，其他都阻止
+    // 1. 纯文字内容 - 直接粘贴（允许默认行为）
+    if (hasText && !hasImage) {
+      console.log('🎯 纯文字内容，允许默认粘贴行为');
       return;
     }
     
-    // 其他情况（纯文字或其他内容）允许默认行为
-    console.log('🎯 允许默认粘贴行为（文字或其他内容）');
+    // 2. 检测到图片 - 处理图片并阻止默认行为
+    if (hasImage) {
+      console.log('🎯 检测到图片，开始处理图片数据');
+      
+      for (const item of clipboardData) {
+        if (item.types.some(type => type.startsWith('image/'))) {
+          try {
+            // 获取图片数据
+            const imageType = item.types.find(type => type.startsWith('image/'));
+            const imageData = await item.getType(imageType);
+            
+            console.log('🎯 图片数据获取成功:', {
+              type: imageType,
+              size: imageData.size
+            });
+            
+            // 创建文件数据对象
+            const fileObj = {
+              name: `clipboard_image_${Date.now()}.${imageType.split('/')[1] || 'png'}`,
+              type: imageType,
+              size: imageData.size || 0,
+              blob: imageData,
+              data: imageData
+            };
+            
+            // 发送到所有iframe
+            await sendFileToAllIframes(fileObj);
+            console.log('🎯 图片已发送到所有iframe');
+            
+          } catch (imageError) {
+            console.log('🎯 处理图片失败:', imageError);
+          }
+        }
+      }
+      
+      // 图片处理完成后，阻止默认粘贴行为
+      console.log('🎯 图片处理完成，阻止默认粘贴行为');
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+    
+    // 3. 其他所有情况 - 直接阻止粘贴行为（排除法）
+    console.log('🎯 非纯文本非图片内容，阻止粘贴行为');
+    event.preventDefault();
+    event.stopPropagation();
+    return;
+    
+    // 默认情况：允许默认行为
+    console.log('🎯 默认情况，允许粘贴行为');
     
   } catch (error) {
     console.error('🎯 粘贴处理出错:', error);
@@ -494,29 +533,16 @@ async function handleUnifiedFilePaste(event) {
 async function sendFileToAllIframes(fileObj) {
   const iframes = document.querySelectorAll('.ai-iframe');
   console.log(`🎯 开始向 ${iframes.length} 个iframe发送文件`);
+  console.log('🎯 文件对象详情:', {
+    name: fileObj.name,
+    type: fileObj.type,
+    size: fileObj.size
+  });
   
-  for (const iframe of iframes) {
-    try {
-      const domain = new URL(iframe.src).hostname;
-      const siteName = iframe.getAttribute('data-site');
-      
-      console.log(`🎯 向 ${siteName} (${domain}) 发送文件`);
-      
-      // 给iframe发送文件数据
-      iframe.contentWindow.postMessage({
-        type: 'FILE_PASTE',
-        fileData: fileObj
-      }, '*');
-      
-      // 给iframe一些时间处理
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-    } catch (error) {
-      console.log(`🎯 向iframe发送文件失败:`, error);
-    }
-  }
+  // 使用逐个处理的方式，确保每个iframe有足够时间处理
+  await executeFileUploadSequentially(iframes, fileObj);
   
-  console.log('🎯 文件发送完成');
+  console.log('🎯 所有iframe文件发送完成');
 }
 
 // 逐个执行文件上传的函数
