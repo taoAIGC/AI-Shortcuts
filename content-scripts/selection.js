@@ -289,6 +289,19 @@ window.addEventListener('scroll', () => {
   }
 }, { passive: true });
 
+// 监听键盘按键事件
+document.addEventListener('keydown', (e) => {
+  // 如果工具栏可见，隐藏工具栏
+  if (isToolbarVisible) {
+    console.log("键盘按键 isToolbarVisible", isToolbarVisible, "按键:", e.key);
+    toolbar.style.display = 'none';
+    isToolbarVisible = false;
+    lastSelectedText = '';
+    currentSelectedText = '';
+    console.log("键盘按键导致工具栏消失");
+  }
+});
+
 // 初始化
 
 
