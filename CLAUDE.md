@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-AI Shortcuts (AI 任意门) is a Chrome browser extension that enhances AI website usage efficiency. The extension allows users to:
+AI比一比 (AI Compare) is a Chrome browser extension that enhances AI website usage efficiency. The extension allows users to:
 
 1. Access multiple AI websites in one tab using iframes
 2. Send queries to multiple AI sites simultaneously for comparison

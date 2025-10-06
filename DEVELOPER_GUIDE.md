@@ -1,10 +1,10 @@
-# AI Shortcuts Developer Guide / AI 任意门开发者指南
+# AI比一比 Developer Guide / AI比一比开发者指南
 
 ## Overview / 概述
 
-AI Shortcuts is a Chrome browser extension that enables users to interact with multiple AI websites simultaneously in a unified interface. This guide helps developers add new AI sites and extend functionality.
+AI比一比 (AI Compare) is a Chrome browser extension that enables users to interact with multiple AI websites simultaneously in a unified interface. This guide helps developers add new AI sites and extend functionality.
 
-AI 任意门是一个 Chrome 浏览器扩展，允许用户在统一界面中同时与多个 AI 网站交互。本指南帮助开发者添加新的 AI 站点并扩展功能。
+AI比一比是一个 Chrome 浏览器扩展，允许用户在统一界面中同时与多个 AI 网站交互。本指南帮助开发者添加新的 AI 站点并扩展功能。
 
 ## Table of Contents / 目录
 

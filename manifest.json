@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "__MSG_appName__",
-  "version": "2.13",
+  "version": "2.15.0",
   "description": "__MSG_extDescription__",
   "permissions": [
     "storage",
@@ -17,7 +17,7 @@
     "<all_urls>"
   ],
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; frame-src *",
+    "extension_pages": "script-src 'self'; object-src 'self'; frame-src *; img-src 'self' chrome-extension: data: blob:;",
     "sandbox": "sandbox allow-scripts allow-forms allow-popups allow-modals; script-src 'unsafe-eval' 'self'"
   },
   "action": {
@@ -43,6 +43,7 @@
       "matches": ["<all_urls>"],
       "js": [
         "config/baseConfig.js",
+        "config/siteDetector.js",
         "iframe/inject.js"
       ],
       "run_at": "document_start",

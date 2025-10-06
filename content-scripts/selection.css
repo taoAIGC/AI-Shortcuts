@@ -141,6 +141,10 @@
     font-size: 12px;
   }
   
+  .single-search-group {
+    position: relative;
+  }
+  
   .site-dropdown.show {
     display: block;
     z-index: 9999;

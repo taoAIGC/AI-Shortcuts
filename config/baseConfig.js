@@ -7,10 +7,9 @@ if (typeof window !== 'undefined' && window.BaseConfigLoaded) {
 // 开发环境配置
 const DEV_CONFIG = {
   IS_PRODUCTION: true,  // 开发时设为 false，发布时设为 true
-  // REMOTE_CONFIG_URL: 'https://raw.githubusercontent.com/taoAIGC/AIShortcuts_test_siteHandlers/refs/heads/main/siteHandlers.json'  // 开发环境远程配置
-  REMOTE_CONFIG_URL: 'DEV'  // 测试时使用本地配置文件
-
-
+  SKIP_REMOTE_CONFIG: true,  // 开发时跳过远程配置，直接使用本地文件
+  ENABLE_CONFIG_CACHE: false, // 开发时禁用配置缓存，确保修改立即生效
+  FORCE_LOCAL_CONFIG: true   // 开发时强制使用本地配置文件
 };
 
 // 生产环境 console 重写（仅在 production 模式下）
@@ -56,6 +55,106 @@ const AppConfigManager = {
       externalLinks: {
         uninstallSurvey: 'https://wenjuan.feishu.cn/m?t=sxcO29Fz913i-1ad4',
         feedbackSurvey: 'https://wenjuan.feishu.cn/m/cfm?t=sTFPGe4oetOi-9m3a'
+      },
+      supportedFileTypes: {
+        categories: {
+          general: {
+            name: "通用文件类型",
+            types: ["Files", "application/octet-stream"]
+          },
+          images: {
+            name: "图片格式",
+            types: ["image/png", "image/jpeg", "image/gif", "image/webp", "image/svg+xml", "image/bmp", "image/tiff", "image/ico", "image/avif"]
+          },
+          documents: {
+            name: "文档格式",
+            types: [
+              "application/pdf",
+              "application/msword",
+              "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              "application/vnd.ms-excel", 
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+              "application/vnd.ms-powerpoint",
+              "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+              "application/vnd.oasis.opendocument.text",
+              "application/vnd.oasis.opendocument.spreadsheet", 
+              "application/vnd.oasis.opendocument.presentation",
+              "application/rtf",
+              "text/plain",
+              "text/csv"
+            ]
+          },
+          audio: {
+            name: "音频格式", 
+            types: ["audio/mpeg", "audio/wav", "audio/ogg", "audio/flac", "audio/m4a"]
+          },
+          video: {
+            name: "视频格式",
+            types: ["video/mp4", "video/avi", "video/mov", "video/wmv", "video/webm"]
+          },
+          code: {
+            name: "代码文件",
+            types: ["text/javascript", "text/css", "text/html", "text/xml", "application/json"]
+          },
+          archives: {
+            name: "压缩文件",
+            types: ["application/zip", "application/x-rar-compressed", "application/x-7z-compressed", "application/gzip", "application/x-tar"]
+          }
+        },
+        mimeToExtension: {
+          mappings: {
+            "Files": "file",
+            "application/octet-stream": "bin",
+            // 图片类型
+            "image/png": "png",
+            "image/jpeg": "jpg", 
+            "image/gif": "gif",
+            "image/webp": "webp",
+            "image/svg+xml": "svg",
+            "image/bmp": "bmp",
+            "image/tiff": "tiff",
+            "image/ico": "ico",
+            "image/avif": "avif",
+            // 文档类型
+            "application/pdf": "pdf",
+            "application/msword": "doc",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
+            "application/vnd.ms-excel": "xls",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx", 
+            "application/vnd.ms-powerpoint": "ppt",
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation": "pptx",
+            "application/vnd.oasis.opendocument.text": "odt",
+            "application/vnd.oasis.opendocument.spreadsheet": "ods",
+            "application/vnd.oasis.opendocument.presentation": "odp",
+            "application/rtf": "rtf",
+            "text/plain": "txt",
+            "text/csv": "csv",
+            // 音频类型
+            "audio/mpeg": "mp3",
+            "audio/wav": "wav", 
+            "audio/ogg": "ogg",
+            "audio/flac": "flac",
+            "audio/m4a": "m4a",
+            // 视频类型
+            "video/mp4": "mp4",
+            "video/avi": "avi",
+            "video/mov": "mov", 
+            "video/wmv": "wmv",
+            "video/webm": "webm",
+            // 代码类型
+            "text/javascript": "js",
+            "text/css": "css",
+            "text/html": "html",
+            "text/xml": "xml", 
+            "application/json": "json",
+            // 压缩文件
+            "application/zip": "zip",
+            "application/x-rar-compressed": "rar",
+            "application/x-7z-compressed": "7z",
+            "application/gzip": "gz",
+            "application/x-tar": "tar"
+          }
+        }
       }
     };
     return this._config;
@@ -83,6 +182,68 @@ const AppConfigManager = {
   async getExternalLinks() {
     const config = await this.loadConfig();
     return config.externalLinks || {};
+  },
+  
+  // 获取支持的文件类型
+  async getSupportedFileTypes() {
+    const config = await this.loadConfig();
+    return config.supportedFileTypes || {};
+  },
+  
+  // 获取所有支持的文件类型（扁平数组）
+  async getAllSupportedFileTypes() {
+    const config = await this.loadConfig();
+    const supportedFileTypes = config.supportedFileTypes;
+    
+    if (!supportedFileTypes || !supportedFileTypes.categories) {
+      return ['Files', 'application/octet-stream', 'image/png', 'image/jpeg', 'text/plain'];
+    }
+    
+    // 将所有分类中的文件类型合并为一个数组
+    const allTypes = [];
+    Object.values(supportedFileTypes.categories).forEach(category => {
+      if (category.types && Array.isArray(category.types)) {
+        allTypes.push(...category.types);
+      }
+    });
+    
+    // 去重并返回
+    return [...new Set(allTypes)];
+  },
+  
+  // 获取 MIME 类型到文件扩展名的映射
+  async getMimeToExtensionMappings() {
+    const config = await this.loadConfig();
+    const supportedFileTypes = config.supportedFileTypes;
+    
+    return supportedFileTypes?.mimeToExtension?.mappings || {};
+  },
+  
+  // 根据 MIME 类型获取文件扩展名
+  async getFileExtensionByMimeType(mimeType) {
+    const mappings = await this.getMimeToExtensionMappings();
+    return mappings[mimeType] || 'unknown';
+  },
+  
+  // 智能生成文件名
+  async generateFileName(originalName, mimeType, fallbackPrefix = 'clipboard') {
+    // 如果有原始文件名且包含扩展名，直接使用
+    if (originalName && originalName.includes('.')) {
+      return originalName;
+    }
+    
+    // 获取正确的文件扩展名
+    const extension = await this.getFileExtensionByMimeType(mimeType);
+    
+    // 使用原始文件名（如果有）或生成时间戳名称
+    const baseName = originalName || `${fallbackPrefix}-${Date.now()}`;
+    
+    // 确保有正确的扩展名
+    if (extension === 'unknown') {
+      return baseName;
+    }
+    
+    return `${baseName}.${extension}`;
   }
 };
 
@@ -363,7 +524,25 @@ if (typeof window === 'undefined') {
   // 动态获取站点配置
   self.getDefaultSites = async function() {
     try {
-      // 1. 从 remoteSiteHandlers 读取基础配置
+      // 开发环境：跳过远程配置，直接使用本地文件
+      if (!DEV_CONFIG.IS_PRODUCTION && DEV_CONFIG.SKIP_REMOTE_CONFIG) {
+        console.log('🚀 开发模式：跳过远程配置，直接加载本地文件');
+        try {
+          const response = await fetch(chrome.runtime.getURL('config/siteHandlers.json'));
+          if (response.ok) {
+            const localConfig = await response.json();
+            if (localConfig.sites && localConfig.sites.length > 0) {
+              console.log('✅ 开发模式：从本地文件加载站点配置成功');
+              return localConfig.sites;
+            }
+          }
+        } catch (error) {
+          console.error('❌ 开发模式：从本地文件加载配置失败:', error);
+        }
+        return [];
+      }
+      
+      // 生产环境：从 remoteSiteHandlers 读取基础配置
       console.log('尝试从 remoteSiteHandlers 读取站点配置...');
       let baseSites = [];
       try {
@@ -433,6 +612,23 @@ if (typeof window === 'undefined') {
 
   self.AppConfigManager = AppConfigManager;
   self.RemoteConfigManager = RemoteConfigManager;
+  
+  // 开发环境配置切换函数
+  self.toggleDevMode = function() {
+    DEV_CONFIG.SKIP_REMOTE_CONFIG = !DEV_CONFIG.SKIP_REMOTE_CONFIG;
+    console.log(`🔄 开发模式切换: ${DEV_CONFIG.SKIP_REMOTE_CONFIG ? '启用' : '禁用'}本地配置优先`);
+    return DEV_CONFIG.SKIP_REMOTE_CONFIG;
+  };
+  
+  // 获取当前开发环境状态
+  self.getDevModeStatus = function() {
+    return {
+      isProduction: DEV_CONFIG.IS_PRODUCTION,
+      skipRemoteConfig: DEV_CONFIG.SKIP_REMOTE_CONFIG,
+      enableConfigCache: DEV_CONFIG.ENABLE_CONFIG_CACHE,
+      forceLocalConfig: DEV_CONFIG.FORCE_LOCAL_CONFIG
+    };
+  };
 }
 // 浏览器环境
 else {
@@ -442,7 +638,25 @@ else {
   // 动态获取站点配置
   window.getDefaultSites = async function() {
     try {
-      // 1. 从 remoteSiteHandlers 读取基础配置
+      // 开发环境：跳过远程配置，直接使用本地文件
+      if (!DEV_CONFIG.IS_PRODUCTION && DEV_CONFIG.SKIP_REMOTE_CONFIG) {
+        console.log('🚀 开发模式：跳过远程配置，直接加载本地文件');
+        try {
+          const response = await fetch(chrome.runtime.getURL('config/siteHandlers.json'));
+          if (response.ok) {
+            const localConfig = await response.json();
+            if (localConfig.sites && localConfig.sites.length > 0) {
+              console.log('✅ 开发模式：从本地文件加载站点配置成功');
+              return localConfig.sites;
+            }
+          }
+        } catch (error) {
+          console.error('❌ 开发模式：从本地文件加载配置失败:', error);
+        }
+        return [];
+      }
+      
+      // 生产环境：从 remoteSiteHandlers 读取基础配置
       let baseSites = [];
       try {
         const result = await chrome.storage.local.get('remoteSiteHandlers');
@@ -509,6 +723,23 @@ else {
   
   window.AppConfigManager = AppConfigManager;
   window.RemoteConfigManager = RemoteConfigManager;
+  
+  // 开发环境配置切换函数
+  window.toggleDevMode = function() {
+    DEV_CONFIG.SKIP_REMOTE_CONFIG = !DEV_CONFIG.SKIP_REMOTE_CONFIG;
+    console.log(`🔄 开发模式切换: ${DEV_CONFIG.SKIP_REMOTE_CONFIG ? '启用' : '禁用'}本地配置优先`);
+    return DEV_CONFIG.SKIP_REMOTE_CONFIG;
+  };
+  
+  // 获取当前开发环境状态
+  window.getDevModeStatus = function() {
+    return {
+      isProduction: DEV_CONFIG.IS_PRODUCTION,
+      skipRemoteConfig: DEV_CONFIG.SKIP_REMOTE_CONFIG,
+      enableConfigCache: DEV_CONFIG.ENABLE_CONFIG_CACHE,
+      forceLocalConfig: DEV_CONFIG.FORCE_LOCAL_CONFIG
+    };
+  };
   
   // 标记配置已加载，避免重复声明
   window.BaseConfigLoaded = true;

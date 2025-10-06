@@ -121,10 +121,10 @@ async function createFloatButton() {
   feedbackIcon.title = '反馈';
 
   // 添加点击事件，打开反馈表单
-  feedbackIcon.addEventListener('click', (e) => {
+  feedbackIcon.addEventListener('click', async (e) => {
     e.stopPropagation();
-    // 打开飞书问卷链接
-    window.open(window.externalLinks?.feedbackSurvey || '#', '_blank');
+    const externalLinks = await window.AppConfigManager.getExternalLinks();
+    window.open(externalLinks.feedbackSurvey, '_blank');
   });
 
   // 添加图标到容器

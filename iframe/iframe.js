@@ -1,6 +1,46 @@
 // 全局文件粘贴检测和处理
 let filePasteHandlerAdded = false;
 
+// 统一的文件扩展名检测
+const SUPPORTED_FILE_EXTENSIONS = [
+  // Office文档类型
+  'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
+  'odt', 'ods', 'odp', 'rtf', 'pages', 'numbers', 'key',
+  'wps', 'et', 'dps', 'vsd', 'vsdx', 'pub', 'one', 'msg', 'eml', 'mpp',
+  // 文本和数据文件
+  'txt', 'csv', 'json', 'xml', 'html', 'css', 'js', 'md', 'yaml', 'yml',
+  // 图片格式
+  'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'tiff', 'ico', 'avif',
+  // 音视频格式
+  'mp4', 'avi', 'mov', 'wmv', 'webm', 'mp3', 'wav', 'ogg', 'flac', 'm4a',
+  // 代码文件
+  'py', 'java', 'cpp', 'c', 'php', 'rb', 'go', 'rs', 'swift', 'kt', 'ts',
+  // 压缩文件
+  'zip', 'rar', '7z', 'gz', 'tar', 'bz2', 'xz'
+];
+
+// 检测是否具有有效的文件扩展名
+function hasValidFileExtension(text) {
+  if (!text || typeof text !== 'string') {
+    return false;
+  }
+  
+  const firstLine = text.trim().split('\n')[0];
+  
+  // 排除URL（包含http/https协议的内容）
+  if (firstLine.includes('http://') || firstLine.includes('https://')) {
+    return false;
+  }
+  
+  // 排除包含域名模式的内容（如www.xxx.com）
+  if (/^[a-zA-Z0-9-]+\.[a-zA-Z]{2,}\//i.test(firstLine) || /www\./i.test(firstLine)) {
+    return false;
+  }
+  
+  const fileExtensionRegex = new RegExp(`\\.(${SUPPORTED_FILE_EXTENSIONS.join('|')})$`, 'i');
+  return fileExtensionRegex.test(firstLine) && firstLine.length < 100;
+}
+
 // 请求剪贴板权限的函数
 async function requestClipboardPermission() {
   try {
@@ -45,8 +85,63 @@ async function requestClipboardPermission() {
 
 // 页面加载完成后的初始化
 document.addEventListener('DOMContentLoaded', async function() {
+    // 初始化自动调整高度的输入框
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        // 自动调整输入框高度
+        function autoResizeTextarea() {
+            searchInput.style.height = 'auto';
+            const scrollHeight = searchInput.scrollHeight;
+            const minHeight = 36; // 最小高度
+            const maxHeight = 200; // 最大高度
+            
+            // 如果内容高度小于等于最小高度，保持最小高度不变
+            if (scrollHeight <= minHeight) {
+                searchInput.style.height = minHeight + 'px';
+            } else {
+                // 只有当内容真正需要更多空间时才调整高度
+                const newHeight = Math.min(scrollHeight, maxHeight);
+                searchInput.style.height = newHeight + 'px';
+            }
+        }
+        
+        // 监听输入事件
+        searchInput.addEventListener('input', autoResizeTextarea);
+        
+        // 监听粘贴事件
+        searchInput.addEventListener('paste', () => {
+            // 延迟执行，等待粘贴内容处理完成
+            setTimeout(autoResizeTextarea, 10);
+        });
+        
+        // 监听聚焦事件，自动调整高度
+        searchInput.addEventListener('focus', () => {
+            // 聚焦时总是调用自动调整函数
+            autoResizeTextarea();
+        });
+        
+        // 监听失焦事件，自动收回高度并隐藏建议
+        searchInput.addEventListener('blur', (e) => {
+            // 失焦后始终收回到底部（单行高度）
+            searchInput.style.height = '36px';
+            
+            // 延迟隐藏查询建议，以便用户能够点击建议项
+            setTimeout(() => {
+                const querySuggestions = document.getElementById('querySuggestions');
+                if (querySuggestions) {
+                    querySuggestions.style.display = 'none';
+                }
+            }, 200);
+        });
+        
+        // 初始调整
+        autoResizeTextarea();
+    }
+    
     // 初始化列数选择
-    const columnSelect = document.getElementById('columnSelect');
+    const columnCurrentBtn = document.getElementById('columnCurrentBtn');
+    const columnDropdown = document.getElementById('columnDropdown');
+    const columnOptionBtns = document.querySelectorAll('.column-option-btn');
     const iframesContainer = document.getElementById('iframes-container');
 
     // 从存储中获取列数设置
@@ -54,7 +149,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (window.innerWidth < 500) {
        preferredColumns = '1';
     }
-    columnSelect.value = preferredColumns;
+    
+    // 设置默认激活状态和当前显示
+    setActiveColumnOption(preferredColumns);
+    updateCurrentDisplay(preferredColumns);
     updateColumns(preferredColumns);
 
     // 检查 URL 参数，判断打开方式
@@ -130,11 +228,26 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     }
 
-    // 列数变化监听器
-    columnSelect.addEventListener('change', function(e) {
-        const columns = e.target.value;
-        chrome.storage.sync.set({ 'preferredColumns': columns });
-        updateColumns(columns);
+    // 当前按钮点击监听器 - 展开/收起下拉菜单
+    columnCurrentBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        toggleDropdown();
+    });
+
+    // 下拉选项点击监听器
+    columnOptionBtns.forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const columns = e.currentTarget.getAttribute('data-columns');
+            selectColumnOption(columns);
+        });
+    });
+
+    // 点击其他地方关闭下拉菜单
+    document.addEventListener('click', function(e) {
+        if (!columnDropdown.contains(e.target) && !columnCurrentBtn.contains(e.target)) {
+            closeDropdown();
+        }
     });
 
     // 统一的文件粘贴处理 - 只添加一次监听器
@@ -144,88 +257,292 @@ document.addEventListener('DOMContentLoaded', async function() {
         console.log('🎯 统一文件粘贴监听器已添加');
     }
 
+    // 添加文件上传功能的事件监听器
+    initializeFileUpload();
+    
+    // 添加导出回答功能的事件监听器
+    initializeExportResponses();
+
 });
+
+// 显示本地文件限制警告
+function showLocalFileWarning(fileName, fileExtension) {
+  const warning = document.createElement('div');
+  warning.style.cssText = `
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+    color: white;
+    padding: 24px;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    z-index: 10001;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 14px;
+    max-width: 480px;
+    width: 90%;
+    text-align: left;
+    line-height: 1.6;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.2);
+    animation: slideInScale 0.3s ease-out;
+  `;
+  
+  // 使用通用的文件图标
+  const icon = '📁';
+  
+  // 获取国际化消息
+  const localFileDetected = chrome.i18n.getMessage('localFileDetected');
+  const browserSecurityRestriction = chrome.i18n.getMessage('browserSecurityRestriction');
+  const localFileSecurityMessage = chrome.i18n.getMessage('localFileSecurityMessage');
+  const suggestedActions = chrome.i18n.getMessage('suggestedActions');
+  const uploadFileAction = chrome.i18n.getMessage('uploadFileAction');
+  const dismissWarning = chrome.i18n.getMessage('dismissWarning');
+  
+  warning.innerHTML = `
+    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+      <span style="font-size: 32px;">${icon}</span>
+      <div>
+        <div style="font-weight: 600; font-size: 16px;">${localFileDetected}</div>
+        <div style="font-size: 12px; opacity: 0.9;">${fileName}</div>
+      </div>
+    </div>
+    
+    <div style="background: rgba(238, 199, 199, 0.1); padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+      <div style="font-size: 13px; margin-bottom: 8px;">🚫 <strong>${browserSecurityRestriction}</strong></div>
+      <div style="font-size: 12px; opacity: 0.9;">
+        ${localFileSecurityMessage}
+      </div>
+    </div>
+    
+    <div style="font-size: 13px; margin-bottom: 16px;">
+      <div style="font-weight: 600; margin-bottom: 8px;">💡 ${suggestedActions}</div>
+      <div style="margin-left: 16px;">
+        <div style="margin-bottom: 4px;">• ${uploadFileAction}</div>
+      </div>
+    </div>
+    
+    <div style="display: flex; gap: 12px; justify-content: flex-end;">
+      <button id="dismissWarning" style="
+        background: rgba(255,255,255,0.2);
+        border: 1px solid rgba(255,255,255,0.3);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 12px;
+        transition: all 0.2s;
+      ">${dismissWarning}</button>
+    </div>
+  `;
+  
+  // 添加 CSS 动画
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes slideInScale {
+      from { 
+        transform: translate(-50%, -50%) scale(0.8); 
+        opacity: 0; 
+      }
+      to { 
+        transform: translate(-50%, -50%) scale(1); 
+        opacity: 1; 
+      }
+    }
+    #dismissWarning:hover {
+      background: rgba(255,255,255,0.3) !important;
+      transform: translateY(-1px);
+    }
+  `;
+  document.head.appendChild(style);
+  
+  document.body.appendChild(warning);
+  
+  // 点击关闭
+  const dismissBtn = warning.querySelector('#dismissWarning');
+  dismissBtn.addEventListener('click', () => {
+    warning.style.animation = 'slideInScale 0.3s ease-out reverse';
+    setTimeout(() => {
+      if (warning.parentElement) {
+        warning.remove();
+        style.remove();
+      }
+    }, 300);
+  });
+  
+  // 8秒后自动关闭
+  setTimeout(() => {
+    if (warning.parentElement) {
+      dismissBtn.click();
+    }
+  }, 8000);
+}
+
+// 检测文本内容是否为本地文件路径（真正的路径，不是简单文件名）
+function isLocalFile(text) {
+  if (!text || typeof text !== 'string') {
+    return false;
+  }
+  
+  const firstLine = text.trim().split('\n')[0];
+  
+  // 排除URL（包含http/https协议的内容）
+  if (firstLine.includes('http://') || firstLine.includes('https://')) {
+    return false;
+  }
+  
+  // 排除包含域名模式的内容（如www.xxx.com或domain.com）
+  if (/^[a-zA-Z0-9-]+\.[a-zA-Z]{2,}/i.test(firstLine) || /www\./i.test(firstLine)) {
+    return false;
+  }
+  
+  // 检测真正的文件路径模式（必须包含路径分隔符）
+  const filePathPatterns = [
+    // Windows 路径: C:\Users\... 或 D:\...
+    /^[A-Za-z]:\\[^<>:"|?*\n]+\.[a-zA-Z0-9]+$/,
+    // Unix/Linux/Mac 路径: /Users/... 或 ~/...
+    /^[~\/][^<>:"|?*\n]*\.[a-zA-Z0-9]+$/,
+    // UNC 路径: \\server\share\...
+    /^\\\\[^<>:"|?*\n]+\\[^<>:"|?*\n]*\.[a-zA-Z0-9]+$/
+  ];
+  
+  // 检查是否包含路径分隔符（真正的文件路径特征）
+  const hasPathSeparator = firstLine.includes('/') || firstLine.includes('\\');
+  const matchesPattern = filePathPatterns.some(pattern => pattern.test(firstLine));
+  
+  // 排除自动生成的文件名
+  const isAutoGeneratedName = /^(clipboard|screenshot|download|image|file)-\d+\./i.test(firstLine);
+  
+  const isRealFilePath = (matchesPattern || hasPathSeparator) && !isAutoGeneratedName;
+  
+  if (isRealFilePath) {
+    console.log('🎯 检测到真正的文件路径:', firstLine);
+  }
+  
+  return isRealFilePath;
+}
 
 // 统一的文件粘贴处理函数
 async function handleUnifiedFilePaste(event) {
-  console.log('🎯 检测到粘贴事件，开始统一处理');
+  console.log('🎯 检测到粘贴事件，开始处理');
   
   try {
     // 1. 首先请求剪贴板权限
     const hasPermission = await requestClipboardPermission();
     if (!hasPermission) {
-      console.log('❌ 无法访问剪贴板，权限不足');
+      console.log('❌ 无法访问剪贴板，权限不足，允许默认行为');
       return;
     }
     
-    // 2. 检查剪贴板中是否有文件
+    // 2. 检查剪贴板内容
     const clipboardData = await navigator.clipboard.read();
     console.log('剪贴板内容:', clipboardData);
     
-    let hasFiles = false;
-    let fileData = null;
+    let hasImage = false;
+    let hasText = false;
     
     for (const item of clipboardData) {
       console.log('剪贴板项目类型:', item.types);
+      console.log('剪贴板项目详情:', item);
       
-      // 检测文件类型：Files 或常见的文件 MIME 类型
-      const fileTypes = ['Files', 'image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/svg+xml', 'application/octet-stream'];
-      const isFile = fileTypes.some(type => item.types.includes(type));
+      // 检查是否有图片
+      if (item.types.some(type => type.startsWith('image/'))) {
+        hasImage = true;
+        console.log('🎯 检测到图片内容');
+      }
       
-      if (isFile) {
-        hasFiles = true;
-        console.log('检测到文件在剪贴板中，类型:', item.types);
-        
-        // 在父页面统一读取文件数据
-        try {
-          if (item.types.includes('Files')) {
-            fileData = {
-              type: 'Files',
-              blob: await item.getType('Files')
-            };
-          } else {
-            // 找到第一个匹配的文件类型
-            for (const type of fileTypes) {
-              if (item.types.includes(type)) {
-                fileData = {
-                  type: type,
-                  blob: await item.getType(type)
-                };
-                break;
-              }
-            }
-          }
-          console.log('成功读取文件数据:', fileData);
-        } catch (error) {
-          console.error('读取文件数据失败:', error);
-          fileData = null;
-        }
-        break;
+      // 检查是否有纯文字
+      if (item.types.includes('text/plain')) {
+        hasText = true;
+        console.log('🎯 检测到纯文字内容');
       }
     }
     
-    if (hasFiles) {
-      console.log('🎯 开始逐个向 iframe 执行文件粘贴');
-      
-      // 获取所有 iframe 元素
-      const iframes = document.querySelectorAll('.ai-iframe');
-      console.log(`找到 ${iframes.length} 个 iframe`);
-      
-      // 逐个执行文件粘贴
-      await executeFileUploadSequentially(iframes, fileData);
-      
-    } else {
-      console.log('剪贴板中没有检测到文件类型，跳过文件粘贴处理');
-    }
-  } catch (error) {
-    console.log('剪贴板访问失败:', error.name, error.message);
-    console.log('提示: 请确保页面已获得焦点并授权剪贴板访问权限');
+    console.log('🎯 内容分析结果:', {
+      hasText,
+      hasImage
+    });
     
-    // 降级处理：尝试让每个 iframe 自己处理
-    console.log('🎯 降级处理：让每个 iframe 自行尝试粘贴');
-    const iframes = document.querySelectorAll('.ai-iframe');
-    await executeFileUploadSequentially(iframes, null, true);
+    // 采用排除法：只允许纯文本和图片，其他都阻止
+    // 1. 纯文字内容 - 直接粘贴（允许默认行为）
+    if (hasText && !hasImage) {
+      console.log('🎯 纯文字内容，允许默认粘贴行为');
+      return;
+    }
+    
+    // 2. 检测到图片 - 处理图片并阻止默认行为
+    if (hasImage) {
+      console.log('🎯 检测到图片，开始处理图片数据');
+      
+      for (const item of clipboardData) {
+        if (item.types.some(type => type.startsWith('image/'))) {
+          try {
+            // 获取图片数据
+            const imageType = item.types.find(type => type.startsWith('image/'));
+            const imageData = await item.getType(imageType);
+            
+            console.log('🎯 图片数据获取成功:', {
+              type: imageType,
+              size: imageData.size
+            });
+            
+            // 创建文件数据对象
+            const fileObj = {
+              name: `clipboard_image_${Date.now()}.${imageType.split('/')[1] || 'png'}`,
+              type: imageType,
+              size: imageData.size || 0,
+              blob: imageData,
+              data: imageData
+            };
+            
+            // 发送到所有iframe
+            await sendFileToAllIframes(fileObj);
+            console.log('🎯 图片已发送到所有iframe');
+            
+          } catch (imageError) {
+            console.log('🎯 处理图片失败:', imageError);
+          }
+        }
+      }
+      
+      // 图片处理完成后，阻止默认粘贴行为
+      console.log('🎯 图片处理完成，阻止默认粘贴行为');
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+    
+    // 3. 其他所有情况 - 直接阻止粘贴行为（排除法）
+    console.log('🎯 非纯文本非图片内容，阻止粘贴行为');
+    event.preventDefault();
+    event.stopPropagation();
+    return;
+    
+    // 默认情况：允许默认行为
+    console.log('🎯 默认情况，允许粘贴行为');
+    
+  } catch (error) {
+    console.error('🎯 粘贴处理出错:', error);
+    // 出错时允许默认行为
   }
+}
+
+// 发送文件到所有iframe的简化函数
+async function sendFileToAllIframes(fileObj) {
+  const iframes = document.querySelectorAll('.ai-iframe');
+  console.log(`🎯 开始向 ${iframes.length} 个iframe发送文件`);
+  console.log('🎯 文件对象详情:', {
+    name: fileObj.name,
+    type: fileObj.type,
+    size: fileObj.size
+  });
+  
+  // 使用逐个处理的方式，确保每个iframe有足够时间处理
+  await executeFileUploadSequentially(iframes, fileObj);
+  
+  console.log('🎯 所有iframe文件发送完成');
 }
 
 // 逐个执行文件上传的函数
@@ -393,6 +710,83 @@ function hideFileUploadProgress() {
   }
 }
 
+// 切换下拉菜单显示状态
+function toggleDropdown() {
+    const columnDropdown = document.getElementById('columnDropdown');
+    const isOpen = columnDropdown.classList.contains('show');
+    
+    if (isOpen) {
+        closeDropdown();
+    } else {
+        openDropdown();
+    }
+}
+
+// 打开下拉菜单
+function openDropdown() {
+    const columnDropdown = document.getElementById('columnDropdown');
+    columnDropdown.classList.add('show');
+}
+
+// 关闭下拉菜单
+function closeDropdown() {
+    const columnDropdown = document.getElementById('columnDropdown');
+    columnDropdown.classList.remove('show');
+}
+
+// 选择列数选项
+function selectColumnOption(columns) {
+    // 更新激活状态
+    setActiveColumnOption(columns);
+    
+    // 更新当前显示
+    updateCurrentDisplay(columns);
+    
+    // 更新布局
+    updateColumns(columns);
+    
+    // 保存到存储
+    chrome.storage.sync.set({ 'preferredColumns': columns });
+    
+    // 关闭下拉菜单
+    closeDropdown();
+}
+
+// 设置激活的列数选项
+function setActiveColumnOption(columns) {
+    const columnOptionBtns = document.querySelectorAll('.column-option-btn');
+    columnOptionBtns.forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.getAttribute('data-columns') === columns) {
+            btn.classList.add('active');
+        }
+    });
+}
+
+// 更新当前显示的图标
+function updateCurrentDisplay(columns) {
+    const columnCurrentBtn = document.getElementById('columnCurrentBtn');
+    const svg = columnCurrentBtn.querySelector('svg');
+    
+    // 根据列数更新 SVG 图标
+    const svgTemplates = {
+        '1': `<rect x="6" y="3" width="8" height="14" rx="1" stroke="currentColor" stroke-width="2" fill="none"/>`,
+        '2': `<rect x="2" y="3" width="6" height="14" rx="1" stroke="currentColor" stroke-width="2" fill="none"/>
+              <rect x="12" y="3" width="6" height="14" rx="1" stroke="currentColor" stroke-width="2" fill="none"/>`,
+        '3': `<rect x="1" y="3" width="4" height="14" rx="1" stroke="currentColor" stroke-width="2" fill="none"/>
+              <rect x="8" y="3" width="4" height="14" rx="1" stroke="currentColor" stroke-width="2" fill="none"/>
+              <rect x="15" y="3" width="4" height="14" rx="1" stroke="currentColor" stroke-width="2" fill="none"/>`,
+        '4': `<rect x="1" y="3" width="3" height="14" rx="1" stroke="currentColor" stroke-width="1.8" fill="none"/>
+              <rect x="6" y="3" width="3" height="14" rx="1" stroke="currentColor" stroke-width="1.8" fill="none"/>
+              <rect x="11" y="3" width="3" height="14" rx="1" stroke="currentColor" stroke-width="1.8" fill="none"/>
+              <rect x="16" y="3" width="3" height="14" rx="1" stroke="currentColor" stroke-width="1.8" fill="none"/>`
+    };
+    
+    if (svgTemplates[columns]) {
+        svg.innerHTML = svgTemplates[columns];
+    }
+}
+
 // 更新列数的辅助函数
 function updateColumns(columns) {
     const iframesContainer = document.getElementById('iframes-container');
@@ -408,7 +802,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const searchInput = document.getElementById('searchInput');
     searchInput.value = message.query;
     createIframes(message.query, message.sites);
-
   }
 });
 
@@ -554,10 +947,10 @@ function createSingleIframe(siteName, url, container, query) {
   iframe.className = 'ai-iframe';
   iframe.setAttribute('data-site', siteName);
   
-  // 修改 sandbox 属性，添加更多必要的权限
-  iframe.sandbox = 'allow-same-origin allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation';
+  // 临时移除 sandbox 属性以测试剪贴板权限
+  // iframe.sandbox = 'allow-same-origin allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation';
   
-  iframe.allow = 'clipboard-read; microphone; camera; geolocation; autoplay; fullscreen; picture-in-picture; storage-access; web-share';
+  iframe.allow = 'clipboard-read; clipboard-write; microphone; camera; geolocation; autoplay; fullscreen; picture-in-picture; storage-access; web-share';
   
   // 记录是否已经处理过点击事件
   let clickHandlerAdded = false;
@@ -639,25 +1032,11 @@ function createSingleIframe(siteName, url, container, query) {
       doc.documentElement.setAttribute('tabindex', '-1');
       doc.body.setAttribute('tabindex', '-1');
       
-      // 阻止所有可能的焦点事件
+      // 只监听焦点事件，保持搜索框焦点
       doc.addEventListener('focus', (e) => {
         e.preventDefault();
         e.stopPropagation();
         searchInput.focus();
-      }, true);
-      
-      doc.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        searchInput.focus();
-      }, true);
-      
-      doc.addEventListener('click', (e) => {
-        if (e.target.tagName !== 'A') {
-          e.preventDefault();
-          e.stopPropagation();
-          searchInput.focus();
-        }
       }, true);
     } catch (error) {
       console.log('无法直接访问 iframe 内容，将通过消息通信处理');
@@ -894,14 +1273,7 @@ document.getElementById('searchInput').addEventListener('focus', (e) => {
     }
 });
 
-// 添加失焦事件监听器，延迟隐藏建议
-document.getElementById('searchInput').addEventListener('blur', (e) => {
-    // 延迟隐藏，以便用户能够点击建议项
-    setTimeout(() => {
-        const querySuggestions = document.getElementById('querySuggestions');
-        querySuggestions.style.display = 'none';
-    }, 200);
-});
+// 注意：失焦事件监听器已合并到DOMContentLoaded中的自动调整高度功能中
 
 // 在 DOMContentLoaded 时设置按钮文案
 document.addEventListener('DOMContentLoaded', () => {
@@ -1113,9 +1485,10 @@ function initializeI18n() {
         const key = element.getAttribute('data-i18n');
         const message = chrome.i18n.getMessage(key);
         if (message) {
-            if (element.tagName.toLowerCase() === 'input' && 
-                element.type === 'text') {
-                // 对于输入框，设置 placeholder
+            if ((element.tagName.toLowerCase() === 'input' && 
+                element.type === 'text') || 
+                element.tagName.toLowerCase() === 'textarea') {
+                // 对于输入框和文本域，设置 placeholder
                 element.placeholder = message;
             } else if (element.tagName.toLowerCase() === 'button') {
                 // 对于按钮，设置 title 属性
@@ -1126,6 +1499,15 @@ function initializeI18n() {
             }
         }
     });
+    
+    // 手动设置输入框的占位符
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        const placeholderMessage = chrome.i18n.getMessage('inputPlaceholder');
+        if (placeholderMessage) {
+            searchInput.placeholder = placeholderMessage;
+        }
+    }
 }
 
 
@@ -2124,6 +2506,162 @@ async function reorderIframes(fromIndex, toIndex) {
     
     console.log('iframe顺序已更新，使用CSS order属性');
   }
+}
+
+// 初始化文件上传功能
+function initializeFileUpload() {
+  const fileUploadButton = document.getElementById('fileUploadButton');
+  const fileInput = document.getElementById('fileInput');
+  
+  if (!fileUploadButton || !fileInput) {
+    console.warn('文件上传元素未找到');
+    return;
+  }
+  
+  // 点击上传按钮触发文件选择
+  fileUploadButton.addEventListener('click', () => {
+    fileInput.click();
+  });
+  
+  // 文件选择变化时处理
+  fileInput.addEventListener('change', handleFileSelection);
+  
+  console.log('🎯 文件上传功能已初始化');
+}
+
+// 初始化导出回答功能
+function initializeExportResponses() {
+  const exportButton = document.getElementById('exportResponsesButton');
+  
+  if (!exportButton) {
+    console.warn('导出回答按钮未找到');
+    return;
+  }
+  
+  // 点击导出按钮显示导出模态框
+  exportButton.addEventListener('click', () => {
+    console.log('🎯 导出按钮被点击');
+    showExportModal();
+  });
+  
+  console.log('🎯 导出回答功能已初始化');
+}
+
+// 处理文件选择
+async function handleFileSelection(event) {
+  const files = event.target.files;
+  
+  if (!files || files.length === 0) {
+    console.log('未选择文件');
+    return;
+  }
+  
+  console.log('🎯 用户选择了文件:', files.length, '个');
+  
+  // 处理第一个文件（暂时只支持单文件）
+  const file = files[0];
+  await processUploadedFile(file);
+  
+  // 清空input，允许重复选择同一文件
+  event.target.value = '';
+}
+
+// 处理上传的文件
+async function processUploadedFile(file) {
+  console.log('🎯 开始处理上传的文件:', {
+    name: file.name,
+    type: file.type,
+    size: file.size,
+    lastModified: file.lastModified
+  });
+  
+  // 文件大小检查（限制50MB）
+  const maxSize = 50 * 1024 * 1024; // 50MB
+  if (file.size > maxSize) {
+    showFileUploadError(`文件大小超过限制（${Math.round(maxSize / 1024 / 1024)}MB）`);
+    return;
+  }
+  
+  try {
+    // 读取文件内容
+    const arrayBuffer = await file.arrayBuffer();
+    const blob = new Blob([arrayBuffer], { type: file.type });
+    
+    // 创建文件数据对象
+    const fileData = {
+      type: file.type,
+      blob: blob,
+      fileName: file.name,
+      originalName: file.name,
+      size: file.size,
+      lastModified: file.lastModified
+    };
+    
+    console.log('🎯 文件数据准备完成:', fileData);
+    
+    // 调用现有的多iframe文件处理流程
+    await processFileToAllIframes(fileData);
+    
+  } catch (error) {
+    console.error('❌ 文件处理失败:', error);
+    showFileUploadError('文件处理失败: ' + error.message);
+  }
+}
+
+// 向所有iframe发送文件
+async function processFileToAllIframes(fileData) {
+  console.log('🎯 开始向所有iframe发送文件');
+  
+  // 获取所有 iframe 元素
+  const iframes = document.querySelectorAll('.ai-iframe');
+  console.log(`找到 ${iframes.length} 个 iframe`);
+  
+  if (iframes.length === 0) {
+    showFileUploadError('没有找到可用的AI站点');
+    return;
+  }
+  
+  // 调用现有的文件上传处理流程
+  await executeFileUploadSequentially(iframes, fileData);
+}
+
+// 显示文件上传错误
+function showFileUploadError(message) {
+  const error = document.createElement('div');
+  error.style.cssText = `
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+    color: white;
+    padding: 16px 24px;
+    border-radius: 12px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+    z-index: 10001;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 14px;
+    max-width: 400px;
+    text-align: center;
+    animation: slideInScale 0.3s ease-out;
+  `;
+  
+  error.innerHTML = `
+    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+      <span style="font-size: 18px;">❌</span>
+      <span style="font-weight: 600;">文件上传失败</span>
+    </div>
+    <div style="font-size: 13px; opacity: 0.9;">${message}</div>
+  `;
+  
+  document.body.appendChild(error);
+  
+  // 3秒后自动关闭
+  setTimeout(() => {
+    if (error.parentElement) {
+      error.remove();
+    }
+  }, 3000);
 }
 
 

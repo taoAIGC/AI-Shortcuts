@@ -1,9 +1,9 @@
 {
   "appName": {
-    "message": "AI Shortcuts - OneClick to compare ChatGPT, Gemini, DeepSeek and more."
+    "message": "AI Compare - OneClick to compare ChatGPT, Gemini, DeepSeek and more."
   },
   "extDescription": {
-    "message": "Access multiple AI platforms simultaneously. Compare responses from ChatGPT, Claude, Gemini, DeepSeek and more in one click."
+    "message": "AI Compare - Compare responses from ChatGPT, Claude, Gemini, DeepSeek and more in one click. Find the best solution quickly."
   },
   "configTitle": {
     "message": " AI Sites"
@@ -20,16 +20,16 @@
     }
   },
   "inputPlaceholder": {
-    "message": "Enter content or Ctrl+V to paste file to search..."
+    "message": "Enter content to search..."
   },
   "openSettings": {
-    "message": "Default Comparison Settings"
+    "message": "AI Compare Settings"
   },
   "searchWithMultiAI": {
-    "message": "Search with AIShortcuts"
+    "message": "Search with AI Compare"
   },
   "startCompare": {
-    "message": "Compare",
+    "message": "PK",
     "placeholders": {
       "n": {
         "content": "$1"
@@ -46,22 +46,22 @@
     "message": "If you want to add more sites, please contact me at AIShortcuts@outlook.com"
   },
   "popupTitle": {
-    "message": "AI Shortcuts"
+    "message": "AI Compare"
   },
   "column1": {
-    "message": "1 Column",
+    "message": "1 Col",
     "description": "Single column layout option"
   },
   "column2": {
-    "message": "2 Columns",
+    "message": "2 Cols",
     "description": "Two columns layout option"
   },
   "column3": {
-    "message": "3 Columns",
+    "message": "3 Cols",
     "description": "Three columns layout option"
   },
   "column4": {
-    "message": "4 Columns",
+    "message": "4 Cols",
     "description": "Four columns layout option"
   },
   "closeButton": {
@@ -178,16 +178,16 @@
     "message": "Manage websites where the floating button is disabled. You can re-enable the floating button here."
   },
   "searchProviderName": {
-    "message": "AIShortcuts"
+    "message": "AI Compare"
   },
   "searchProviderDescription": {
-    "message": "Search across multiple AI sites with AI shortcuts"
+    "message": "Compare responses from multiple AI platforms with AI Compare"
   },
   "promptTemplatesTitle": {
     "message": "Prompt Templates"
   },
   "promptTemplatesDescription": {
-    "message": "Customize prompt templates for search suggestion buttons"
+    "message": "Customize prompt templates for AI comparison search"
   },
   "addTemplateButton": {
     "message": "Add New Template"
@@ -242,5 +242,62 @@
   },
   "templateQueryRequired": {
     "message": "Please enter query template"
+  },
+  "localFileDetected": {
+    "message": "Local File Detected"
+  },
+  "browserSecurityRestriction": {
+    "message": "Browser Security Restriction"
+  },
+  "localFileSecurityMessage": {
+    "message": "When copying local files, browsers can only access file paths, not file contents."
+  },
+  "suggestedActions": {
+    "message": "Suggested Actions:"
+  },
+  "uploadFileAction": {
+    "message": "Click the <strong>File Upload button</strong> at the top to select files"
+  },
+  "dismissWarning": {
+    "message": "Got it"
+  },
+  "exportResponses": {
+    "message": "Export AI Compare Results"
+  },
+  "exportModalTitle": {
+    "message": "Export AI Compare Results"
+  },
+  "exportFormat": {
+    "message": "Export Format"
+  },
+  "selectSites": {
+    "message": "Select Sites"
+  },
+  "preview": {
+    "message": "Preview"
+  },
+  "export": {
+    "message": "Export"
+  },
+  "cancel": {
+    "message": "Cancel"
+  },
+  "exportSuccess": {
+    "message": "Export successful!"
+  },
+  "exportFailed": {
+    "message": "Export failed"
+  },
+  "selectSitesToExport": {
+    "message": "Please select sites to export"
+  },
+  "noContentFound": {
+    "message": "No content found to export"
+  },
+  "contentExtractionFailed": {
+    "message": "Content extraction failed"
+  },
+  "devNotice": {
+    "message": "Feature in development, may have errors or limitations"
   }
 } 
