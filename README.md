@@ -1,4 +1,4 @@
-# AI Shortcuts：one click to open multi AI sites
+# AI比一比：one click to open multi AI sites
 
 
 [Engglish](https://github.com/taoAIGC/AI-Shortcuts/blob/master/README.md#english )   ｜   [中文](https://github.com/taoAIGC/AI-Shortcuts/blob/master/README.md#%E4%B8%AD%E6%96%87) 
@@ -8,7 +8,7 @@
 
 ### Introduction:
 
-"AI shortcuts" enhances the efficiency of using AI websites.
+"AI比一比" enhances the efficiency of using AI websites.
 
 1. Embed multiple AI websites in one tab, enter a keyword once, and display the query results from multiple AI websites simultaneously.
 2. One-click send messages and open your frequently used AI sites (ChatGPT, Claude, Perplexity, Kimi, Doubao, POE, Gemini, and more being added).
@@ -62,7 +62,7 @@ This project is licensed under the GNU General Public License v3.0.
 
 ### 简介
 
-「AI 任意门」提高你使用AI网站的效率
+「AI比一比」提高你使用AI网站的效率
 
 1. 一个标签页内，嵌入多个 AI 网站，输入一次关键词，同时展示多个AI网站的查询结果
 2. 一键发送消息，并打开你常用的 AI站点（chatgpt、 claude、 perplexity、kimi、豆包、 POE、gemini，持续增加中）
@@ -76,7 +76,7 @@ This project is licensed under the GNU General Public License v3.0.
 chrome：https://chromewebstore.google.com/detail/multi-ai/dkhpgbbhlnmjbkihoeniojpkggkabbbl 
 
 
-edge：https://microsoftedge.microsoft.com/addons/detail/ai-%E4%BB%BB%E6%84%8F%E9%97%A8-%E5%BF%AB%E9%80%9F%E8%AE%BF%E9%97%AE-chatgpt-%E8%B1%86%E5%8C%85-/pehoogkkiaidofipnnafdpcfbkhkhddo ( 新版本一直审核不通过，所以版本较老)
+edge：https://microsoftedge.microsoft.com/addons/detail/ai%E6%AF%94%E4%B8%80%E6%AF%94-%E5%BF%AB%E9%80%9F%E8%AE%BF%E9%97%AE-chatgpt-%E8%B1%86%E5%8C%85-/pehoogkkiaidofipnnafdpcfbkhkhddo ( 新版本一直审核不通过，所以版本较老)
 
 
 
@@ -116,6 +116,6 @@ email: AIShortcuts@outlook.com
 
 ### 给我买杯咖啡
 
-「AI 任意门」是免费工具，如果它对你有帮助，可以送我一杯咖啡吗？我会更努力地维护它。
+「AI比一比」是免费工具，如果它对你有帮助，可以送我一杯咖啡吗？我会更努力地维护它。
 
 <img src="https://github-production-user-asset-6210df.s3.amazonaws.com/1812275/460316844-4e928502-73eb-4918-959a-db17f7f747ff.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAVCODYLSA53PQK4ZA%2F20250629%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20250629T152605Z&X-Amz-Expires=300&X-Amz-Signature=51f982565a095dd6ef1e05a54c01caa6e768e275291e52737150082650e4394c&X-Amz-SignedHeaders=host" width="300">

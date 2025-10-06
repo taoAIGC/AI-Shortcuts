@@ -317,67 +317,67 @@ function loadExportSites(container, modal) {
   }, 100);
 }
 
-// 内容缓存管理器
-const ContentCache = {
-  _cache: new Map(),
-  _cacheTimeout: 5 * 60 * 1000, // 5分钟缓存过期
-  
-  // 生成缓存键
-  _generateKey(siteName, url) {
-    return `${siteName}:${url || 'unknown'}`;
-  },
-  
-  // 设置缓存
-  set(siteName, url, content) {
-    const key = this._generateKey(siteName, url);
-    this._cache.set(key, {
-      content: content,
-      timestamp: Date.now(),
-      siteName: siteName
-    });
-    console.log(`💾 缓存 ${siteName} 内容，长度: ${content.content?.length || 0}`);
-  },
-  
-  // 获取缓存
-  get(siteName, url) {
-    const key = this._generateKey(siteName, url);
-    const cached = this._cache.get(key);
-    
-    if (!cached) {
-      return null;
-    }
-    
-    // 检查是否过期
-    if (Date.now() - cached.timestamp > this._cacheTimeout) {
-      this._cache.delete(key);
-      console.log(`🗑️ 清理过期缓存: ${siteName}`);
-      return null;
-    }
-    
-    console.log(`💨 使用缓存 ${siteName} 内容`);
-    return cached.content;
-  },
-  
-  // 清理所有缓存
-  clear() {
-    this._cache.clear();
-    console.log('🧹 清理所有内容缓存');
-  },
-  
-  // 获取缓存状态
-  getStats() {
-    const total = this._cache.size;
-    const expired = Array.from(this._cache.values()).filter(
-      item => Date.now() - item.timestamp > this._cacheTimeout
-    ).length;
-    return { total, expired, valid: total - expired };
-  }
-};
+// 缓存功能已移除，确保实时性
 
-// 收集iframe中的回答内容（并行化优化版）
-async function collectResponses(selectedSites, useCache = true) {
+// 从页面中提取URL（基于配置文件）
+async function extractAlternateUrl(siteName) {
+  try {
+    console.log(`🔍 开始为 ${siteName} 提取URL...`);
+    
+    // 强制清除配置缓存（如果存在）
+    if (window.siteDetector && window.siteDetector.clearCache) {
+      console.log('🧹 清除配置缓存...');
+      window.siteDetector.clearCache();
+    }
+    
+    // 获取站点配置
+    const siteConfig = await getSiteContentExtractorConfig(siteName);
+    console.log(`📋 ${siteName} 配置:`, siteConfig);
+    
+    if (!siteConfig || !siteConfig.urlExtractor) {
+      console.log(`⚠️ ${siteName} 未配置URL提取器`);
+      console.log(`🔍 调试信息 - siteConfig:`, siteConfig);
+      console.log(`🔍 调试信息 - urlExtractor:`, siteConfig?.urlExtractor);
+      return null;
+    }
+    
+    const { alternateLinkSelector, urlPattern, removeParams } = siteConfig.urlExtractor;
+    console.log(`🎯 使用选择器: ${alternateLinkSelector}, 模式: ${urlPattern}, 删除参数: ${removeParams}`);
+    
+    // 查找所有alternate link标签
+    const alternateLinks = document.querySelectorAll(alternateLinkSelector);
+    console.log(`🔍 找到 ${alternateLinks.length} 个alternate链接`);
+    
+    for (const link of alternateLinks) {
+      const href = link.getAttribute('href');
+      console.log(`🔗 检查链接: ${href}`);
+      
+      if (href && href.includes(urlPattern)) {
+        // 解析URL并去掉指定参数
+        const url = new URL(href);
+        console.log(`🧹 原始URL参数:`, Array.from(url.searchParams.keys()));
+        
+        removeParams.forEach(param => {
+          url.searchParams.delete(param);
+        });
+        
+        const cleanUrl = url.toString();
+        console.log(`🔗 从alternate标签提取到${siteName} URL: ${cleanUrl}`);
+        return cleanUrl;
+      }
+    }
+    
+    console.log(`⚠️ 未找到${siteName}的alternate链接`);
+    return null;
+  } catch (error) {
+    console.error(`❌ 提取${siteName} alternate URL时出错:`, error);
+    return null;
+  }
+}
+
+// 收集iframe中的回答内容（实时提取版）
+async function collectResponses(selectedSites) {
   console.log('🎯 开始收集回答内容，选择的站点:', selectedSites);
-  console.log('📊 缓存状态:', ContentCache.getStats());
   
   const responses = [];
   
@@ -385,7 +385,6 @@ async function collectResponses(selectedSites, useCache = true) {
   const startTime = performance.now();
   let successCount = 0;
   let errorCount = 0;
-  let cacheHits = 0;
   
   // 并行处理所有站点，提升性能
   const extractPromises = Array.from(selectedSites).map(async (siteName) => {
@@ -397,35 +396,50 @@ async function collectResponses(selectedSites, useCache = true) {
       }
       
       const iframeUrl = iframe.src || 'unknown';
+      console.log(`🔍 [DEBUG] ${siteName} iframeUrl:`, iframeUrl);
       
-      // 尝试使用缓存
-      if (useCache) {
-        const cachedContent = ContentCache.get(siteName, iframeUrl);
-        if (cachedContent) {
-          cacheHits++;
-          return cachedContent;
-        }
+      // 尝试从alternate标签获取清洁的URL（基于配置）
+      let finalUrl = iframeUrl;
+      console.log(`🔍 准备调用 extractAlternateUrl(${siteName})...`);
+      const alternateUrl = await extractAlternateUrl(siteName);
+      console.log(`🔍 extractAlternateUrl 返回:`, alternateUrl);
+      if (alternateUrl) {
+        finalUrl = alternateUrl;
+        console.log(`🔄 ${siteName} URL更新: ${iframeUrl} → ${finalUrl}`);
+      } else {
+        console.log(`📝 ${siteName} 使用原始URL: ${finalUrl}`);
       }
+      
+      // 直接进行实时内容提取，不使用缓存
       
       console.log(`🎯 开始提取 ${siteName} 的内容...`);
       
       // 尝试从iframe中提取内容
       const extractResult = await extractIframeContent(iframe, siteName);
+      console.log(`🔍 [DEBUG] extractResult 类型:`, typeof extractResult, extractResult);
       
       // 处理新的返回格式
-      let content, extractionMethod;
+      let content, extractionMethod, extractedUrl;
       
+      // 统一处理为字符串格式
       if (typeof extractResult === 'string') {
-        // 旧格式 - 只是字符串内容
         content = extractResult;
-        extractionMethod = 'legacy';
+        extractionMethod = '配置方法';
+        extractedUrl = iframeUrl;
       } else if (extractResult && typeof extractResult === 'object') {
-        // 新格式 - 包含详细信息的对象
         content = extractResult.content || '';
-        extractionMethod = extractResult.extractionMethod || 'unknown';
+        extractionMethod = extractResult.extractionMethod || '配置方法';
+        extractedUrl = extractResult.url || iframeUrl;
       } else {
         content = '';
         extractionMethod = 'failed';
+        extractedUrl = iframeUrl;
+      }
+      
+      // 使用从iframe中提取的URL
+      if (extractedUrl && extractedUrl !== iframeUrl) {
+        finalUrl = extractedUrl;
+        console.log(`🔄 ${siteName} 使用iframe提取的URL: ${finalUrl}`);
       }
       
       if (content && content.trim()) {
@@ -435,13 +449,10 @@ async function collectResponses(selectedSites, useCache = true) {
           timestamp: new Date().toISOString(),
           extractionMethod: extractionMethod,
           length: content.length,
-          url: iframeUrl
+          url: finalUrl
         };
         
-        // 缓存成功提取的内容
-        if (useCache && !responseData.error) {
-          ContentCache.set(siteName, iframeUrl, responseData);
-        }
+        console.log(`📋 ${siteName} 响应数据URL: ${responseData.url}`);
         
         console.log(`✅ 成功提取 ${siteName} 内容，长度: ${content.length}, 方法: ${extractionMethod}`);
         return responseData;
@@ -479,7 +490,7 @@ async function collectResponses(selectedSites, useCache = true) {
   const totalTime = endTime - startTime;
   
   console.log(`🎯 收集完成，共获得 ${responses.length} 个回答`);
-  console.log(`📊 性能统计: 成功 ${successCount}, 失败 ${errorCount}, 缓存命中 ${cacheHits}, 耗时 ${totalTime.toFixed(2)}ms`);
+  console.log(`📊 性能统计: 成功 ${successCount}, 失败 ${errorCount}, 耗时 ${totalTime.toFixed(2)}ms`);
   
   return responses;
 }
@@ -490,8 +501,13 @@ async function extractIframeContent(iframe, siteName) {
   try {
     console.log(`尝试通过消息通信获取 ${siteName} 内容...`);
     const result = await requestIframeContent(iframe, siteName);
-    if (result && result.trim()) {
+    
+    // 处理新的返回格式（对象包含content和url）
+    if (result && typeof result === 'object' && result.content) {
       console.log(`✅ 成功通过消息通信获取 ${siteName} 内容`);
+      return result;
+    } else if (result && typeof result === 'string' && result.trim()) {
+      console.log(`✅ 成功通过消息通信获取 ${siteName} 内容（字符串格式）`);
       return result;
     }
   } catch (error) {
@@ -983,21 +999,41 @@ function cleanExtractedText(text) {
 // 获取站点特定的内容提取配置
 async function getSiteContentExtractorConfig(siteName) {
   try {
+    console.log(`🔍 开始获取 ${siteName} 的配置...`);
+    
     // 优先使用新的统一站点检测器
     if (window.siteDetector) {
+      console.log('📡 使用 siteDetector 获取配置...');
       const sites = await window.siteDetector.getSites();
+      console.log(`📋 获取到 ${sites.length} 个站点配置`);
+      
       const site = sites.find(s => s.name === siteName);
+      console.log(`🎯 查找 ${siteName}:`, site ? '找到' : '未找到');
       
       if (site && site.contentExtractor) {
-        console.log(`✅ 使用新检测器找到 ${siteName} 的内容提取配置`);
+        console.log(`✅ 使用新检测器找到 ${siteName} 的内容提取配置:`, site.contentExtractor);
         return site.contentExtractor;
+      } else if (site) {
+        console.log(`⚠️ ${siteName} 站点存在但无 contentExtractor:`, site);
       }
     }
     
     // 降级到原有逻辑
     if (typeof window.getDefaultSites === 'function') {
+      console.log('📡 使用 getDefaultSites 获取配置...');
       const sites = await window.getDefaultSites();
+      console.log(`📋 获取到 ${sites.length} 个站点配置`);
+      
       const site = sites.find(s => s.name === siteName);
+      console.log(`🎯 查找 ${siteName}:`, site ? '找到' : '未找到');
+      
+      if (site && site.contentExtractor) {
+        console.log(`✅ 使用 getDefaultSites 找到 ${siteName} 的内容提取配置:`, site.contentExtractor);
+        return site.contentExtractor;
+      } else if (site) {
+        console.log(`⚠️ ${siteName} 站点存在但无 contentExtractor:`, site);
+      }
+      
       return site?.contentExtractor || null;
     } else {
       console.warn('window.getDefaultSites 函数不可用');
@@ -1020,7 +1056,11 @@ function requestIframeContent(iframe, siteName) {
       if (event.data.type === 'EXTRACTED_CONTENT' && event.data.siteName === siteName) {
         clearTimeout(timeout);
         window.removeEventListener('message', messageHandler);
-        resolve(event.data.content);
+        // 返回包含内容和URL的对象
+        resolve({
+          content: event.data.content,
+          url: event.data.url || iframe.src
+        });
       }
     };
     
@@ -1044,28 +1084,46 @@ function generatePreview(responses, format) {
   const maxPreviewLength = 150; // 减少预览长度，提升性能
   
   responses.forEach((response) => {
-    if (format === 'markdown') {
-      preview += `## ${response.siteName}\n\n`;
-      const contentPreview = response.content.substring(0, maxPreviewLength);
-      preview += contentPreview;
+      if (format === 'markdown') {
+        preview += `## ${response.siteName}\n\n`;
+        
+        // 添加URL信息
+        if (response.url && response.url !== 'unknown') {
+          preview += `**URL:** ${response.url}\n\n`;
+        }
+        
+        const contentPreview = response.content.substring(0, maxPreviewLength);
+        preview += contentPreview;
       if (response.content.length > maxPreviewLength) {
         preview += '...';
       }
       preview += '\n\n---\n\n';
-    } else if (format === 'html') {
-      preview += `<h3>${response.siteName}</h3>\n`;
-      const contentPreview = response.content.substring(0, maxPreviewLength);
-      preview += `<p>${contentPreview}`;
+      } else if (format === 'html') {
+        preview += `<h3>${response.siteName}</h3>\n`;
+        
+        // 添加URL信息
+        if (response.url && response.url !== 'unknown') {
+          preview += `<p><strong>URL:</strong> <a href="${response.url}" target="_blank">${response.url}</a></p>\n`;
+        }
+        
+        const contentPreview = response.content.substring(0, maxPreviewLength);
+        preview += `<p>${contentPreview}`;
       if (response.content.length > maxPreviewLength) {
         preview += '...</p>\n';
       } else {
         preview += '</p>\n';
       }
       preview += '<hr>\n\n';
-    } else { // txt format
-      preview += `${response.siteName}:\n`;
-      const contentPreview = response.content.substring(0, maxPreviewLength);
-      preview += contentPreview;
+      } else { // txt format
+        preview += `${response.siteName}:\n`;
+        
+        // 添加URL信息
+        if (response.url && response.url !== 'unknown') {
+          preview += `URL: ${response.url}\n\n`;
+        }
+        
+        const contentPreview = response.content.substring(0, maxPreviewLength);
+        preview += contentPreview;
       if (response.content.length > maxPreviewLength) {
         preview += '...';
       }

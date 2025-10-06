@@ -1,6 +1,6 @@
 {
   "version": "1.1.1",
-  "lastUpdated": "2025-09-29T00:00:00Z",
+  "lastUpdated": "2025-10-06T00:00:00Z",
   "description": "支持粘贴功能",
   "author": "AIShortcuts",
   "sites": [
@@ -65,33 +65,23 @@
       "contentExtractor": {
         "messageContainer": "[data-message-author-role=\"assistant\"]",
         "contentSelectors": [
-          ".markdown.prose",
-          ".markdown"
+          ".markdown.prose"
         ],
         "thinkingSelector": ":scope > div:not(.markdown)",
         "excludeSelectors": [
-          "button",
-          "[class*=\"copy\"]",
-          "[class*=\"regenerate\"]",
-          "[class*=\"user\"]",
-          ".flex",
-          "nav",
-          "header",
-          "footer"
         ],
         "extractThinking": true,
         "thinkingBlockFilters": [
-          ":scope > div:not(.markdown)",
-          "[class*=\"thinking\"]",
-          "[data-testid*=\"thinking\"]",
-          ".transition-all.rounded-lg"
+
         ],
         "fallbackSelectors": [
-          "[class*=\"message\"][class*=\"assistant\"]",
-          "[class*=\"response\"]",
-          "main",
-          "article"
-        ]
+
+        ],
+        "urlExtractor": {
+          "alternateLinkSelector": "link[rel=\"alternate\"]",
+          "urlPattern": "chatgpt.com/c/",
+          "removeParams": ["locale"]
+        }
       }
     },
     {
@@ -156,35 +146,24 @@
       "contentExtractor": {
         "messageContainer": ".conversation-container",
         "contentSelectors": [
-          "model-response .model-response-text",
-          "model-response",
-          "[data-message-author-role=\"model\"]"
+          "model-response .model-response-text"
         ],
-        "userMessageSelector": "user-query .query-text",
+        "thinkingSelector": ":scope > div:not(.model-response-text)",
         "excludeSelectors": [
-          "button",
-          "[class*=\"copy\"]",
-          "[class*=\"user\"]",
-          "[class*=\"input\"]",
-          "[class*=\"prompt\"]",
-          "textarea",
-          ".safety-info",
-          "[class*=\"safety\"]",
-          "nav",
-          "header",
-          "footer"
+
         ],
-        "extractThinking": false,
+        "extractThinking": true,
+        "thinkingBlockFilters": [
+
+        ],
         "fallbackSelectors": [
-          ".model-response-text",
-          "[class*=\"model\"][class*=\"response\"]",
-          ".gemini-response",
-          "[class*=\"ai-response\"]",
-          "main",
-          "article"
+
         ],
-        "containerSelector": "#chat-history",
-        "editModeCheck": "textarea"
+        "urlExtractor": {
+          "alternateLinkSelector": "link[rel=\"alternate\"]",
+          "urlPattern": "gemini.google.com/app/",
+          "removeParams": ["locale"]
+        }
       }
     },
     {

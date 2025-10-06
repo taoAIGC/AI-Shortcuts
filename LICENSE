@@ -634,7 +634,7 @@ the "copyright" line and a pointer to where the full notice is found.
     <one line to give the program's name and a brief idea of what it does.>
     Copyright (C) <2025>  <multi-ai@outlook.com>
 
-    // AI-Shortcuts is a browser extension designed to provide users with a multi-platform AI Q&A and search experience.
+    // AI比一比 (AI Compare) is a browser extension designed to provide users with a multi-platform AI Q&A and search experience.
     // Main features include:
     // 1. Simultaneously query and display answers from multiple mainstream AI platforms (such as ChatGPT, Bing, Google Bard, etc.).
     // 2. Display responses from different AI platforms side by side using a multi-column iframe layout for easy comparison and reference.

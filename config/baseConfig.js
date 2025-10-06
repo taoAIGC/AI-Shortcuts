@@ -7,10 +7,9 @@ if (typeof window !== 'undefined' && window.BaseConfigLoaded) {
 // 开发环境配置
 const DEV_CONFIG = {
   IS_PRODUCTION: true,  // 开发时设为 false，发布时设为 true
-  // REMOTE_CONFIG_URL: 'https://raw.githubusercontent.com/taoAIGC/AIShortcuts_test_siteHandlers/refs/heads/main/siteHandlers.json'  // 开发环境远程配置
-  REMOTE_CONFIG_URL: 'DEV'  // 测试时使用本地配置文件
-
-
+  SKIP_REMOTE_CONFIG: true,  // 开发时跳过远程配置，直接使用本地文件
+  ENABLE_CONFIG_CACHE: false, // 开发时禁用配置缓存，确保修改立即生效
+  FORCE_LOCAL_CONFIG: true   // 开发时强制使用本地配置文件
 };
 
 // 生产环境 console 重写（仅在 production 模式下）
@@ -525,7 +524,25 @@ if (typeof window === 'undefined') {
   // 动态获取站点配置
   self.getDefaultSites = async function() {
     try {
-      // 1. 从 remoteSiteHandlers 读取基础配置
+      // 开发环境：跳过远程配置，直接使用本地文件
+      if (!DEV_CONFIG.IS_PRODUCTION && DEV_CONFIG.SKIP_REMOTE_CONFIG) {
+        console.log('🚀 开发模式：跳过远程配置，直接加载本地文件');
+        try {
+          const response = await fetch(chrome.runtime.getURL('config/siteHandlers.json'));
+          if (response.ok) {
+            const localConfig = await response.json();
+            if (localConfig.sites && localConfig.sites.length > 0) {
+              console.log('✅ 开发模式：从本地文件加载站点配置成功');
+              return localConfig.sites;
+            }
+          }
+        } catch (error) {
+          console.error('❌ 开发模式：从本地文件加载配置失败:', error);
+        }
+        return [];
+      }
+      
+      // 生产环境：从 remoteSiteHandlers 读取基础配置
       console.log('尝试从 remoteSiteHandlers 读取站点配置...');
       let baseSites = [];
       try {
@@ -595,6 +612,23 @@ if (typeof window === 'undefined') {
 
   self.AppConfigManager = AppConfigManager;
   self.RemoteConfigManager = RemoteConfigManager;
+  
+  // 开发环境配置切换函数
+  self.toggleDevMode = function() {
+    DEV_CONFIG.SKIP_REMOTE_CONFIG = !DEV_CONFIG.SKIP_REMOTE_CONFIG;
+    console.log(`🔄 开发模式切换: ${DEV_CONFIG.SKIP_REMOTE_CONFIG ? '启用' : '禁用'}本地配置优先`);
+    return DEV_CONFIG.SKIP_REMOTE_CONFIG;
+  };
+  
+  // 获取当前开发环境状态
+  self.getDevModeStatus = function() {
+    return {
+      isProduction: DEV_CONFIG.IS_PRODUCTION,
+      skipRemoteConfig: DEV_CONFIG.SKIP_REMOTE_CONFIG,
+      enableConfigCache: DEV_CONFIG.ENABLE_CONFIG_CACHE,
+      forceLocalConfig: DEV_CONFIG.FORCE_LOCAL_CONFIG
+    };
+  };
 }
 // 浏览器环境
 else {
@@ -604,7 +638,25 @@ else {
   // 动态获取站点配置
   window.getDefaultSites = async function() {
     try {
-      // 1. 从 remoteSiteHandlers 读取基础配置
+      // 开发环境：跳过远程配置，直接使用本地文件
+      if (!DEV_CONFIG.IS_PRODUCTION && DEV_CONFIG.SKIP_REMOTE_CONFIG) {
+        console.log('🚀 开发模式：跳过远程配置，直接加载本地文件');
+        try {
+          const response = await fetch(chrome.runtime.getURL('config/siteHandlers.json'));
+          if (response.ok) {
+            const localConfig = await response.json();
+            if (localConfig.sites && localConfig.sites.length > 0) {
+              console.log('✅ 开发模式：从本地文件加载站点配置成功');
+              return localConfig.sites;
+            }
+          }
+        } catch (error) {
+          console.error('❌ 开发模式：从本地文件加载配置失败:', error);
+        }
+        return [];
+      }
+      
+      // 生产环境：从 remoteSiteHandlers 读取基础配置
       let baseSites = [];
       try {
         const result = await chrome.storage.local.get('remoteSiteHandlers');
@@ -671,6 +723,23 @@ else {
   
   window.AppConfigManager = AppConfigManager;
   window.RemoteConfigManager = RemoteConfigManager;
+  
+  // 开发环境配置切换函数
+  window.toggleDevMode = function() {
+    DEV_CONFIG.SKIP_REMOTE_CONFIG = !DEV_CONFIG.SKIP_REMOTE_CONFIG;
+    console.log(`🔄 开发模式切换: ${DEV_CONFIG.SKIP_REMOTE_CONFIG ? '启用' : '禁用'}本地配置优先`);
+    return DEV_CONFIG.SKIP_REMOTE_CONFIG;
+  };
+  
+  // 获取当前开发环境状态
+  window.getDevModeStatus = function() {
+    return {
+      isProduction: DEV_CONFIG.IS_PRODUCTION,
+      skipRemoteConfig: DEV_CONFIG.SKIP_REMOTE_CONFIG,
+      enableConfigCache: DEV_CONFIG.ENABLE_CONFIG_CACHE,
+      forceLocalConfig: DEV_CONFIG.FORCE_LOCAL_CONFIG
+    };
+  };
   
   // 标记配置已加载，避免重复声明
   window.BaseConfigLoaded = true;

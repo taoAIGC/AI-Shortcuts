@@ -1072,11 +1072,31 @@ window.addEventListener('message', async function(event) {
                 // 提取页面内容
                 const content = await extractPageContent();
                 
+                // 提取当前页面的URL（去掉locale等参数）
+                let pageUrl = window.location.href;
+                try {
+                    // 查找alternate链接获取清洁的URL
+                    const alternateLinks = document.querySelectorAll('link[rel="alternate"]');
+                    for (const link of alternateLinks) {
+                        const href = link.getAttribute('href');
+                        if (href && href.includes('chatgpt.com/c/')) {
+                            const url = new URL(href);
+                            url.searchParams.delete('locale');
+                            pageUrl = url.toString();
+                            console.log(`🔗 从alternate标签获取清洁URL: ${pageUrl}`);
+                            break;
+                        }
+                    }
+                } catch (error) {
+                    console.log('⚠️ URL清理失败，使用原始URL:', error);
+                }
+                
                 // 发送提取结果回主窗口
                 window.parent.postMessage({
                     type: 'EXTRACTED_CONTENT',
                     siteName: event.data.siteName,
-                    content: content
+                    content: content,
+                    url: pageUrl
                 }, '*');
                 
                 console.log('✅ 内容提取完成，已发送结果');
@@ -1242,15 +1262,6 @@ async function extractPageContent() {
         const domain = window.location.hostname;
         console.log('🔍 当前域名:', domain);
         
-        // 调试：查找页面上所有可能的 markdown 相关元素
-        console.log('🔍 调试信息 - 查找 markdown 相关元素:');
-        const markdownElements = document.querySelectorAll('[class*="markdown"], [class*="prose"], [class*="message"], [class*="response"]');
-        console.log(`🔍 找到 ${markdownElements.length} 个可能的 markdown 元素`);
-        markdownElements.forEach((el, i) => {
-            if (i < 5) { // 只显示前5个
-                console.log(`🔍 元素 ${i + 1}:`, el.className, '内容长度:', (el.textContent || '').length);
-            }
-        });
         
         // 获取站点配置
         const siteHandler = await getSiteHandler(domain);
@@ -1264,7 +1275,7 @@ async function extractPageContent() {
             content = await extractWithConfig(siteHandler.contentExtractor, siteHandler.name);
         } else {
             // 没有找到站点配置，返回提示信息
-            const siteName = siteHandler ? siteHandler.name : await getSiteNameFromDomain(domain);
+            const siteName = siteHandler ? siteHandler.name : domain;
             console.log(`⚠️ 未找到 ${siteName} 的内容提取配置，返回提示信息`);
             content = `无法自动提取 ${siteName} 的详细内容，请手动复制。\n\n提示：该站点可能尚未配置内容提取规则，或者页面结构发生了变化。`;
         }
@@ -1289,9 +1300,14 @@ async function extractWithConfig(contentExtractor, siteName) {
     
     try {
         // 1. 首先尝试主要选择器
-        if (contentExtractor.selectors && contentExtractor.selectors.length > 0) {
+        if (contentExtractor.contentSelectors && contentExtractor.contentSelectors.length > 0) {
             console.log('🔍 尝试主要选择器...');
-            content = await extractWithSelectorsOptimized(contentExtractor.selectors, siteName, contentExtractor.excludeSelectors);
+            content = await extractWithSelectorsOptimized(
+                contentExtractor.contentSelectors, 
+                siteName, 
+                contentExtractor.excludeSelectors,
+                contentExtractor.messageContainer
+            );
             
             if (content.trim() && !content.includes('无法自动提取')) {
                 extractionMethod = '主要选择器';
@@ -1303,7 +1319,12 @@ async function extractWithConfig(contentExtractor, siteName) {
         // 2. 如果主要选择器失败，尝试备用选择器
         if (contentExtractor.fallbackSelectors && contentExtractor.fallbackSelectors.length > 0) {
             console.log('🔍 主要选择器失败，尝试备用选择器...');
-            content = await extractWithSelectorsOptimized(contentExtractor.fallbackSelectors, siteName, contentExtractor.excludeSelectors);
+            content = await extractWithSelectorsOptimized(
+                contentExtractor.fallbackSelectors, 
+                siteName, 
+                contentExtractor.excludeSelectors,
+                contentExtractor.messageContainer
+            );
             
             if (content.trim() && !content.includes('无法自动提取')) {
                 extractionMethod = '备用选择器';
@@ -1347,11 +1368,11 @@ async function extractWithConfig(contentExtractor, siteName) {
 }
 
 // 验证选择器有效性
-function validateSelectors(selectors) {
+function validateSelectors(selectors, searchRoot = document) {
     const validSelectors = [];
     for (const selector of selectors) {
         try {
-            const elements = document.querySelectorAll(selector);
+            const elements = searchRoot.querySelectorAll(selector);
             if (elements.length > 0) {
                 validSelectors.push(selector);
                 console.log(`✅ 选择器 ${selector} 有效，找到 ${elements.length} 个元素`);
@@ -1367,10 +1388,11 @@ function validateSelectors(selectors) {
 
 
 // 优化版选择器提取内容
-async function extractWithSelectorsOptimized(selectors, siteName, excludeSelectors = []) {
+async function extractWithSelectorsOptimized(selectors, siteName, excludeSelectors = [], messageContainer = null) {
     console.log(`🔍 开始提取 ${siteName} 的内容...`);
     console.log(`🔍 使用选择器:`, selectors);
     console.log(`🔍 排除选择器:`, excludeSelectors);
+    console.log(`🔍 消息容器:`, messageContainer);
     
     let content = '';
     
@@ -1378,23 +1400,39 @@ async function extractWithSelectorsOptimized(selectors, siteName, excludeSelecto
     const defaultExcludeSelectors = ['nav', 'header', 'footer', '.sidebar', '.menu'];
     const allExcludeSelectors = [...defaultExcludeSelectors, ...(excludeSelectors || [])];
     
-    // 调试：显示页面上所有可能的元素
-    const allElements = document.querySelectorAll('*');
-    console.log(`🔍 页面总元素数: ${allElements.length}`);
+    // 如果指定了消息容器，先查找容器
+    let searchRoot = document;
+    let messageContainers = [];
+    if (messageContainer) {
+        messageContainers = Array.from(document.querySelectorAll(messageContainer));
+        console.log(`🔍 找到 ${messageContainers.length} 个消息容器`);
+        
+        if (messageContainers.length === 0) {
+            console.log(`⚠️ 未找到消息容器 ${messageContainer}，使用整个文档`);
+        } else {
+            console.log(`🔍 将在 ${messageContainers.length} 个消息容器中搜索内容`);
+        }
+    }
     
-    // 查找可能的AI回答元素
-    const possibleElements = document.querySelectorAll('[class*="response"], [class*="message"], [class*="answer"], [class*="markdown"]');
-    console.log(`🔍 找到 ${possibleElements.length} 个可能的AI回答元素`);
+    // 如果没有消息容器，使用整个文档
+    if (messageContainers.length === 0) {
+        messageContainers = [document];
+    }
     
-    // 验证选择器有效性
-    const validSelectors = validateSelectors(selectors);
-    console.log(`🔍 有效选择器数量: ${validSelectors.length}/${selectors.length}`);
+    // 遍历所有消息容器进行内容提取
+    for (const [containerIndex, container] of messageContainers.entries()) {
+        console.log(`🔍 处理第 ${containerIndex + 1}/${messageContainers.length} 个消息容器`);
+        
+        
+        // 验证选择器有效性
+        const validSelectors = validateSelectors(selectors, container);
+        console.log(`🔍 容器内有效选择器数量: ${validSelectors.length}/${selectors.length}`);
     
-    // 使用 Promise.all 并行处理选择器
-    const extractionPromises = validSelectors.map(async (selector) => {
-        try {
-            const elements = document.querySelectorAll(selector);
-            console.log(`🔍 选择器 ${selector} 找到 ${elements.length} 个元素`);
+        // 使用 Promise.all 并行处理选择器
+        const extractionPromises = validSelectors.map(async (selector) => {
+            try {
+                const elements = container.querySelectorAll(selector);
+                // 移除重复日志，已在 validateSelectors 中输出
             
             if (elements.length === 0) return '';
             
@@ -1406,7 +1444,10 @@ async function extractWithSelectorsOptimized(selectors, siteName, excludeSelecto
                     element.closest(excludeSelector)
                 );
                 
-                if (shouldExclude) continue;
+                if (shouldExclude) {
+                    console.log(`🔍 排除元素:`, element);
+                    continue;
+                }
                 
                 // 等待元素内容加载完成
                 await waitForContentLoad(element);
@@ -1415,22 +1456,33 @@ async function extractWithSelectorsOptimized(selectors, siteName, excludeSelecto
                 let text = await extractElementContent(element);
                 
                 if (text.trim()) {
-                    selectorContent += `\n\n## ${siteName}\n\n${text.trim()}\n`;
+                    selectorContent += `\n\n${text.trim()}\n`;
                 }
             }
             
             return selectorContent;
-        } catch (error) {
-            console.warn(`选择器 ${selector} 提取失败:`, error);
-            return '';
+            } catch (error) {
+                console.warn(`容器内选择器 ${selector} 提取失败:`, error);
+                return '';
+            }
+        });
+        
+        // 等待所有选择器处理完成
+        const results = await Promise.all(extractionPromises);
+        
+        // 合并结果，去重处理
+        const uniqueResults = [];
+        const seenContent = new Set();
+        
+        for (const result of results) {
+            if (result.trim() && !seenContent.has(result.trim())) {
+                uniqueResults.push(result);
+                seenContent.add(result.trim());
+            }
         }
-    });
-    
-    // 等待所有选择器处理完成
-    const results = await Promise.all(extractionPromises);
-    
-    // 合并结果
-    content = results.filter(result => result.trim()).join('\n');
+        
+        content += uniqueResults.join('\n');
+    }
     
     if (!content.trim()) {
         content = `无法自动提取 ${siteName} 的详细内容，请手动复制。`;
@@ -1655,37 +1707,6 @@ async function genericContentExtraction(siteName) {
     return '';
 }
 
-// 从域名推断站点名称
-function getSiteNameFromDomain(domain) {
-    const domainMappings = {
-        'chatgpt.com': 'ChatGPT',
-        'gemini.google.com': 'Gemini',
-        'grok.x.ai': 'Grok',
-        'grok.com': 'Grok',
-        'claude.ai': 'Claude',
-        'deepseek.com': 'DeepSeek',
-        'poe.com': 'Poe',
-        'perplexity.ai': 'Perplexity',
-        'you.com': 'You.com',
-        'bing.com': 'Bing Chat',
-        'bard.google.com': 'Bard'
-    };
-    
-    // 直接匹配
-    if (domainMappings[domain]) {
-        return domainMappings[domain];
-    }
-    
-    // 部分匹配
-    for (const [key, value] of Object.entries(domainMappings)) {
-        if (domain.includes(key)) {
-            return value;
-        }
-    }
-    
-    // 如果都不匹配，返回格式化的域名
-    return domain.charAt(0).toUpperCase() + domain.slice(1);
-}
 
 // 将 HTML 转换为 Markdown
 function convertHtmlToMarkdown(html) {

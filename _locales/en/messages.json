@@ -1,9 +1,9 @@
 {
   "appName": {
-    "message": "AI Shortcuts - OneClick to compare ChatGPT, Gemini, DeepSeek and more."
+    "message": "AI Compare - OneClick to compare ChatGPT, Gemini, DeepSeek and more."
   },
   "extDescription": {
-    "message": "Access multiple AI platforms simultaneously. Compare responses from ChatGPT, Claude, Gemini, DeepSeek and more in one click."
+    "message": "AI Compare - Compare responses from ChatGPT, Claude, Gemini, DeepSeek and more in one click. Find the best solution quickly."
   },
   "configTitle": {
     "message": " AI Sites"
@@ -23,10 +23,10 @@
     "message": "Enter content to search..."
   },
   "openSettings": {
-    "message": "Default Comparison Settings"
+    "message": "AI Compare Settings"
   },
   "searchWithMultiAI": {
-    "message": "Search with AIShortcuts"
+    "message": "Search with AI Compare"
   },
   "startCompare": {
     "message": "PK",
@@ -46,7 +46,7 @@
     "message": "If you want to add more sites, please contact me at AIShortcuts@outlook.com"
   },
   "popupTitle": {
-    "message": "AI Shortcuts"
+    "message": "AI Compare"
   },
   "column1": {
     "message": "1 Col",
@@ -178,16 +178,16 @@
     "message": "Manage websites where the floating button is disabled. You can re-enable the floating button here."
   },
   "searchProviderName": {
-    "message": "AIShortcuts"
+    "message": "AI Compare"
   },
   "searchProviderDescription": {
-    "message": "Search across multiple AI sites with AI shortcuts"
+    "message": "Compare responses from multiple AI platforms with AI Compare"
   },
   "promptTemplatesTitle": {
     "message": "Prompt Templates"
   },
   "promptTemplatesDescription": {
-    "message": "Customize prompt templates for search suggestion buttons"
+    "message": "Customize prompt templates for AI comparison search"
   },
   "addTemplateButton": {
     "message": "Add New Template"
@@ -262,10 +262,10 @@
     "message": "Got it"
   },
   "exportResponses": {
-    "message": "Export AI Responses"
+    "message": "Export AI Compare Results"
   },
   "exportModalTitle": {
-    "message": "Export AI Responses"
+    "message": "Export AI Compare Results"
   },
   "exportFormat": {
     "message": "Export Format"
