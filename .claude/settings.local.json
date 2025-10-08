@@ -6,7 +6,13 @@
       "Bash(grep:*)",
       "Bash(node:*)",
       "Bash(mkdir:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(claude mcp add:*)",
+      "Bash(claude mcp:*)",
+      "WebFetch(domain:developers.chrome.com)",
+      "mcp__chrome-devtools__list_pages",
+      "mcp__chrome-devtools__navigate_page",
+      "mcp__chrome-devtools__performance_start_trace"
     ],
     "deny": [],
     "ask": [],
